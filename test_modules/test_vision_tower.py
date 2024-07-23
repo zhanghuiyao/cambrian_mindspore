@@ -1,4 +1,5 @@
 import argparse
+import mindspore as ms
 from PIL import Image
 from cambrian.model.language_model.cambrian_llama import CambrianConfig
 from cambrian.model.multimodal_encoder.builder import build_vision_tower_aux_list
@@ -23,9 +24,11 @@ def test_vision_tower(args, config, replace_name: str = None, replace_len: int =
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="test")
-    parser.add_argument("--model_path", type=str, default="")
-    parser.add_argument("--image_path", type=str, default="")
+    parser.add_argument("--model_path", type=str, default="/home_host/zhy/cambrian-8b")
+    parser.add_argument("--image_path", type=str, default="/home_host/zhy/cambrian_mindspore/images/cambrian.png")
     args, _ = parser.parse_known_args()
+
+    ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend")
 
     config, _ = CambrianConfig.from_pretrained(
         args.model_path,

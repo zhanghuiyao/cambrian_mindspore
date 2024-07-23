@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 import mindspore as ms
 from mindspore import nn, ops, Tensor, Parameter
@@ -13,7 +13,7 @@ from cambrian.model.vision_sampler import VisionTokenSampler
 from cambrian.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 
 
-class CambrianMetaModel(nn.Cell):
+class CambrianMetaModel:
 
     def __init__(self, config):
         super(CambrianMetaModel, self).__init__(config)
@@ -351,7 +351,7 @@ def unpad_image(tensor, original_size):
     return unpadded_tensor
 
 
-class CambrianMetaForCausalLM(ABC):
+class CambrianMetaForCausalLM:
 
     @abstractmethod
     def get_model(self):
