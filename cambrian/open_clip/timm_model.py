@@ -5,7 +5,7 @@ from collections import OrderedDict
 from cambrian.timm import to_2tuple, Mlp
 from cambrian.timm.layers.attention_pool2d import RotAttentionPool2d
 from cambrian.timm.layers.attention_pool2d import AttentionPool2d as AbsAttentionPool2d
-from cambrian.timm.models._factory import create_model
+from cambrian.timm.models import create_model
 
 from .utils import freeze_batch_norm_2d
 

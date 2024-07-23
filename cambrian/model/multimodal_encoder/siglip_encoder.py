@@ -8,11 +8,18 @@ from cambrian.model.multimodal_encoder.clip_encoder import ClipVisionTower
 
 
 def extract_res_interp(model_name):
+    # valid_model_prefixes = {
+    #     "siglip/CLIP-ViT-SO400M-14-384":"hf-hub:timm/ViT-SO400M-14-SigLIP-384",
+    #     "timm/ViT-SO400M-14-SigLIP-384":"hf-hub:timm/ViT-SO400M-14-SigLIP-384",
+    #     "siglip/CLIP-ViT-SO400M-14":"hf-hub:timm/ViT-SO400M-14-SigLIP",
+    #     "timm/ViT-SO400M-14-SigLIP":"hf-hub:timm/ViT-SO400M-14-SigLIP"
+    # }
+
     valid_model_prefixes = {
-        "siglip/CLIP-ViT-SO400M-14-384":"hf-hub:timm/ViT-SO400M-14-SigLIP-384",
-        "timm/ViT-SO400M-14-SigLIP-384":"hf-hub:timm/ViT-SO400M-14-SigLIP-384",
-        "siglip/CLIP-ViT-SO400M-14":"hf-hub:timm/ViT-SO400M-14-SigLIP",
-        "timm/ViT-SO400M-14-SigLIP":"hf-hub:timm/ViT-SO400M-14-SigLIP"
+        "siglip/CLIP-ViT-SO400M-14-384":"ViT-SO400M-14-SigLIP-384",
+        "timm/ViT-SO400M-14-SigLIP-384":"ViT-SO400M-14-SigLIP-384",
+        "siglip/CLIP-ViT-SO400M-14":"ViT-SO400M-14-SigLIP",
+        "timm/ViT-SO400M-14-SigLIP":"ViT-SO400M-14-SigLIP"
     }
 
     res = 384 if '384' in model_name else 224
