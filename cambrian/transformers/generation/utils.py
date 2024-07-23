@@ -11,7 +11,6 @@ from mindspore import nn, ops, Tensor, Parameter
 from transformers import GenerationConfig, logging, PreTrainedTokenizerBase
 from transformers import GenerationMixin as _GenerationMixin
 from transformers.tokenization_utils import ExtensionsTrie
-from transformers.generation.utils import GenerationMode
 from transformers.utils.generic import ModelOutput
 
 from cambrian.transformers.generation.stopping_criteria import \
@@ -21,10 +20,28 @@ from cambrian.transformers.generation.logits_process import \
     TemperatureLogitsWarper, \
     MinLengthLogitsProcessor, MinNewTokensLengthLogitsProcessor, PrefixConstrainedLogitsProcessor, LogitNormalization
 from cambrian.transformers.cache_utils import Cache, StaticCache, DynamicCache
+from cambrian.transformers.utils.generic import ExplicitEnum
 
 NEED_SETUP_CACHE_CLASSES_MAPPING = {"static": StaticCache}
 
 logger = logging.get_logger(__name__)
+
+
+class GenerationMode(ExplicitEnum):
+    """
+    Possible generation modes, downstream of the [`~generation.GenerationMixin.generate`] method.
+    """
+
+    # Non-beam methods
+    CONTRASTIVE_SEARCH = "contrastive_search"
+    GREEDY_SEARCH = "greedy_search"
+    SAMPLE = "sample"
+    ASSISTED_GENERATION = "assisted_generation"
+    # Beam methods
+    BEAM_SEARCH = "beam_search"
+    BEAM_SAMPLE = "beam_sample"
+    CONSTRAINED_BEAM_SEARCH = "constrained_beam_search"
+    GROUP_BEAM_SEARCH = "group_beam_search"
 
 
 @dataclass
