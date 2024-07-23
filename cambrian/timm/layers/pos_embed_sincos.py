@@ -25,7 +25,7 @@ def freq_bands_np(
         temperature: float = 10000.,
         step: int = 2,
 ) -> np.array:
-    exp = np.arange(0, num_bands, step, dtype=np.int64).to(np.float32) / num_bands
+    exp = np.arange(0, num_bands, step, dtype=np.int64).astype(np.float32) / num_bands
     bands = 1. / (temperature ** exp)
     return bands
 
@@ -225,7 +225,7 @@ class RotaryEmbedding(nn.Cell):
                 )
                 print(bands)
 
-            self.bands = Parameter(Tensor(bands), requires_grad=False, name="bands")
+            self.bands = Parameter(Tensor(bands, ms.float32), requires_grad=False, name="bands")
             self.pos_embed_sin = None
             self.pos_embed_cos = None
         else:

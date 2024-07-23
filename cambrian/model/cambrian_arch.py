@@ -48,14 +48,14 @@ class CambrianMetaModel:
                     #             nn.Dense(vision_tower_aux.hidden_size, vision_hidden_size),
                     #             nn.GELU(),
                     #             nn.Dense(vision_hidden_size, vision_hidden_size),
-                    #             nn.LayerNorm(vision_hidden_size)
+                    #             nn.LayerNorm([vision_hidden_size])
                     #         ]))
                     mm_projector_auxes.append(
                         nn.SequentialCell([
                             nn.Dense(vision_tower_aux.hidden_size, vision_hidden_size),
                             nn.GELU(),
                             nn.Dense(vision_hidden_size, vision_hidden_size),
-                            nn.LayerNorm(vision_hidden_size)
+                            nn.LayerNorm([vision_hidden_size])
                         ])
                     )
                 self.mm_projector_auxes = nn.CellList(mm_projector_auxes)
@@ -183,14 +183,14 @@ class CambrianMetaModel:
                     #             nn.Dense(vision_tower_aux.hidden_size, vision_hidden_size),
                     #             nn.GELU(),
                     #             nn.Dense(vision_hidden_size, vision_hidden_size),
-                    #             nn.LayerNorm(vision_hidden_size)
+                    #             nn.LayerNorm([vision_hidden_size])
                     #         ]))
                     mm_projector_auxes.append(
                         nn.SequentialCell([
                             nn.Dense(vision_tower_aux.hidden_size, vision_hidden_size),
                             nn.GELU(),
                             nn.Dense(vision_hidden_size, vision_hidden_size),
-                            nn.LayerNorm(vision_hidden_size)
+                            nn.LayerNorm([vision_hidden_size])
                         ])
                     )
                 self.mm_projector_auxes = nn.CellList(mm_projector_auxes)
@@ -374,7 +374,7 @@ class CambrianMetaForCausalLM:
 
             reduce_factor = (aux_height//query_side_len)
             vision_tower_aux_feature_rearranged = vision_tower_aux_feature.view(bs, query_side_len, reduce_factor, query_side_len, reduce_factor, -1)
-            vision_tower_aux_feature_rearranged = vision_tower_aux_feature_rearranged.permute(0, 1, 3, 2, 4, 5).contiguous().flatten(0, 2).flatten(1, 2)
+            vision_tower_aux_feature_rearranged = vision_tower_aux_feature_rearranged.permute(0, 1, 3, 2, 4, 5).contiguous().flatten(start_dim=0, end_dim=2).flatten(start_dim=1, end_dim=2)
 
             vision_tower_aux_attention_masks_rearranged = vision_tower_aux_attention_masks.view(bs * query_side_len * query_side_len, reduce_factor * reduce_factor)
 
@@ -403,13 +403,13 @@ class CambrianMetaForCausalLM:
                 cur_vision_tower_aux_feature_rearranged = cur_vision_tower_aux_feature_rearranged.permute(0, 1, 3, 2, 4, 5).contiguous()
                 if unpad:
                     cur_vision_tower_aux_feature_rearranged = unpad_image(cur_vision_tower_aux_feature_rearranged, image_size)
-                cur_vision_tower_aux_feature_rearranged = cur_vision_tower_aux_feature_rearranged.flatten(0,2).flatten(1,2) # query_side_len*query_side_len X reduce_factor*reduce_factor X C
+                cur_vision_tower_aux_feature_rearranged = cur_vision_tower_aux_feature_rearranged.flatten(start_dim=0, end_dim=2).flatten(start_dim=1, end_dim=2) # query_side_len*query_side_len X reduce_factor*reduce_factor X C
 
                 cur_vision_tower_aux_attention_masks_rearranged = unmask_attention_mask(cur_vision_tower_aux_attention_masks_rearranged, image_size)
                 cur_vision_tower_aux_attention_masks_rearranged = cur_vision_tower_aux_attention_masks_rearranged.view(1, query_side_len, reduce_factor, query_side_len, reduce_factor).permute(0, 1, 3, 2, 4).contiguous()
                 if unpad:
                     cur_vision_tower_aux_attention_masks_rearranged = unpad_image(cur_vision_tower_aux_attention_masks_rearranged, image_size)
-                cur_vision_tower_aux_attention_masks_rearranged = cur_vision_tower_aux_attention_masks_rearranged.flatten(0,2).flatten(1,2)
+                cur_vision_tower_aux_attention_masks_rearranged = cur_vision_tower_aux_attention_masks_rearranged.flatten(start_dim=0, end_dim=2).flatten(start_dim=1, end_dim=2)
 
                 ops.masked_fill(
                     cur_vision_tower_aux_attention_masks_rearranged,
@@ -483,7 +483,7 @@ class CambrianMetaForCausalLM:
             # perform vision sampling for each query group
             for query_group_i, query_num in enumerate(query_num_list):
                 query_features_i = self.get_model().vision_query[query_group_i, :].view(1, 1, 1, -1).broadcast_to((bs, query_num, -1, -1))
-                global_context_feature_i = global_context_feature.broadcast_to((-1, query_num, 1, -1)).flatten(0, 1)
+                global_context_feature_i = global_context_feature.broadcast_to((-1, query_num, 1, -1)).flatten(start_dim=0, end_dim=1)
                 query_side_len = int(query_num**0.5)
 
                 if self.training:
@@ -493,9 +493,9 @@ class CambrianMetaForCausalLM:
                     vision_tower_aux_feature_list_i, vision_tower_aux_attention_masks_list_i = \
                         self.rearrange_vision_tower_features_inference(vision_tower_aux_feature_list, query_side_len, image_sizes)
 
-                # query_features_i = getattr(self.get_model(), "vision_sampler_{}".format(query_group_i))(query_features_i.flatten(0,1), global_context_feature_i, *vision_tower_aux_feature_list_i, *vision_tower_aux_attention_masks_list_i)
+                # query_features_i = getattr(self.get_model(), "vision_sampler_{}".format(query_group_i))(query_features_i.flatten(start_dim=0, end_dim=1), global_context_feature_i, *vision_tower_aux_feature_list_i, *vision_tower_aux_attention_masks_list_i)
                 query_features_i = self.get_model().vision_samplers[query_group_i](
-                    query_features_i.flatten(0, 1), global_context_feature_i, *vision_tower_aux_feature_list_i,
+                    query_features_i.flatten(start_dim=0, end_dim=1), global_context_feature_i, *vision_tower_aux_feature_list_i,
                     *vision_tower_aux_attention_masks_list_i
                 )
 
@@ -509,13 +509,13 @@ class CambrianMetaForCausalLM:
                         mode='bilinear',
                         align_corners=False
                     ).to(dtype=query_features_i.dtype)
-                    query_features_i = query_features_i.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
+                    query_features_i = query_features_i.permute(0, 2, 3, 1).contiguous().flatten(start_dim=1, end_dim=2)
                 final_image_features_list.append(query_features_i)
 
             if self.training:
                 vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final = \
                     self.rearrange_vision_tower_features_train(vision_tower_aux_feature_list, image_aux_attention_masks_list, final_height)
-                global_context_feature_final = global_context_feature.broadcast_to((-1, final_height*final_width, 1, -1)).flatten(0, 1)
+                global_context_feature_final = global_context_feature.broadcast_to((-1, final_height*final_width, 1, -1)).flatten(start_dim=0, end_dim=1)
         else:
             final_image_features_list = image_aux_features_list
 
@@ -528,7 +528,7 @@ class CambrianMetaForCausalLM:
                 image_features,
                 self.model.image_newline[None, None, None, :].broadcast_to((image_features.shape[0], final_height, 1, -1))
             ), axis=2)
-            image_features = image_features.flatten(1, 2)
+            image_features = image_features.flatten(start_dim=1, end_dim=2)
             final_size = [(final_height, final_width)] * bs
         else:
             image_features = image_features.view(bs, final_height, final_width, -1)
@@ -551,7 +551,7 @@ class CambrianMetaForCausalLM:
                     (cur_image_feature, self.model.image_newline.view(1, 1, 1, -1).broadcast_to((1, cur_h, 1, -1))),
                     axis=2
                 )
-                cur_image_feature = cur_image_feature.flatten(1, 2)
+                cur_image_feature = cur_image_feature.flatten(start_dim=1, end_dim=2)
                 image_features_unpadded.append(cur_image_feature.squeeze(0))
 
                 if self.get_model().config.mm_projector_type == 'sva':

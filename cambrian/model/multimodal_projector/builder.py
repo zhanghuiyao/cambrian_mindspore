@@ -21,6 +21,8 @@ class IdentityMap(nn.Cell):
 class SimpleResBlock(nn.Cell):
     def __init__(self, channels):
         super().__init__()
+        if isinstance(channels, int):
+            channels = [channels]
         self.pre_norm = nn.LayerNorm(channels)
 
         self.proj = nn.SequentialCell([

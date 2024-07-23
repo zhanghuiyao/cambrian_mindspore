@@ -4,7 +4,7 @@ from typing import Type
 
 from mindspore import nn, ops
 
-from cambrian.timm.layers.norm import RmsNorm, FrozenBatchNorm2d
+from cambrian.timm.layers import LayerNorm, LayerNorm2d, RmsNorm, FrozenBatchNorm2d
 
 
 _NORM_MAP = dict(
@@ -13,8 +13,8 @@ _NORM_MAP = dict(
     batchnorm1d=nn.BatchNorm1d,
     groupnorm=nn.GroupNorm,
     groupnorm1=nn.GroupNorm,
-    layernorm=nn.LayerNorm,
-    layernorm2d=nn.LayerNorm,
+    layernorm=LayerNorm,
+    layernorm2d=LayerNorm2d,
     rmsnorm=RmsNorm,
     frozenbatchnorm2d=FrozenBatchNorm2d,
 )

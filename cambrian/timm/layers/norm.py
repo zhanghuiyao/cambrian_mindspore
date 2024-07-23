@@ -2,10 +2,34 @@ import numbers
 from typing import Tuple
 
 import numpy as np
+import mindspore as ms
 from mindspore import nn, ops, Tensor, Parameter
 from mindspore.common import initializer as init
 
 from cambrian.timm.layers.fast_norm import rms_norm
+
+
+class LayerNorm(nn.LayerNorm):
+    def __init__(self, *args, **kwargs):
+        if len(args) > 0:
+            if isinstance(args[0], int):
+                args = ((args[0],), *args[1:])
+        else:
+            normalized_shape = kwargs.get("normalized_shape")
+            if isinstance(normalized_shape, int):
+                normalized_shape = (normalized_shape,)
+                kwargs["normalized_shape"] = normalized_shape
+
+        super(LayerNorm, self).__init__(*args, **kwargs)
+
+
+class LayerNorm2d(LayerNorm):
+    """ LayerNorm for channels of '2D' spatial NCHW tensors """
+    def construct(self, x: Tensor) -> Tensor:
+        x = x.permute(0, 2, 3, 1)
+        x, _, _ = self.layer_norm(x, self.gamma.astype(x.dtype), self.beta.astype(x.dtype))
+        x = x.permute(0, 3, 1, 2)
+        return x
 
 
 class RmsNorm(nn.Cell):
@@ -17,7 +41,7 @@ class RmsNorm(nn.Cell):
     elementwise_affine: bool
 
     def __init__(self, channels, eps=1e-6, affine=True, dtype=None) -> None:
-        factory_kwargs = {'dtype': dtype}
+        factory_kwargs = {'dtype': dtype if dtype else ms.float32}
         super().__init__()
         normalized_shape = channels
         if isinstance(normalized_shape, numbers.Integral):

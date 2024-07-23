@@ -162,7 +162,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
 
                         # latent_query = latent_query.view(bs, self.latent_query_num, -1)
                         latent_query = latent_query.view(bs, image_token_len_per_side, image_token_len_per_side, -1)
-                        latent_query_with_newline = ops.cat([latent_query, newline_embd], 2).flatten(1,2)
+                        latent_query_with_newline = ops.cat([latent_query, newline_embd], 2).flatten(start_dim=1, end_dim=2)
                         hidden_states[:, latent_query_start_idx:latent_query_start_idx+latent_query_newline_num] = latent_query_with_newline[:, :, :]
                     else:
                         bs = len(final_vision_feature_size)
@@ -200,7 +200,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                             cur_newline_embd = newline_embd_list[batch_i]
                             cur_latent_query_newline_num = cur_h * (cur_w+1)
                             cur_latent_query = cur_latent_query.view(1, cur_h, cur_w, -1)
-                            cur_latent_query_with_newline = ops.cat([cur_latent_query, cur_newline_embd], 2).flatten(1,2)
+                            cur_latent_query_with_newline = ops.cat([cur_latent_query, cur_newline_embd], 2).flatten(start_dim=1, end_dim=2)
                             hidden_states[batch_i:batch_i+1, latent_query_start_idx:latent_query_start_idx+cur_latent_query_newline_num] = cur_latent_query_with_newline[:, :, :]
 
             if use_cache:

@@ -83,12 +83,12 @@ class TimmModel(nn.Cell):
 
         # NOTE attention pool ends with a projection layer, so proj should usually be set to '' if such pooling is used
         if proj == 'linear':
-            head_layers['drop'] = nn.Dropout(drop)
-            head_layers['proj'] = nn.Linear(prev_chs, embed_dim, bias=proj_bias)
+            head_layers['drop'] = nn.Dropout(p=drop)
+            head_layers['proj'] = nn.Dense(prev_chs, embed_dim, has_bias=proj_bias)
         elif proj == 'mlp':
             head_layers['mlp'] = Mlp(prev_chs, 2 * embed_dim, embed_dim, drop=(drop, 0), bias=(True, proj_bias))
 
-        self.head = nn.Sequential(head_layers)
+        self.head = nn.SequentialCell(head_layers)
 
     def lock(self, unlocked_groups=0, freeze_bn_stats=False):
         """ lock modules

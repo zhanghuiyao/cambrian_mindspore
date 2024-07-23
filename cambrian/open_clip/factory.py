@@ -1,5 +1,6 @@
 # Reference to https://github.com/mlfoundations/open_clip
 
+import os
 import json
 import logging
 import re
@@ -10,9 +11,11 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import mindspore as ms
 
-from cambrian.open_clip.model import CLIP
+from cambrian.open_clip.model import CLIP, CustomTextCLIP
 from cambrian.open_clip.constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
-from cambrian.open_clip.transform import PreprocessCfg, merge_preprocess_kwargs, image_transform_v2
+from cambrian.open_clip.transform import PreprocessCfg, merge_preprocess_kwargs, image_transform_v2, merge_preprocess_dict
+
+from .model import set_model_preprocess_cfg
 
 
 HF_HUB_PREFIX = "hf-hub:"
@@ -74,11 +77,31 @@ def create_model(
     model_name: str,
     pretrained: str = "",
     precision: str = "fp32",
+    force_custom_text: bool = False,
+    force_patch_dropout: Optional[float] = None,
+    force_image_size: Optional[Union[int, Tuple[int, int]]] = None,
+    force_preprocess_cfg: Optional[Dict[str, Any]] = None,
     cache_dir: Optional[str] = None,
 ):
-    model_name = model_name.replace("/", "-")  # for callers using old naming with / in ViT names
+    force_preprocess_cfg = force_preprocess_cfg or {}
+    preprocess_cfg = asdict(PreprocessCfg())
     pretrained_cfg = {}
-    model_cfg = get_model_config(model_name)
+
+    has_hf_hub_prefix = model_name.startswith(HF_HUB_PREFIX)
+    if has_hf_hub_prefix:
+        model_name = model_name.replace("/", "-")  # for callers using old naming with / in ViT names
+        raise NotImplementedError
+    else:
+        load_from_local = os.path.isfile(os.path.join(model_name, "open_clip_config.json"))
+        if load_from_local:
+            config_path = os.path.join(model_name, "open_clip_config.json")
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            preprocess_cfg = merge_preprocess_dict(preprocess_cfg, config['preprocess_cfg'])
+            model_cfg = config['model_cfg']
+        else:
+            model_name = model_name.replace("/", "-")  # for callers using old naming with / in ViT names
+            model_cfg = get_model_config(model_name)
 
     if model_cfg is not None:
         logging.info(f"Loaded {model_name} model config.")
@@ -86,11 +109,28 @@ def create_model(
         logging.error(f"Model config for {model_name} not found; available models {list_models()}.")
         raise RuntimeError(f"Model config for {model_name} not found.")
 
+    if pretrained and pretrained.lower() == 'openai':
+        raise NotImplementedError
+
+    if force_patch_dropout is not None:
+        # override the default patch dropout value
+        model_cfg["vision_cfg"]["patch_dropout"] = force_patch_dropout
+
+    if force_image_size is not None:
+        # override model config's image size
+        model_cfg["vision_cfg"]["image_size"] = force_image_size
+
     # cast_dtype set for fp16 and bf16 (manual mixed-precision), not set for 'amp' or 'pure' modes
     cast_dtype = ms.float32 if precision == "fp32" else ms.float16
-    custom_text = model_cfg.pop("custom_text", False)
-    assert custom_text is False
-    model = CLIP(**model_cfg, cast_dtype=cast_dtype)
+    custom_text = model_cfg.pop("custom_text", False) or force_custom_text
+
+    if custom_text:
+        if "multimodal_cfg" in model_cfg:
+            raise NotImplementedError
+        else:
+            model = CustomTextCLIP(**model_cfg, cast_dtype=cast_dtype)
+    else:
+        model = CLIP(**model_cfg, cast_dtype=cast_dtype)
 
     if precision in ("fp16", "bf16", "pure_fp16", "pure_bf16"):
         # manual mixed precision that matches original OpenAI behaviour
@@ -104,6 +144,12 @@ def create_model(
         # set image / mean metadata from pretrained_cfg if available, or use default
         model.visual.image_mean = pretrained_cfg.get("mean", None) or OPENAI_DATASET_MEAN
         model.visual.image_std = pretrained_cfg.get("std", None) or OPENAI_DATASET_STD
+
+    # set image preprocessing configuration in model attributes for convenience
+    if getattr(model.visual, 'image_size', None) is not None:
+        # use image_size set on model creation (via config or force_image_size arg)
+        force_preprocess_cfg['size'] = model.visual.image_size
+    set_model_preprocess_cfg(model, merge_preprocess_dict(preprocess_cfg, force_preprocess_cfg))
 
     return model
 
@@ -130,6 +176,9 @@ def create_model_from_pretrained(
         model_name,
         pretrained,
         precision=precision,
+        force_custom_text=force_custom_text,
+        force_image_size=force_image_size,
+        force_preprocess_cfg=force_preprocess_cfg,
         cache_dir=cache_dir,
     )
 

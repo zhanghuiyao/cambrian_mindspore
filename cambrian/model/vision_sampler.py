@@ -21,13 +21,13 @@ class CrossAttention(nn.Cell):
             )
 
         self.q_proj = nn.SequentialCell([
-            nn.LayerNorm(q_dim), nn.Dense(q_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
+            nn.LayerNorm([q_dim]), nn.Dense(q_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
         ])
         self.k_proj = nn.SequentialCell([
-            nn.LayerNorm(kv_dim), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
+            nn.LayerNorm([kv_dim]), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
         ])
         self.v_proj = nn.SequentialCell([
-            nn.LayerNorm(kv_dim), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
+            nn.LayerNorm([kv_dim]), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
         ])
         self.o_proj = nn.Dense(self.num_heads * self.head_dim, q_dim, has_bias=attention_bias)
 
@@ -134,26 +134,26 @@ class MultiKVCrossAttention(nn.Cell):
             )
 
         self.q_proj = nn.SequentialCell([
-            nn.LayerNorm(q_dim), nn.Dense(q_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
+            nn.LayerNorm([q_dim]), nn.Dense(q_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
         ])
         self.num_of_kvs = len(kv_dim_list)
 
         self.k_projs, self.v_projs = nn.CellList([]), nn.CellList([])
         for i, kv_dim in enumerate(kv_dim_list):
             # setattr(self, 'k_proj_{}'.format(i), nn.SequentialCell([
-            #     nn.LayerNorm(kv_dim), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
+            #     nn.LayerNorm([kv_dim]), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
             # ]))
             # setattr(self, 'v_proj_{}'.format(i), nn.SequentialCell([
-            #     nn.LayerNorm(kv_dim), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
+            #     nn.LayerNorm([kv_dim]), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
             # ]))
             self.k_projs.append(
                 nn.SequentialCell([
-                    nn.LayerNorm(kv_dim), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
+                    nn.LayerNorm([kv_dim]), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
                 ])
             )
             self.v_projs.append(
                 nn.SequentialCell([
-                    nn.LayerNorm(kv_dim), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
+                    nn.LayerNorm([kv_dim]), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
                 ])
             )
         self.o_proj = nn.Dense(self.num_heads * self.head_dim, q_dim, has_bias=attention_bias)
@@ -229,7 +229,7 @@ class VisionCrossAttentionLayer(nn.Cell):
         #     self.tower_weight = Parameter(ops.zeros((self.num_of_kvs)), name='tower_weight')
         self.proj_out = MLP(hidden_dim, hidden_dim, q_dim)
 
-        self.norm = nn.LayerNorm(hidden_dim)
+        self.norm = nn.LayerNorm([hidden_dim])
 
         self.cross_attn = MultiKVCrossAttention(hidden_dim, kv_dim_list, hidden_dim, num_heads)
         self.kv_size_list = kv_size_list
@@ -317,7 +317,7 @@ class VisionAggregationLayer(nn.Cell):
 
         self.proj_out = MLP(hidden_dim, hidden_dim, q_dim)
 
-        self.norm = nn.LayerNorm(hidden_dim)
+        self.norm = nn.LayerNorm([hidden_dim])
 
         if self.num_of_kvs > 1:
             self.weight_mlp = MLP(q_dim+hidden_dim, hidden_dim, self.num_of_kvs)

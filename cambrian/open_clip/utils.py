@@ -2,6 +2,7 @@ import collections.abc
 import numpy as np
 from itertools import repeat
 
+import mindspore as ms
 from mindspore import nn, Tensor, Parameter
 
 
@@ -38,10 +39,10 @@ class FrozenBatchNorm2d(nn.Cell):
         super().__init__()
         self.eps = eps
 
-        self.weight = Parameter(Tensor(np.ones(num_features)), requires_grad=False, name="weight")
-        self.bias = Parameter(Tensor(np.zeros(num_features)), requires_grad=False, name="bias")
-        self.running_mean = Parameter(Tensor(np.zeros(num_features)), requires_grad=False, name="running_mean")
-        self.running_var = Parameter(Tensor(np.ones(num_features)), requires_grad=False, name="running_var")
+        self.weight = Parameter(Tensor(np.ones(num_features), ms.float32), requires_grad=False, name="weight")
+        self.bias = Parameter(Tensor(np.zeros(num_features), ms.float32), requires_grad=False, name="bias")
+        self.running_mean = Parameter(Tensor(np.zeros(num_features), ms.float32), requires_grad=False, name="running_mean")
+        self.running_var = Parameter(Tensor(np.ones(num_features), ms.float32), requires_grad=False, name="running_var")
 
     def construct(self, x: Tensor) -> Tensor:
         # move reshapes to the beginning

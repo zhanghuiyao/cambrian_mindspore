@@ -1,5 +1,6 @@
 import sys
 import warnings
+from copy import deepcopy
 from collections import defaultdict, deque
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Sequence, Union, Tuple
 from dataclasses import replace
@@ -130,3 +131,16 @@ def register_model(fn: Callable[..., Any]) -> Callable[..., Any]:
         _model_default_cfgs[model_name] = default_cfg
 
     return fn
+
+
+def get_pretrained_cfg(model_name: str, allow_unregistered: bool = True) -> Optional[PretrainedCfg]:
+    if model_name in _model_pretrained_cfgs:
+        return deepcopy(_model_pretrained_cfgs[model_name])
+    arch_name, tag = split_model_name_tag(model_name)
+    if arch_name in _model_default_cfgs:
+        # if model arch exists, but the tag is wrong, error out
+        raise RuntimeError(f'Invalid pretrained tag ({tag}) for {arch_name}.')
+    if allow_unregistered:
+        # if model arch doesn't exist, it has no pretrained_cfg registered, allow a default to be created
+        return None
+    raise RuntimeError(f'Model architecture ({arch_name}) has no pretrained cfg registered.')

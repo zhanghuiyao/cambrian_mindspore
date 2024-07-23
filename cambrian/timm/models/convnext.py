@@ -7,15 +7,11 @@ from functools import partial
 from typing import Callable, Optional, Tuple, Union
 
 from cambrian.timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, OPENAI_CLIP_MEAN, OPENAI_CLIP_STD
-from cambrian.timm.layers.mlp import Mlp
-from cambrian.timm.layers.pool2d_same import AvgPool2dSame
-from cambrian.timm.layers.create_conv2d import create_conv2d
-from cambrian.timm.layers.create_act import get_act_layer
-from cambrian.timm.layers.helpers import to_ntuple, make_divisible
-from cambrian.timm.layers.drop import DropPath
-from cambrian.timm.layers.classifier import ClassifierHead, NormMlpClassifierHead
 from cambrian.timm.models._builder import build_model_with_cfg
 from cambrian.timm.models._registry import generate_default_cfgs, register_model
+from cambrian.timm.layers import \
+    Mlp, AvgPool2dSame, LayerNorm, LayerNorm2d, DropPath, ClassifierHead, NormMlpClassifierHead, \
+    create_conv2d, get_act_layer, to_ntuple, make_divisible
 
 
 class Downsample(nn.Cell):
@@ -89,7 +85,7 @@ class ConvNeXtBlock(nn.Cell):
         dilation = to_ntuple(2)(dilation)
         act_layer = get_act_layer(act_layer)
         if not norm_layer:
-            norm_layer = nn.LayerNorm
+            norm_layer = LayerNorm2d if conv_mlp else LayerNorm
 
         # mlp_layer = partial(GlobalResponseNormMlp if use_grn else Mlp, use_conv=conv_mlp)
         if use_grn:
@@ -254,9 +250,10 @@ class ConvNeXt(nn.Cell):
         super().__init__()
         assert output_stride in (8, 16, 32)
         kernel_sizes = to_ntuple(4)(kernel_sizes)
+
         if norm_layer is None:
-            norm_layer = nn.LayerNorm
-            norm_layer_cl = norm_layer if conv_mlp else nn.LayerNorm
+            norm_layer = LayerNorm2d
+            norm_layer_cl = norm_layer if conv_mlp else LayerNorm
             if norm_eps is not None:
                 norm_layer = partial(norm_layer, epsilon=norm_eps)
                 norm_layer_cl = partial(norm_layer_cl, epsilon=norm_eps)
@@ -289,8 +286,14 @@ class ConvNeXt(nn.Cell):
             ])
             stem_stride = 4
 
-        self.stages = nn.SequentialCell()
-        dp_rates = np.linspace(0, drop_path_rate, sum(depths))[:, None].tolist()
+        # dp_rates = [x.tolist() for x in ops.linspace(0, drop_path_rate, sum(depths)).split(depths)]
+        dp_rates = []
+        _dp_rates = np.linspace(0, drop_path_rate, sum(depths))
+        _start_idx = 0
+        for sub_depths in depths:
+            _end_idx = _start_idx + sub_depths
+            dp_rates.append(_dp_rates[_start_idx:_end_idx].tolist())
+            _start_idx = _end_idx
 
         stages = []
         prev_chs = dims[0]
@@ -324,7 +327,7 @@ class ConvNeXt(nn.Cell):
             prev_chs = out_chs
             # NOTE feature_info use currently assumes stage 0 == stride 1, rest are stride 2
             self.feature_info += [dict(num_chs=prev_chs, reduction=curr_stride, module=f'stages.{i}')]
-        self.stages = nn.SequentialCell(stages)
+        self.stages = nn.CellList(stages)
         self.num_features = prev_chs
 
         # if head_norm_first == true, norm -> global pool -> fc ordering, like most other nets
@@ -371,7 +374,8 @@ class ConvNeXt(nn.Cell):
 
     def forward_features(self, x):
         x = self.stem(x)
-        x = self.stages(x)
+        for stage in self.stages:
+            x = stage(x)
         x = self.norm_pre(x)
         return x
 
@@ -493,6 +497,7 @@ default_cfgs = {
 default_cfgs = generate_default_cfgs(default_cfgs)
 
 
+@register_model
 def convnext_xxlarge(pretrained=False, **kwargs) -> ConvNeXt:
     model_args = dict(depths=[3, 4, 30, 3], dims=[384, 768, 1536, 3072], norm_eps=kwargs.pop('norm_eps', 1e-5))
     model = _create_convnext('convnext_xxlarge', pretrained=pretrained, **dict(model_args, **kwargs))

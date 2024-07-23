@@ -18,7 +18,7 @@ def nchw_to(x: Tensor, fmt: Format):
     if fmt == Format.NHWC:
         x = x.permute(0, 2, 3, 1)
     elif fmt == Format.NLC:
-        x = x.flatten(2).swapdims(1, 2)
+        x = x.flatten(start_dim=2).swapdims(1, 2)
     elif fmt == Format.NCL:
-        x = x.flatten(2)
+        x = x.flatten(start_dim=2)
     return x

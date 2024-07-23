@@ -134,9 +134,9 @@ class CLIPEncoderLayer(nn.Cell):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = CLIPAttention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
         self.mlp = CLIPMLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
 
     def construct(
         self,
@@ -281,7 +281,7 @@ class CLIPVisionEmbeddings(nn.Cell):
         self.num_positions = self.num_patches + 1
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
 
-        self.position_ids = Parameter(Tensor(np.arange(self.num_positions)[np.newaxis, :]), requires_grad=False, name='position_ids')
+        self.position_ids = Parameter(Tensor(np.arange(self.num_positions)[np.newaxis, :], ms.int32), requires_grad=False, name='position_ids')
 
     def construct(self, pixel_values):
         batch_size = pixel_values.shape[0]
@@ -302,9 +302,9 @@ class CLIPVisionTransformer(nn.Cell):
         embed_dim = config.hidden_size
 
         self.embeddings = CLIPVisionEmbeddings(config)
-        self.pre_layrnorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.pre_layrnorm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
         self.encoder = CLIPEncoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
 
     def construct(
         self,

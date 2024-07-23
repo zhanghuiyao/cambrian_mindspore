@@ -38,13 +38,13 @@ class AttentionPoolLatent(nn.Cell):
 
         if pos_embed == 'abs':
             spatial_len = self.feat_size
-            self.pos_embed = Parameter(Tensor(np.zeros((spatial_len, in_features))), name='pos_embed')
+            self.pos_embed = Parameter(Tensor(np.zeros((spatial_len, in_features)), ms.float32), name='pos_embed')
         else:
             self.pos_embed = None
 
         self.latent_dim = latent_dim or embed_dim
         self.latent_len = latent_len
-        self.latent = Parameter(Tensor(np.zeros((1, self.latent_len, embed_dim))), name="latent")
+        self.latent = Parameter(Tensor(np.zeros((1, self.latent_len, embed_dim)), ms.float32), name="latent")
 
         self.q = nn.Dense(embed_dim, embed_dim, has_bias=qkv_bias)
         self.kv = nn.Dense(embed_dim, embed_dim * 2, has_bias=qkv_bias)

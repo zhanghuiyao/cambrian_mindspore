@@ -609,7 +609,6 @@ class GenerationMixin(_GenerationMixin):
                 MinLengthLogitsProcessor(
                     generation_config.min_length,
                     generation_config.eos_token_id,
-                    device=device,
                 )
             )
         if (
@@ -622,7 +621,6 @@ class GenerationMixin(_GenerationMixin):
                     input_ids_seq_length,
                     generation_config.min_new_tokens,
                     generation_config.eos_token_id,
-                    device=device,
                 )
             )
         if prefix_allowed_tokens_fn is not None:
@@ -739,7 +737,7 @@ class GenerationMixin(_GenerationMixin):
         if generation_config.eta_cutoff is not None and 0.0 < generation_config.eta_cutoff < 1.0:
             # warpers.append(
             #     EtaLogitsWarper(
-            #         epsilon=generation_config.eta_cutoff, min_tokens_to_keep=min_tokens_to_keep, device=device
+            #         epsilon=generation_config.eta_cutoff, min_tokens_to_keep=min_tokens_to_keep
             #     )
             # )
             raise NotImplementedError
@@ -1012,7 +1010,6 @@ class GenerationMixin(_GenerationMixin):
             encoder_input_ids=inputs_tensor,
             prefix_allowed_tokens_fn=prefix_allowed_tokens_fn,
             logits_processor=logits_processor,
-            device=inputs_tensor.device,
             model_kwargs=model_kwargs,
             negative_prompt_ids=negative_prompt_ids,
             negative_prompt_attention_mask=negative_prompt_attention_mask,
@@ -1027,7 +1024,7 @@ class GenerationMixin(_GenerationMixin):
         if generation_mode in (GenerationMode.SAMPLE, GenerationMode.GREEDY_SEARCH):
             # 11. prepare logits warper
             prepared_logits_warper = (
-                self._get_logits_warper(generation_config, device=input_ids.device)
+                self._get_logits_warper(generation_config)
                 if generation_config.do_sample
                 else None
             )

@@ -23,7 +23,7 @@ class ProcessorWrapper:
     def preprocess(self, image, return_tensors='ms'):
         # Ensure image is a PIL Image
         output = {}
-        output['pixel_values'] = [self._transforms(image)]
+        output['pixel_values'] = self._transforms(image)
         return output
 
 
@@ -50,7 +50,7 @@ class BaseVisionTower(nn.Cell):
         raise NotImplementedError("Subclasses must implement forward")
 
     def construct(self, images):
-        if isinstance(images, tuple):
+        if isinstance(images, (tuple, list)):
             image_features = [
                 self._forward(image.unsqueeze(0))
                 for image in images

@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple, Union
@@ -176,3 +177,79 @@ class CLIP(nn.Cell):
         if self.logit_bias is not None:
             return image_features, text_features, self.logit_scale.exp(), self.logit_bias
         return image_features, text_features, self.logit_scale.exp()
+
+
+class CustomTextCLIP(nn.Cell):
+    output_dict: bool
+
+    def __init__(
+            self,
+            embed_dim: int,
+            vision_cfg: CLIPVisionCfg,
+            text_cfg: CLIPTextCfg,
+            quick_gelu: bool = False,
+            init_logit_scale: float = np.log(1 / 0.07),
+            init_logit_bias: Optional[float] = None,
+            cast_dtype = None,
+            output_dict: bool = False,
+    ):
+        super().__init__()
+        self.output_dict = output_dict
+        self.visual = _build_vision_tower(embed_dim, vision_cfg, quick_gelu, cast_dtype)
+
+        # TODO: build text tower
+        # self.text = _build_text_tower(embed_dim, text_cfg, quick_gelu, cast_dtype)
+        # self.context_length = self.text.context_length
+        # self.vocab_size = self.text.vocab_size
+
+        self.logit_scale = Parameter(Tensor(np.ones([]) * init_logit_scale, ms.float32))
+        if init_logit_bias is not None:
+            self.logit_bias = Parameter(Tensor(np.ones([]) * init_logit_bias, ms.float32))
+        else:
+            self.logit_bias = None
+
+    def lock_image_tower(self, unlocked_groups=0, freeze_bn_stats=False):
+        # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
+        self.visual.lock(unlocked_groups=unlocked_groups, freeze_bn_stats=freeze_bn_stats)
+
+    def lock_text_tower(self, unlocked_layers: int = 0, freeze_layer_norm: bool = True):
+        self.text.lock(unlocked_layers, freeze_layer_norm)
+
+    def encode_image(self, image, normalize: bool = False):
+        features = self.visual(image)
+        return ops.L2Normalize(axis=-1, epsilon=1e-12)(features) if normalize else features
+
+    def encode_text(self, text, normalize: bool = False):
+        raise NotImplementedError
+
+    def get_logits(self, image, text):
+        raise NotImplementedError
+
+    def construct(
+            self,
+            image: Optional[Tensor] = None,
+            text: Optional[Tensor] = None,
+    ):
+        image_features = self.encode_image(image, normalize=True) if image is not None else None
+        text_features = self.encode_text(text, normalize=True) if text is not None else None
+
+        if self.output_dict:
+            out_dict = {
+                "image_features": image_features,
+                "text_features": text_features,
+                "logit_scale": self.logit_scale.exp()
+            }
+            if self.logit_bias is not None:
+                out_dict['logit_bias'] = self.logit_bias
+            return out_dict
+
+        if self.logit_bias is not None:
+            return image_features, text_features, self.logit_scale.exp(), self.logit_bias
+        return image_features, text_features, self.logit_scale.exp()
+
+
+def set_model_preprocess_cfg(model, preprocess_cfg: Dict[str, Any]):
+    module = getattr(model, 'visual', model)
+    module.image_mean = preprocess_cfg['mean']  # legacy attribute, keeping for bwd compat
+    module.image_std = preprocess_cfg['std']  # legacy attribute, keeping for bwd compat
+    module.preprocess_cfg = copy.deepcopy(preprocess_cfg)  # new attr, package all pp cfg as dict

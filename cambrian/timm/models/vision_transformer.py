@@ -11,13 +11,11 @@ from mindspore import nn, ops, Tensor, Parameter
 from cambrian.timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD, \
     OPENAI_CLIP_MEAN, OPENAI_CLIP_STD
 
-from cambrian.timm.layers import PatchEmbed, Mlp, DropPath, AttentionPoolLatent, RmsNorm, PatchDropout, SwiGLUPacked, \
+from cambrian.timm.layers import LayerNorm, PatchEmbed, Mlp, DropPath, AttentionPoolLatent, RmsNorm, PatchDropout, SwiGLUPacked, \
     resample_patch_embed, resample_abs_pos_embed, get_act_layer, get_norm_layer, LayerType
 from cambrian.timm.models._builder import build_model_with_cfg
 from cambrian.timm.models._manipulate import named_apply, checkpoint_seq, adapt_input_conv
 from cambrian.timm.models._registry import generate_default_cfgs, register_model
-
-
 
 
 __all__ = ['VisionTransformer']  # model_registry will add each entrypoint fn to this
@@ -36,7 +34,7 @@ class Attention(nn.Cell):
             qk_norm: bool = False,
             attn_drop: float = 0.,
             proj_drop: float = 0.,
-            norm_layer: nn.Cell = nn.LayerNorm,
+            norm_layer: nn.Cell = LayerNorm,
     ) -> None:
         super().__init__()
         assert dim % num_heads == 0, 'dim should be divisible by num_heads'
@@ -79,7 +77,7 @@ class LayerScale(nn.Cell):
     ) -> None:
         super().__init__()
         self.inplace = inplace
-        self.gamma = Parameter(Tensor(init_values * np.ones(dim)), name="gamma")
+        self.gamma = Parameter(Tensor(init_values * np.ones(dim), ms.float32), name="gamma")
 
     def construct(self, x: Tensor) -> Tensor:
         return x * self.gamma
@@ -98,7 +96,7 @@ class Block(nn.Cell):
             init_values: Optional[float] = None,
             drop_path: float = 0.,
             act_layer: nn.Cell = nn.GELU,
-            norm_layer: nn.Cell = nn.LayerNorm,
+            norm_layer: nn.Cell = LayerNorm,
             mlp_layer: nn.Cell = Mlp,
     ) -> None:
         super().__init__()
@@ -206,7 +204,7 @@ class VisionTransformer(nn.Cell):
         assert global_pool in ('', 'avg', 'token', 'map')
         assert class_token or global_pool != 'token'
         use_fc_norm = global_pool == 'avg' if fc_norm is None else fc_norm
-        norm_layer = get_norm_layer(norm_layer) or partial(nn.LayerNorm, epsilon=1e-6)
+        norm_layer = get_norm_layer(norm_layer) or partial(LayerNorm, epsilon=1e-6)
         act_layer = get_act_layer(act_layer) or nn.GELU
 
         self.num_classes = num_classes
@@ -561,12 +559,12 @@ def _load_weights(model: VisionTransformer, checkpoint_path: str, prefix: str = 
         mha_prefix = block_prefix + f'MultiHeadDotProductAttention_0/'
         model.attn_pool.latent.set_data(_n2p(w[f'{block_prefix}probe'], t=False))
         model.attn_pool.kv.weight.set_data(ops.cat([
-            _n2p(w[f'{mha_prefix}{n}/kernel'], t=False).flatten(1).T for n in ('key', 'value')]))
+            _n2p(w[f'{mha_prefix}{n}/kernel'], t=False).flatten(start_dim=1).T for n in ('key', 'value')]))
         model.attn_pool.kv.bias.set_data(ops.cat([
             _n2p(w[f'{mha_prefix}{n}/bias'], t=False).reshape(-1) for n in ('key', 'value')]))
-        model.attn_pool.q.weight.set_data(_n2p(w[f'{mha_prefix}query/kernel'], t=False).flatten(1).T)
+        model.attn_pool.q.weight.set_data(_n2p(w[f'{mha_prefix}query/kernel'], t=False).flatten(start_dim=1).T)
         model.attn_pool.q.bias.set_data(_n2p(w[f'{mha_prefix}query/bias'], t=False).reshape(-1))
-        model.attn_pool.proj.weight.set_data(_n2p(w[f'{mha_prefix}out/kernel']).flatten(1))
+        model.attn_pool.proj.weight.set_data(_n2p(w[f'{mha_prefix}out/kernel']).flatten(start_dim=1))
         model.attn_pool.proj.bias.set_data(_n2p(w[f'{mha_prefix}out/bias']))
         model.attn_pool.norm.weight.set_data(_n2p(w[f'{block_prefix}LayerNorm_0/scale']))
         model.attn_pool.norm.bias.set_data(_n2p(w[f'{block_prefix}LayerNorm_0/bias']))
@@ -581,10 +579,10 @@ def _load_weights(model: VisionTransformer, checkpoint_path: str, prefix: str = 
         block.norm1.weight.set_data(_n2p(w[f'{block_prefix}LayerNorm_0/scale']))
         block.norm1.bias.set_data(_n2p(w[f'{block_prefix}LayerNorm_0/bias']))
         block.attn.qkv.weight.set_data(ops.cat([
-            _n2p(w[f'{mha_prefix}{n}/kernel'], t=False).flatten(1).T for n in ('query', 'key', 'value')]))
+            _n2p(w[f'{mha_prefix}{n}/kernel'], t=False).flatten(start_dim=1).T for n in ('query', 'key', 'value')]))
         block.attn.qkv.bias.set_data(ops.cat([
             _n2p(w[f'{mha_prefix}{n}/bias'], t=False).reshape(-1) for n in ('query', 'key', 'value')]))
-        block.attn.proj.weight.set_data(_n2p(w[f'{mha_prefix}out/kernel']).flatten(1))
+        block.attn.proj.weight.set_data(_n2p(w[f'{mha_prefix}out/kernel']).flatten(start_dim=1))
         block.attn.proj.bias.set_data(_n2p(w[f'{mha_prefix}out/bias']))
         block.norm2.weight.set_data(_n2p(w[f'{block_prefix}LayerNorm_{ln1_sub}/scale']))
         block.norm2.bias.set_data(_n2p(w[f'{block_prefix}LayerNorm_{ln1_sub}/bias']))

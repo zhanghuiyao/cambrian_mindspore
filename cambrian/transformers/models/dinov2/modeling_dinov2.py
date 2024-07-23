@@ -20,11 +20,11 @@ class Dinov2Embeddings(nn.Cell):
     def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
 
-        self.cls_token = Parameter(Tensor(np.random.randn(1, 1, config.hidden_size)), name='cls_token')
-        self.mask_token = Parameter(Tensor(np.zeros((1, config.hidden_size))), name='mask_token')
+        self.cls_token = Parameter(Tensor(np.random.randn(1, 1, config.hidden_size), ms.float32), name='cls_token')
+        self.mask_token = Parameter(Tensor(np.zeros((1, config.hidden_size)), ms.float32), name='mask_token')
         self.patch_embeddings = Dinov2PatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
-        self.position_embeddings = Parameter(Tensor(np.random.randn(1, num_patches + 1, config.hidden_size)), name='position_embeddings')
+        self.position_embeddings = Parameter(Tensor(np.random.randn(1, num_patches + 1, config.hidden_size), ms.float32), name='position_embeddings')
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.config = config
 
@@ -229,7 +229,7 @@ class Dinov2Attention(nn.Cell):
 class Dinov2LayerScale(nn.Cell):
     def __init__(self, config) -> None:
         super().__init__()
-        self.lambda1 = Parameter(Tensor(config.layerscale_value * np.ones(config.hidden_size)), name='lambda1')
+        self.lambda1 = Parameter(Tensor(config.layerscale_value * np.ones(config.hidden_size), ms.float32), name='lambda1')
 
     def construct(self, hidden_state: Tensor) -> Tensor:
         return hidden_state * self.lambda1
@@ -311,12 +311,12 @@ class Dinov2Layer(nn.Cell):
     def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
 
-        self.norm1 = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.norm1 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.attention = Dinov2Attention(config)
         self.layer_scale1 = Dinov2LayerScale(config)
         self.drop_path = Dinov2DropPath(config.drop_path_rate) if config.drop_path_rate > 0.0 else nn.Identity()
 
-        self.norm2 = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.norm2 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
         if config.use_swiglu_ffn:
             self.mlp = Dinov2SwiGLUFFN(config)
@@ -403,7 +403,7 @@ class Dinov2Model(nn.Cell):
         self.embeddings = Dinov2Embeddings(config)
         self.encoder = Dinov2Encoder(config)
 
-        self.layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path):
@@ -425,6 +425,44 @@ class Dinov2Model(nn.Cell):
 
     def get_input_embeddings(self) -> Dinov2PatchEmbeddings:
         return self.embeddings.patch_embeddings
+
+    def get_head_mask(
+        self, head_mask: Optional[Tensor], num_hidden_layers: int, is_attention_chunked: bool = False
+    ) -> Tensor:
+        """
+        Prepare the head mask if needed.
+
+        Args:
+            head_mask (`torch.Tensor` with shape `[num_heads]` or `[num_hidden_layers x num_heads]`, *optional*):
+                The mask indicating if we should keep the heads or not (1.0 for keep, 0.0 for discard).
+            num_hidden_layers (`int`):
+                The number of hidden layers in the model.
+            is_attention_chunked (`bool`, *optional*, defaults to `False`):
+                Whether or not the attentions scores are computed by chunks or not.
+
+        Returns:
+            `torch.Tensor` with shape `[num_hidden_layers x batch x num_heads x seq_length x seq_length]` or list with
+            `[None]` for each layer.
+        """
+        if head_mask is not None:
+            head_mask = self._convert_head_mask_to_5d(head_mask, num_hidden_layers)
+            if is_attention_chunked is True:
+                head_mask = head_mask.unsqueeze(-1)
+        else:
+            head_mask = [None] * num_hidden_layers
+
+        return head_mask
+
+    def _convert_head_mask_to_5d(self, head_mask, num_hidden_layers):
+        """-> [num_hidden_layers x batch x num_heads x seq_length x seq_length]"""
+        if head_mask.dim() == 1:
+            head_mask = head_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+            head_mask = head_mask.expand(num_hidden_layers, -1, -1, -1, -1)
+        elif head_mask.dim() == 2:
+            head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)  # We can specify head_mask for each layer
+        assert head_mask.dim() == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
+        head_mask = head_mask.to(dtype=self.dtype)  # switch to float if need + fp16 compatibility
+        return head_mask
 
     def construct(
         self,

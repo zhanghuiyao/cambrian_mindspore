@@ -17,6 +17,7 @@ from .pos_embed_sincos import *
 from .drop import *
 from .norm import *
 from .typing import *
+from .classifier import *
 
 from .create_act import *
 from .create_norm import *

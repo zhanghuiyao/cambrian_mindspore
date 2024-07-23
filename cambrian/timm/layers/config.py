@@ -1,6 +1,21 @@
 from typing import Any, Optional
 
 
+# Set to True if prefer to have layers with no jit optimization (includes activations)
+_NO_JIT = False
+
+# Set to True if prefer to have activation layers with no jit optimization
+# NOTE not currently used as no difference between no_jit and no_activation jit as only layers obeying
+# the jit flags so far are activations. This will change as more layers are updated and/or added.
+_NO_ACTIVATION_JIT = False
+
+# Set to True if exporting a model with Same padding via ONNX
+_EXPORTABLE = False
+
+# Set to True if wanting to use torch.jit.script on a model
+_SCRIPTABLE = False
+
+
 class set_layer_config:
     """ Layer config context manager that allows setting all layer config flags at once.
     If a flag arg is None, it will not change the current value.

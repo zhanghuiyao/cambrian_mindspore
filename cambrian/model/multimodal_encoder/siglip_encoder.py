@@ -8,18 +8,11 @@ from cambrian.model.multimodal_encoder.clip_encoder import ClipVisionTower
 
 
 def extract_res_interp(model_name):
-    # valid_model_prefixes = {
-    #     "siglip/CLIP-ViT-SO400M-14-384":"hf-hub:timm/ViT-SO400M-14-SigLIP-384",
-    #     "timm/ViT-SO400M-14-SigLIP-384":"hf-hub:timm/ViT-SO400M-14-SigLIP-384",
-    #     "siglip/CLIP-ViT-SO400M-14":"hf-hub:timm/ViT-SO400M-14-SigLIP",
-    #     "timm/ViT-SO400M-14-SigLIP":"hf-hub:timm/ViT-SO400M-14-SigLIP"
-    # }
-
     valid_model_prefixes = {
-        "siglip/CLIP-ViT-SO400M-14-384":"ViT-SO400M-14-SigLIP-384",
-        "timm/ViT-SO400M-14-SigLIP-384":"ViT-SO400M-14-SigLIP-384",
-        "siglip/CLIP-ViT-SO400M-14":"ViT-SO400M-14-SigLIP",
-        "timm/ViT-SO400M-14-SigLIP":"ViT-SO400M-14-SigLIP"
+        "siglip/CLIP-ViT-SO400M-14-384":"timm/ViT-SO400M-14-SigLIP-384",
+        "timm/ViT-SO400M-14-SigLIP-384":"timm/ViT-SO400M-14-SigLIP-384",
+        "siglip/CLIP-ViT-SO400M-14":"timm/ViT-SO400M-14-SigLIP",
+        "timm/ViT-SO400M-14-SigLIP":"timm/ViT-SO400M-14-SigLIP"
     }
 
     res = 384 if '384' in model_name else 224
@@ -47,6 +40,13 @@ class SiglipVisionTower(ClipVisionTower):
         super(ClipVisionTower, self).__init__(vision_tower_name, args, delay_load)
         base_model_name, res, interp = extract_res_interp(vision_tower_name)
         self.vision_tower_name = base_model_name
+
+        # replace model name to local path
+        if self.vision_tower_name == "timm/ViT-SO400M-14-SigLIP-384":
+            replace_local_path = "./cambrian/hf-configs/timm-ViT-SO400M-14-SigLIP-384"
+            print(f"Warning: SiglipVisionTower, replace vision_tower_name to local path")
+            self.vision_tower_name = replace_local_path
+
         self._image_size = res if res is not None else 512
         self._interp_size = interp
         if not self.delay_load:
@@ -68,7 +68,7 @@ class SiglipVisionTower(ClipVisionTower):
         self._patch_size = self.vision_tower.patch_embed.patch_size[0]
         self.image_processor = ProcessorWrapper(processor, height=self._image_size, width=self._image_size)
 
-        self.vision_tower.requires_grad(self.unfreeze_mm_vision_tower)
+        self.vision_tower.requires_grad = self.unfreeze_mm_vision_tower
         self.is_loaded = True
 
     def interpolate(self, image_features):
@@ -95,12 +95,12 @@ class SiglipVisionTower(ClipVisionTower):
             image_features = image_features.permute(0, 2, 3, 1).contiguous()
 
             # Flatten the spatial dimensions (target_h, target_w) into a single dimension
-            image_features = image_features.flatten(1, 2)
+            image_features = image_features.flatten(start_dim=1, end_dim=2)
 
         return image_features
 
     def _forward(self, images, interpolate_token = 576):
-        image_features = self.vision_tower.forward_features(images.to(device=self.device, dtype=self.dtype))
+        image_features = self.vision_tower.forward_features(images.to(dtype=self.dtype))
         interp_features = self.interpolate(image_features)
         if self.unfreeze_mm_vision_tower:
             interp_features = ops.stop_gradient(interp_features)

@@ -76,7 +76,7 @@ class PatchEmbed(nn.Cell):
             x = ops.pad(x, (0, pad_w, 0, pad_h))
         x = self.proj(x)
         if self.flatten:
-            x = x.flatten(2).swapdims(1, 2)  # NCHW -> NLC
+            x = x.flatten(start_dim=2).swapdims(1, 2)  # NCHW -> NLC
         elif self.output_fmt != Format.NCHW:
             x = nchw_to(x, self.output_fmt)
         x = self.norm(x)

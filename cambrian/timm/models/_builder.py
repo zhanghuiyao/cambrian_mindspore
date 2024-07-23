@@ -3,6 +3,8 @@ import dataclasses
 from typing import Optional, Dict, Callable, Any, Tuple
 
 from cambrian.timm.models._pretrained import PretrainedCfg
+from cambrian.timm.models._registry import get_pretrained_cfg
+
 
 _logger = logging.getLogger(__name__)
 
@@ -72,10 +74,11 @@ def resolve_pretrained_cfg(
 
     # fallback to looking up pretrained cfg in model registry by variant identifier
     if not pretrained_cfg:
-        # if pretrained_tag:
-        #     model_with_tag = '.'.join([variant, pretrained_tag])
-        # pretrained_cfg = get_pretrained_cfg(model_with_tag)
-        raise NotImplementedError
+        # fallback to looking up pretrained cfg in model registry by variant identifier
+        if not pretrained_cfg:
+            if pretrained_tag:
+                model_with_tag = '.'.join([variant, pretrained_tag])
+            pretrained_cfg = get_pretrained_cfg(model_with_tag)
 
     if not pretrained_cfg:
         _logger.warning(

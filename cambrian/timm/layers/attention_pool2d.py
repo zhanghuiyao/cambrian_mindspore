@@ -100,7 +100,7 @@ class AttentionPool2d(nn.Cell):
         self.scale = self.head_dim ** -0.5
 
         spatial_dim = self.feat_size[0] * self.feat_size[1]
-        self.pos_embed = Parameter(Tensor(np.zeros((spatial_dim + 1, in_features))), name="pos_embed")
+        self.pos_embed = Parameter(Tensor(np.zeros((spatial_dim + 1, in_features)), ms.float32), name="pos_embed")
 
         # TODO: weight init
         # trunc_normal_(self.pos_embed, std=in_features ** -0.5)

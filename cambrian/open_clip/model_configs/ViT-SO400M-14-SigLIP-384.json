@@ -22,7 +22,7 @@
         "no_causal_mask": true,
         "proj_bias": true,
         "pool_type": "last",
-        "norm_kwargs":{
+        "norm_kwargs": {
             "eps": 1e-6
         }
     }

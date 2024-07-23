@@ -8,8 +8,8 @@ from cambrian.model.multimodal_encoder.base_encoder import BaseVisionTower, Proc
 
 def extract_res_interp(model_name):
     valid_model_prefixes = {
-        "clip-convnext-L":"hf-hub:laion/CLIP-convnext_large_d_320.laion2B-s29B-b131K-ft-soup",
-        "clip-convnext-XXL":"hf-hub:laion/CLIP-convnext_xxlarge-laion2B-s34B-b82K-augreg-soup"
+        "clip-convnext-L":"laion/CLIP-convnext_large_d_320.laion2B-s29B-b131K-ft-soup",
+        "clip-convnext-XXL":"laion/CLIP-convnext_xxlarge-laion2B-s34B-b82K-augreg-soup"
     }
 
     res = None
@@ -47,6 +47,13 @@ class CLIPConvNextTower(BaseVisionTower):
         self.is_multi_stage = "multi-stage" in vision_tower
         base_model_name, res, interp = extract_res_interp(vision_tower)
         self.vision_tower_name = base_model_name
+
+        # replace model name to local path
+        if self.vision_tower_name == "laion/CLIP-convnext_xxlarge-laion2B-s34B-b82K-augreg-soup":
+            replace_local_path = "./cambrian/hf-configs/laion-CLIP-convnext_xxlarge-laion2B-s34B-b82K-augreg-soup"
+            print(f"Warning: CLIPConvNextTower, replace vision_tower_name to local path")
+            self.vision_tower_name = replace_local_path
+
         self._image_size = res if res is not None else 1024
         self._interp_size = interp  # default 256
         self._reduction = 32
@@ -90,7 +97,7 @@ class CLIPConvNextTower(BaseVisionTower):
             self._hidden_size = sum([stage['num_chs'] for stage in feature_info])
         else:
             self._hidden_size = feature_info[-1]['num_chs']
-        self.vision_tower.requires_grad(self.unfreeze_mm_vision_tower)
+        self.vision_tower.requires_grad = self.unfreeze_mm_vision_tower
         self.is_loaded = True
 
     def interpolate(self, image_forward_outs):
@@ -112,7 +119,7 @@ class CLIPConvNextTower(BaseVisionTower):
             mode='bilinear',
             align_corners=False
         ).to(dtype=image_forward_outs.dtype)
-        image_features = image_features.flatten(2, 3).permute(0, 2, 1).contiguous()
+        image_features = image_features.flatten(start_dim=2, end_dim=3).permute(0, 2, 1).contiguous()
         return image_features
 
     def _forward(self, images):
@@ -126,7 +133,7 @@ class CLIPConvNextTower(BaseVisionTower):
             torch.Tensor: The output features from the vision tower after interpolation.
         """
         image_features_stages = []
-        x = self.vision_tower.stem(images.to(device=self.device, dtype=self.dtype))
+        x = self.vision_tower.stem(images.to(dtype=self.dtype))
         for stage in self.vision_tower.stages:
             x = stage(x)
             image_features_stages.append(x)

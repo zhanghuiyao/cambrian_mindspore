@@ -1,9 +1,10 @@
 import mindspore as ms
 from mindspore import nn, ops, Tensor, Parameter
-
 from ezcolorlog import root_logger as logger
 
-from transformers import Dinov2Model, AutoImageProcessor, Dinov2Config
+from transformers import AutoImageProcessor
+
+from cambrian.transformers.models.dinov2 import Dinov2Model, Dinov2Config
 
 from .base_encoder import BaseVisionTower
 
@@ -64,9 +65,17 @@ class DinoVisionTower(BaseVisionTower):
         #         self.vision_tower_name = parts[0]
         #     else:
         #         self._image_size = None  # default is 518px
+
         base_model_name, res, interp = extract_res_interp(self.vision_tower_name)
-        self._vision_tower_name = vision_tower
+        # self._vision_tower_name = vision_tower
         self.vision_tower_name = base_model_name
+
+        # replace model name to local path
+        if self.vision_tower_name == "facebook/dinov2-giant":
+            replace_local_path = "./cambrian/hf-configs/facebook-dinov2-giant"
+            logger.warning(f"DinoVisionTower, replace vision_tower_name to local path")
+            self.vision_tower_name = replace_local_path
+
         self._image_size = res
         self._interp_size = interp
         self._patch_size = 14  # default patch size
@@ -105,7 +114,7 @@ class DinoVisionTower(BaseVisionTower):
 
         #print(self._hidden_size, self._patch_size)
 
-        self.vision_tower.requires_grad_(self.unfreeze_mm_vision_tower)
+        self.vision_tower.requires_grad = self.unfreeze_mm_vision_tower
         self.is_loaded = True
 
     @property
@@ -113,7 +122,8 @@ class DinoVisionTower(BaseVisionTower):
         return self._image_size
 
     def feature_select(self, outputs):
-        sequence_output = outputs["last_hidden_state"]  # batch_size, sequence_length, hidden_size
+        last_hidden_state, _, _, _ = outputs
+        sequence_output = last_hidden_state  # batch_size, sequence_length, hidden_size
 
         if self.select_feature == 'cls_patch':
             image_features = sequence_output
@@ -149,13 +159,13 @@ class DinoVisionTower(BaseVisionTower):
             image_features = image_features.permute(0, 2, 3, 1).contiguous()
 
             # Flatten the spatial dimensions (target_h, target_w) into a single dimension
-            image_features = image_features.flatten(1, 2)
+            image_features = image_features.flatten(start_dim=1, end_dim=2)
 
         return image_features
 
     def _forward(self, images):
         # logger.warning(f"images shape: {images.shape}")
-        image_forward_outs = self.vision_tower.forward(images.to(dtype=self.dtype))
+        image_forward_outs = self.vision_tower(images.to(dtype=self.dtype))
         # logger.warning(f"image_forward_outs shape: {image_forward_outs['last_hidden_state'].shape}")
         image_features = self.feature_select(image_forward_outs).to(images.dtype)
         # logger.warning(f"image_features shape: {image_features.shape}")

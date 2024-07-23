@@ -27,6 +27,13 @@ class ClipVisionTower(BaseVisionTower):
         super(ClipVisionTower, self).__init__(vision_tower_name, args, delay_load)
         base_model_name, interp = extract_interp(vision_tower_name)
         self.vision_tower_name = base_model_name
+
+        # replace model name to local path
+        if self.vision_tower_name == "openai/clip-vit-large-patch14-336":
+            replace_local_path = "./cambrian/hf-configs/openai-clip-vit-large-patch14-336"
+            logger.warning(f"ClipVisionTower, replace vision_tower_name to local path")
+            self.vision_tower_name = replace_local_path
+
         self._interp_size = interp 
         if not self.delay_load:
             self.load_model()
@@ -43,9 +50,7 @@ class ClipVisionTower(BaseVisionTower):
         self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
         self.vision_tower = CLIPVisionModel.from_pretrained(self.vision_tower_name)
 
-        # TODO: load weight
-
-        self.vision_tower.set_grad(requires_grad=self.unfreeze_mm_vision_tower)
+        self.vision_tower.requires_grad = self.unfreeze_mm_vision_tower
         self.is_loaded = True
 
     def _feature_select(self, image_features):
@@ -58,7 +63,8 @@ class ClipVisionTower(BaseVisionTower):
         return features
 
     def feature_select(self, image_forward_outs):
-        image_features = image_forward_outs.hidden_states[self.select_layer]
+        _, _, hidden_states, _ = image_forward_outs
+        image_features = hidden_states[self.select_layer]
         return self._feature_select(image_features)
 
     def interpolate(self, image_features):

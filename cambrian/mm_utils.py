@@ -22,7 +22,9 @@ def process_images(images, image_processor, model_cfg):
             if hasattr(processor_aux, 'image_mean'):
                 target_resolution = processor_aux.crop_size['height']
                 image_aux = expand2square(image_aux, tuple(int(x*255) for x in processor_aux.image_mean)).resize((target_resolution, target_resolution))
-            image_aux = processor_aux.preprocess(image_aux, return_tensors='pt')['pixel_values'][0]
+
+            image_aux = processor_aux.preprocess(image_aux)['pixel_values'][0]
+
             image_aux_list.append(image_aux)
         new_images_aux_list.append(image_aux_list)
     new_images_aux_list = [list(batch_image_aux) for batch_image_aux in zip(*new_images_aux_list)]
