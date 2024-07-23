@@ -9,7 +9,7 @@ from transformers import LlamaConfig, logging
 
 from cambrian.transformers.activations import ACT2FN
 from cambrian.transformers.cache_utils import Cache, StaticCache, DynamicCache
-from cambrian.transformers.generation.utils import GenerationMixin
+from cambrian.transformers.modeling_utils import PreTrainedModel
 
 
 logger = logging.get_logger(__name__)
@@ -401,7 +401,7 @@ class LlamaDecoderLayer(nn.Cell):
         return outputs
 
 
-class LlamaModel(nn.Cell, GenerationMixin):
+class LlamaModel(nn.Cell, PreTrainedModel):
     """
     Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`LlamaDecoderLayer`]
 
@@ -609,7 +609,7 @@ class LlamaModel(nn.Cell, GenerationMixin):
         return causal_mask
 
 
-class LlamaForCausalLM(nn.Cell, GenerationMixin):
+class LlamaForCausalLM(nn.Cell, PreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):

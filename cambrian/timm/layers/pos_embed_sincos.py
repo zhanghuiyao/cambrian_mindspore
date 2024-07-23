@@ -62,7 +62,7 @@ def build_fourier_pos_embed(
         include_grid: bool = False,
         in_pixels: bool = True,
         ref_feat_shape: Optional[List[int]] = None,
-        dtype: ms.dtype = ms.float32,
+        dtype = ms.float32,
 ):
     """
 
@@ -131,7 +131,7 @@ def build_rotary_pos_embed(
         linear_bands: bool = False,
         in_pixels: bool = True,
         ref_feat_shape: Optional[List[int]] = None,
-        dtype: ms.dtype = ms.float32,
+        dtype = ms.float32,
 ):
     """
 

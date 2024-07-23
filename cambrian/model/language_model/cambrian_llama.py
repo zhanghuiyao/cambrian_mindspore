@@ -6,7 +6,6 @@ from mindspore import nn, ops, Tensor, Parameter
 
 from transformers.utils import logging
 
-from cambrian.transformers.modeling_utils import PreTrainedModel
 from cambrian.transformers.models.llama import LlamaConfig, LlamaModel, LlamaForCausalLM
 from cambrian.transformers.cache_utils import Cache, DynamicCache, StaticCache
 from cambrian.transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
@@ -27,7 +26,7 @@ class CambrianConfig(LlamaConfig):
     debug = "debug"
 
 
-class CambrianLlamaModel(CambrianMetaModel, LlamaModel, PreTrainedModel):
+class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
     config_class = CambrianConfig
 
     def __init__(self, config):
@@ -227,7 +226,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel, PreTrainedModel):
         return _last_hidden_state, _past_key_values, _hidden_states, _attentions
 
 
-class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM, PreTrainedModel):
+class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
     config_class = CambrianConfig
 
     def __init__(self, config):

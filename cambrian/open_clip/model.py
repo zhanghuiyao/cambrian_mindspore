@@ -73,7 +73,7 @@ def _build_vision_tower(
         embed_dim: int,
         vision_cfg: CLIPVisionCfg,
         quick_gelu: bool = False,
-        cast_dtype: Optional[ms.dtype] = None
+        cast_dtype = None
 ):
     if isinstance(vision_cfg, dict):
         vision_cfg = CLIPVisionCfg(**vision_cfg)
@@ -115,7 +115,7 @@ class CLIP(nn.Cell):
             quick_gelu: bool = False,
             init_logit_scale: float = np.log(1 / 0.07),
             init_logit_bias: Optional[float] = None,
-            cast_dtype: Optional[ms.dtype] = None,
+            cast_dtype = None,
             output_dict: bool = False,
     ):
         super().__init__()

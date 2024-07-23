@@ -45,7 +45,7 @@ class AttentionMaskConverter:
         batch_size: int,
         query_length: int,
         key_value_length: int,
-        dtype: ms.dtype,
+        dtype,
         is_causal: bool = True,
         sliding_window: Optional[int] = None
     ) -> Optional[Tensor]:
@@ -77,7 +77,7 @@ class AttentionMaskConverter:
         self,
         attention_mask_2d: Tensor,
         query_length: int,
-        dtype: ms.dtype,
+        dtype,
         key_value_length: Optional[int] = None,
         is_causal: bool = True,
         sliding_window: Optional[int] = None
@@ -122,7 +122,7 @@ class AttentionMaskConverter:
     @staticmethod
     def _make_causal_mask(
         input_ids_shape: Tuple,
-        dtype: ms.dtype,
+        dtype,
         past_key_values_length: int = 0,
         sliding_window: Optional[int] = None,
     ):
@@ -149,7 +149,7 @@ class AttentionMaskConverter:
         return mask[None, None, :, :].broadcast_to((bsz, 1, tgt_len, tgt_len + past_key_values_length))
 
     @staticmethod
-    def _expand_mask(mask: Tensor, dtype: ms.dtype, tgt_len: Optional[int] = None):
+    def _expand_mask(mask: Tensor, dtype, tgt_len: Optional[int] = None):
         """
         Expands attention_mask from `[bsz, seq_len]` to `[bsz, 1, tgt_seq_len, src_seq_len]`.
         """
