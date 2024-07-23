@@ -13,7 +13,7 @@ from cambrian.model.vision_sampler import VisionTokenSampler
 from cambrian.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 
 
-class CambrianMetaModel:
+class CambrianMetaModel(nn.Cell):
 
     def __init__(self, config):
         super(CambrianMetaModel, self).__init__(config)
@@ -28,7 +28,8 @@ class CambrianMetaModel:
                 query_num_list = config.query_num_list
                 connector_only = config.connector_only
                 connector_depth = config.connector_depth
-                self.vision_tower_aux_list = build_vision_tower_aux_list(config, delay_load=True)
+                vision_tower_aux_list = build_vision_tower_aux_list(config, delay_load=True)
+                self.vision_tower_aux_list = nn.CellList(vision_tower_aux_list)
                 self.mm_projector = nn.SequentialCell([
                     nn.Dense(vision_hidden_size * num_query_group, config.hidden_size),
                     nn.GELU(),
