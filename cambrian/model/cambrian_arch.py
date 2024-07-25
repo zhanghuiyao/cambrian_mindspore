@@ -680,7 +680,7 @@ class CambrianMetaForCausalLM:
                     _index_table > (_im_positions + _im_token_len - 1), _index_table - _im_token_len, gather_index)
                 cur_input_ids = ops.gather(cur_input_ids, gather_index, axis=0)
                 cur_labels = ops.gather(labels[batch_idx], gather_index, axis=0)
-                cur_attention_mask = ops.gather(cur_attention_mask, gather_index, axis=0)
+                cur_attention_mask = ops.gather(cur_attention_mask.to(ms.int32), gather_index, axis=0).to(ms.bool_)
 
                 # zhy_test
                 cur_input_embeds = self.embed_tokens(cur_input_ids)
