@@ -17,7 +17,7 @@ class StoppingCriteriaList(list):
     def __call__(self, input_ids: Tensor, scores: Tensor, **kwargs) -> Tensor:
         is_done = ops.full((input_ids.shape[0],), False, dtype=ms.bool_)
         for criteria in self:
-            is_done = is_done | criteria(input_ids, scores, **kwargs)
+            is_done = ops.logical_or(is_done, criteria(input_ids, scores, **kwargs))
         return is_done
 
     @property
