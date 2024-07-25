@@ -60,7 +60,6 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         )
         return cls(config)
 
-    @ms.jit
     def construct(
         self,
         input_ids: Tensor = None,
@@ -239,6 +238,9 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
         self.embed_tokens = self.get_model().embed_tokens
 
+        # for inference
+        self.vision_tower_aux_feature_list = None
+
         # TODO: Initialize weights and apply final processing
         # self.post_init()
 
@@ -297,6 +299,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
     def get_model(self):
         return self.model
 
+    @ms.jit
     def construct(
             self,
             input_ids: Tensor = None,
@@ -366,8 +369,15 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
         # inference
         else:
-            if hasattr(self, "vision_tower_aux_feature_list"):
+            if self.vision_tower_aux_feature_list is not None:
                 # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
+
+                if inputs_embeds is not None:
+                    vision_tower_aux_feature_list = self.vision_tower_aux_feature_list
+                    vision_tower_aux_attention_masks_list = self.vision_tower_aux_attention_masks_list
+                    final_vision_feature_size = self.final_vision_feature_size
+                    global_context_feature = self.global_context_feature
+
                 outputs = self.model(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
@@ -378,10 +388,10 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                     output_attentions=output_attentions,
                     output_hidden_states=output_hidden_states,
                     return_dict=return_dict,
-                    vision_tower_aux_feature_list=vision_tower_aux_feature_list if inputs_embeds is None else self.vision_tower_aux_feature_list,
-                    vision_tower_aux_attention_masks_list=vision_tower_aux_attention_masks_list if inputs_embeds is None else self.vision_tower_aux_attention_masks_list,
-                    final_vision_feature_size=final_vision_feature_size if inputs_embeds is None else self.final_vision_feature_size,
-                    global_context_feature=global_context_feature if inputs_embeds is None else self.global_context_feature,
+                    vision_tower_aux_feature_list=vision_tower_aux_feature_list,
+                    vision_tower_aux_attention_masks_list=vision_tower_aux_attention_masks_list,
+                    final_vision_feature_size=final_vision_feature_size,
+                    global_context_feature=global_context_feature,
                 )
             else:
                 outputs = self.model(
