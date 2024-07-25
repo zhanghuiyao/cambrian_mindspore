@@ -13,7 +13,7 @@ from cambrian.model.vision_sampler import VisionTokenSampler
 from cambrian.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 
 
-class CambrianMetaModel:
+class CambrianMetaModel(nn.Cell):
 
     def __init__(self, config):
         super(CambrianMetaModel, self).__init__(config)
@@ -354,7 +354,7 @@ def unpad_image(tensor, original_size):
     return unpadded_tensor
 
 
-class CambrianMetaForCausalLM:
+class CambrianMetaForCausalLM(nn.Cell):
 
     @abstractmethod
     def get_model(self):
