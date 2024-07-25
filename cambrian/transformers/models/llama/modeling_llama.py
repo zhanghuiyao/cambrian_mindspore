@@ -806,7 +806,7 @@ class LlamaForCausalLM(PreTrainedModel):
         masked_input_ids = []
         for i in range(len(input_ids)):
             cur_input_ids, cur_attention_mask = input_ids[i], attention_mask[i]
-            active_len = cur_attention_mask.sum()
+            active_len = int(cur_attention_mask.sum())
             assert cur_attention_mask[:active_len].sum() == cur_attention_mask.sum()
             masked_input_ids.append(cur_input_ids[:active_len])
         input_ids = masked_input_ids
