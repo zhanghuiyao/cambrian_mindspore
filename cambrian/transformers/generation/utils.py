@@ -774,6 +774,13 @@ class GenerationMixin:
         ):
             model_kwargs["cache_position"] = model_kwargs["cache_position"][-1:] + num_new_tokens
 
+        if (
+            model_kwargs.get("use_cache", True)
+            and "past_key_values" in model_kwargs
+            and model_kwargs["past_key_values"] is not None
+        ):
+            model_kwargs["past_key_values"] = outputs.past_key_values
+
         return model_kwargs
 
     def _get_logits_processor(
@@ -1397,14 +1404,11 @@ class GenerationMixin:
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
-            use_cache = model_inputs.pop("use_cache")
-            past_key_values = model_inputs.pop("past_key_values")
+            use_cache = model_inputs.get("use_cache", False)
 
             # forward pass to get next token
             outputs = self(
                 **model_inputs,
-                use_cache=use_cache,
-                past_key_values=past_key_values
             )
 
             print(f"======> zhy_test, step: {step}, sample outputs shape: {[o.shape for o in outputs if o is not None]}")
