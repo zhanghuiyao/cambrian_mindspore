@@ -60,7 +60,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         )
         return cls(config)
 
-    # @ms.jit
+    @ms.jit
     def construct(
         self,
         input_ids: Tensor = None,

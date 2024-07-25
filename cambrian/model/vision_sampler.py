@@ -278,7 +278,7 @@ class VisionCrossAttentionLayer(nn.Cell):
         if attention_mask_list is not None:
             for attention_mask in attention_mask_list:
                 attention_mask = attention_mask.view(attention_mask.shape[0], 1, 1, -1)
-                attention_mask = attention_mask.broadcast_to((-1, -1, queries.shape[1], -1))
+                attention_mask = attention_mask.to(ms.int32).broadcast_to((-1, -1, queries.shape[1], -1)).to(attention_mask.dtype)
                 attention_mask_list_reshaped.append(attention_mask)
 
         vision_latents_pos_list = []
