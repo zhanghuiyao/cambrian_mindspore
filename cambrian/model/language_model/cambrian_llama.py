@@ -60,7 +60,6 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         )
         return cls(config)
 
-    @ms.jit
     def embedding_tokens(self, tokens):
         return self.embed_tokens(tokens)
 

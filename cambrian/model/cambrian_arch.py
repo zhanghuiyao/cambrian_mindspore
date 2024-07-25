@@ -441,6 +441,7 @@ class CambrianMetaForCausalLM:
             image_aux_features_list += (image_aux_features,)
         return image_aux_features_list
 
+    @ms.jit
     def prepare_inputs_labels_for_multimodal(
         self, input_ids, position_ids, attention_mask, past_key_values, labels,
         images, image_aux_attention_masks_list=None, image_sizes=None
