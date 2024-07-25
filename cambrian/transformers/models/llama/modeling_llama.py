@@ -829,10 +829,10 @@ class LlamaForCausalLM(PreTrainedModel):
             else:
                 raise ValueError
 
-        new_input_ids = padded_input_ids
-        new_labels = None if _labels is None else padded_labels
-        new_position_ids = None if _position_ids is None else padded_position_ids
-        new_attention_mask = None if _attention_mask is None else padded_attention_mask
+        new_input_ids = Tensor(padded_input_ids)
+        new_labels = None if _labels is None else Tensor(padded_labels)
+        new_position_ids = None if _position_ids is None else Tensor(padded_position_ids)
+        new_attention_mask = None if _attention_mask is None else Tensor(padded_attention_mask)
 
         return new_input_ids, new_labels, new_position_ids, new_attention_mask, input_ids_mask
 
