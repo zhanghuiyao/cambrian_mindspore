@@ -763,8 +763,6 @@ class GenerationMixin:
             model_kwargs["past_key_values"] = outputs.past_key_values
 
         if not is_encoder_decoder and not use_cache and model_kwargs.get("inputs_embeds", None) is not None:
-            assert next_tokens is not None
-
             inputs_embeds = model_kwargs["inputs_embeds"]
             position_ids = model_kwargs["position_ids"]
             attention_mask = model_kwargs["attention_mask"]
@@ -781,7 +779,9 @@ class GenerationMixin:
             if "labels" in model_kwargs:
                 raise NotImplementedError
 
-            next_token_embedding = self.embed_tokens(next_tokens).to(inputs_embeds.dtype)
+            assert next_tokens is not None
+            assert hasattr(self, 'model')
+            next_token_embedding = self.model.embed_tokens(next_tokens).to(inputs_embeds.dtype)
 
             if is_pad:
                 next_token_index = attention_mask.sum(-1)

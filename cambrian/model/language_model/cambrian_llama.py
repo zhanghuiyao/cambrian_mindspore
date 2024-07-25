@@ -236,8 +236,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         self.tokenizer_model_max_length = config.tokenizer_model_max_length
         self.tokenizer_padding_side = config.tokenizer_padding_side
 
-        self.embed_tokens = self.get_model().embed_tokens
-
         # for inference
         self.vision_tower_aux_feature_list = None
 
@@ -479,7 +477,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             self.final_vision_feature_size = final_vision_feature_size
             self.global_context_feature = global_context_feature
         else:
-            inputs_embeds = self.embed_tokens(inputs)
+            inputs_embeds = self.model.embed_tokens(inputs)
 
         return super().generate(
             position_ids=position_ids,
