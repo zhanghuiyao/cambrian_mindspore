@@ -1049,7 +1049,10 @@ class GenerationMixin:
                     and dict_to_expand[key] is not None
                     and isinstance(dict_to_expand[key], Tensor)
                 ):
-                    dict_to_expand[key] = dict_to_expand[key].repeat_interleave(expand_size, dim=0)
+                    if dict_to_expand[key].dtype == ms.bool_:
+                        dict_to_expand[key] = dict_to_expand[key].to(ms.int32).repeat_interleave(expand_size, dim=0).to(ms.bool_)
+                    else:
+                        dict_to_expand[key] = dict_to_expand[key].repeat_interleave(expand_size, dim=0)
             return dict_to_expand
 
         if input_ids is not None:
