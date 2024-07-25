@@ -781,7 +781,7 @@ class GenerationMixin:
 
             assert next_tokens is not None
             assert hasattr(self, 'model')
-            next_token_embedding = self.model.embed_tokens(next_tokens).to(inputs_embeds.dtype)
+            next_token_embedding = self.get_model().embedding_tokens(next_tokens).to(inputs_embeds.dtype)
 
             if is_pad:
                 next_token_index = attention_mask.sum(-1)

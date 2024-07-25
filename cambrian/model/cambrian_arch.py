@@ -13,7 +13,7 @@ from cambrian.model.vision_sampler import VisionTokenSampler
 from cambrian.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 
 
-class CambrianMetaModel(nn.Cell):
+class CambrianMetaModel:
 
     def __init__(self, config):
         super(CambrianMetaModel, self).__init__(config)
@@ -354,7 +354,7 @@ def unpad_image(tensor, original_size):
     return unpadded_tensor
 
 
-class CambrianMetaForCausalLM(nn.Cell):
+class CambrianMetaForCausalLM:
 
     @abstractmethod
     def get_model(self):
@@ -577,7 +577,7 @@ class CambrianMetaForCausalLM(nn.Cell):
 
             # embed the input_ids
             new_input_ids_padded_for_emb = ops.where(input_ids == IMAGE_TOKEN_INDEX, 0, input_ids)
-            input_embeds = self.model.embed_tokens(new_input_ids_padded_for_emb)
+            input_embeds = self.get_model().embedding_tokens(new_input_ids_padded_for_emb)
             new_input_embeds = []
             cur_image_idx = 0
 
@@ -649,7 +649,7 @@ class CambrianMetaForCausalLM(nn.Cell):
 
                 if num_images == 0:
                     # cur_image_features = image_features[batch_idx]
-                    cur_input_embeds = self.model.embed_tokens(cur_input_ids)
+                    cur_input_embeds = self.get_model().embedding_tokens(cur_input_ids)
                     new_input_embed = cur_input_embeds
                     new_label = labels[batch_idx]
                     new_position_id = ops.arange(0, cur_input_ids.shape[0], 1, dtype=cur_input_ids.dtype)
@@ -681,7 +681,7 @@ class CambrianMetaForCausalLM(nn.Cell):
                 cur_attention_mask = ops.gather(cur_attention_mask.to(ms.int32), gather_index, axis=0).to(ms.bool_)
 
                 # zhy_test
-                cur_input_embeds = self.model.embed_tokens(cur_input_ids)
+                cur_input_embeds = self.get_model().embedding_tokens(cur_input_ids)
                 # cur_input_embeds = ops.broadcast_to(cur_input_ids[:, None], (-1, 4096)).to(ms.float16)
 
                 # zhy_test

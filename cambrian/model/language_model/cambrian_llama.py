@@ -60,6 +60,9 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         )
         return cls(config)
 
+    def embedding_tokens(self, tokens):
+        return self.embed_tokens(tokens)
+
     def construct(
         self,
         input_ids: Tensor = None,
@@ -477,7 +480,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             self.final_vision_feature_size = final_vision_feature_size
             self.global_context_feature = global_context_feature
         else:
-            inputs_embeds = self.model.embed_tokens(inputs)
+            inputs_embeds = self.get_model().embedding_tokens(inputs)
 
         return super().generate(
             position_ids=position_ids,
