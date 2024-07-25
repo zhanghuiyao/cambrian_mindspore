@@ -680,8 +680,10 @@ class CambrianMetaForCausalLM:
                 cur_input_ids = ops.gather(cur_input_ids, gather_index, axis=0)
                 cur_labels = ops.gather(labels[batch_idx], gather_index, axis=0)
                 neg_cur_input_ids_mask = None
-                if input_ids_mask:
+                if input_ids_mask is not None:
+                    input_ids_mask = input_ids_mask.to(ms.int32)
                     cur_input_ids_mask = ops.gather(input_ids_mask[batch_idx], gather_index, axis=0)
+                    cur_input_ids_mask = cur_input_ids_mask.to(ms.bool_)
                     neg_cur_input_ids_mask = not cur_input_ids_mask
 
                 # zhy_test
@@ -695,20 +697,20 @@ class CambrianMetaForCausalLM:
                 cur_input_embeds[_img_indexes] = cur_image_features.to(cur_input_embeds.dtype)
                 new_input_embed = cur_input_embeds
 
-                if input_ids_mask:
+                if input_ids_mask is not None:
                     # new_input_embed *= ops.cast(cur_input_ids_mask[:, None], new_input_embed.dtype)
                     new_input_embed = new_input_embed.masked_fill(neg_cur_input_ids_mask[:, None], 0)
                 new_input_embeds.append(new_input_embed)
 
                 _img_indexes = ops.arange(0, _im_token_len, 1, dtype=ms.int32) + _im_positions
                 new_label = ops.scatter(cur_labels, 0, _img_indexes, ops.full((_im_token_len,), IGNORE_INDEX, dtype=cur_labels.dtype))
-                if input_ids_mask:
+                if input_ids_mask is not None:
                     new_label = new_label.masked_fill(neg_cur_input_ids_mask, IGNORE_INDEX)
                 new_labels.append(new_label)
 
                 new_attention_mask = ops.ones_like(cur_input_ids, dtype=ms.bool_)
                 new_position_id = ops.arange(0, cur_input_ids.shape[0], 1, dtype=ms.int32)
-                if input_ids_mask:
+                if input_ids_mask is not None:
                     # new_attention_mask *= cur_input_ids_mask.to(cur_input_ids.dtype)
                     # new_position_id *= cur_input_ids_mask.to(cur_input_ids.dtype)
                     new_attention_mask = new_attention_mask.masked_fill(neg_cur_input_ids_mask, 0)
