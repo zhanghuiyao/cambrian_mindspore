@@ -12,6 +12,45 @@ logger = logging.get_logger(__name__)
 
 
 class PreTrainedModel(nn.Cell, GenerationMixin):
+    config_class = None
+    base_model_prefix = ""
+    main_input_name = "input_ids"
+    model_tags = None
+
+    _auto_class = None
+    _no_split_modules = None
+    _skip_keys_device_placement = None
+    _keep_in_fp32_modules = None
+
+    # a list of `re` patterns of `state_dict` keys that should be removed from the list of missing
+    # keys we find (keys inside the model but not in the checkpoint) and avoid unnecessary warnings.
+    _keys_to_ignore_on_load_missing = None
+    # a list of `re` patterns of `state_dict` keys that should be removed from the list of
+    # unexpected keys we find (keys inside the checkpoint but not the model) and avoid unnecessary
+    # warnings.
+    _keys_to_ignore_on_load_unexpected = None
+    # a list of `state_dict` keys to ignore when saving the model (useful for keys that aren't
+    # trained, but which are either deterministic or tied variables)
+    _keys_to_ignore_on_save = None
+    # a list of `state_dict` keys that are potentially tied to another key in the state_dict.
+    _tied_weights_keys = None
+
+    is_parallelizable = False
+    supports_gradient_checkpointing = False
+    _is_stateful = False
+
+    # Flash Attention 2 support
+    _supports_flash_attn_2 = False
+
+    # SDPA support
+    _supports_sdpa = False
+
+    # Has support for a `Cache` instance as `past_key_values`? Does it support a `StaticCache`?
+    _supports_cache_class = False
+    _supports_static_cache = False
+
+    # Has support for a `QuantoQuantizedCache` instance as `past_key_values`
+    _supports_quantized_cache = False
 
     def _init_weights(self, module):
         """
@@ -25,14 +64,14 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
     def _resize_token_embeddings(self, new_num_tokens, pad_to_multiple_of=None):
         old_embeddings = self.get_input_embeddings()
         new_embeddings = self._get_resized_embeddings(old_embeddings, new_num_tokens, pad_to_multiple_of)
-        old_embeddings_requires_grad = old_embeddings.weight.requires_grad
+        old_embeddings_requires_grad = old_embeddings.requires_grad
         new_embeddings.requires_grad = old_embeddings_requires_grad
         self.set_input_embeddings(new_embeddings)
         is_quantized = hasattr(self, "hf_quantizer") and self.hf_quantizer is not None
 
         # Update new_num_tokens with the actual size of new_embeddings
         if pad_to_multiple_of is not None:
-            new_num_tokens = new_embeddings.weight.shape[0]
+            new_num_tokens = new_embeddings.embedding_table.shape[0]
 
         # if word embeddings are not tied, make sure that lm head is resized as well
         if self.get_output_embeddings() is not None and not self.config.tie_word_embeddings:
@@ -41,7 +80,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
                 new_lm_head = self._get_resized_embeddings(old_lm_head, new_num_tokens)
             else:
                 new_lm_head = self._get_resized_lm_head(old_lm_head, new_num_tokens)
-            new_lm_head.requires_grad = old_lm_head.weight.requires_grad
+            new_lm_head.requires_grad = old_lm_head.requires_grad
             self.set_output_embeddings(new_lm_head)
 
         return self.get_input_embeddings()
@@ -77,10 +116,11 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
 
         # Update base model and current model config
         if hasattr(self.config, "text_config"):
-            self.config.text_config.vocab_size = model_embeds.weight.shape[0]
+            self.config.text_config.vocab_size = model_embeds.embedding_table.shape[0]
         # TODO: to be removed after v4.42, config.vocab_size is deprecated for models that have a config.text_config
-        self.config.vocab_size = model_embeds.weight.shape[0]
-        self.vocab_size = model_embeds.weight.shape[0]
+
+        self.config.vocab_size = model_embeds.embedding_table.shape[0]
+        self.vocab_size = model_embeds.embedding_table.shape[0]
 
         # Tie weights again if needed
         self.tie_weights()
@@ -100,7 +140,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
         if getattr(self.config, "is_encoder_decoder", False) and getattr(self.config, "tie_encoder_decoder", False):
             raise NotImplementedError
 
-        for module in self.modules():
+        for name, module in self.cells_and_names():
             if hasattr(module, "_tie_weights"):
                 module._tie_weights()
 
@@ -144,7 +184,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
                     f"Asking to pad the embedding matrix to a multiple of `{pad_to_multiple_of}`, which is not and integer. Please make sure to pass an integer"
                 )
             if new_num_tokens is None:
-                new_num_tokens = old_embeddings.weight.shape[0]
+                new_num_tokens = old_embeddings.embedding_table.shape[0]
             new_num_tokens = ((new_num_tokens + pad_to_multiple_of - 1) // pad_to_multiple_of) * pad_to_multiple_of
         else:
             logger.info(
@@ -158,7 +198,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
             return old_embeddings
 
         is_quantized = hasattr(self, "hf_quantizer") and self.hf_quantizer is not None
-        old_num_tokens, old_embedding_dim = old_embeddings.weight.size()
+        old_num_tokens, old_embedding_dim = old_embeddings.embedding_table.shape
 
         if old_num_tokens == new_num_tokens:
             return old_embeddings
@@ -179,7 +219,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
         new_embeddings = nn.Embedding(
             new_num_tokens,
             old_embedding_dim,
-            dtype=old_embeddings.weight.dtype,
+            dtype=old_embeddings.embedding_table.dtype,
         )
 
         # initialize all new embeddings (in particular added tokens)
@@ -248,7 +288,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
                 Increasing the size will add newly initialized vectors at the end. Reducing the size will remove
                 vectors from the end. If not provided or `None`, just returns a pointer to the input tokens
                 `torch.nn.Linear` module of the model without doing anything. transposed (`bool`, *optional*, defaults
-                to `False`): Whether `old_lm_head` is transposed or not. If True `old_lm_head.size()` is `lm_head_dim,
+                to `False`): Whether `old_lm_head` is transposed or not. If True `old_lm_head.shape` is `lm_head_dim,
                 vocab_size` else `vocab_size, lm_head_dim`.
 
         Return:
@@ -260,7 +300,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
 
         is_quantized = hasattr(self, "hf_quantizer") and self.hf_quantizer is not None
         old_num_tokens, old_lm_head_dim = (
-            old_lm_head.weight.size() if not transposed else old_lm_head.weight.t().size()
+            old_lm_head.weight.shape if not transposed else old_lm_head.weight.t().shape()
         )
 
         if old_num_tokens == new_num_tokens:
@@ -319,3 +359,17 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
             new_bias_np[:num_tokens_to_copy] = old_bias_np[:num_tokens_to_copy]
 
             new_lm_head.bias.set_data(Tensor(new_bias_np))
+
+    @classmethod
+    def can_generate(cls) -> bool:
+        """
+        Returns whether this model can generate sequences with `.generate()`.
+
+        Returns:
+            `bool`: Whether this model can generate sequences with `.generate()`.
+        """
+        # Detects whether `prepare_inputs_for_generation` has been overwritten, which is a requirement for generation.
+        # Alternativelly, the model can also have a custom `generate` function.
+        if "GenerationMixin" in str(cls.prepare_inputs_for_generation) and "GenerationMixin" in str(cls.generate):
+            return False
+        return True

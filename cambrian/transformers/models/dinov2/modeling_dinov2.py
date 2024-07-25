@@ -78,7 +78,7 @@ class Dinov2Embeddings(nn.Cell):
             )
 
         # add the [CLS] token to the embedded patch tokens
-        cls_tokens = self.cls_token.broadcast_to((batch_size, -1, -1))
+        cls_tokens = self.cls_token.broadcast_to((batch_size, -1, -1)).to(embeddings.dtype)
 
         embeddings = ops.cat((cls_tokens, embeddings), axis=1)
 

@@ -9,7 +9,12 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dtype=None):
         query, key, value = query.astype(dtype), key.astype(dtype), value.astype(dtype)
 
     if attn_mask is not None:
-        attn_mask = attn_mask.masked_fill(not attn_mask, -1e5) if attn_mask.dtype == ms.bool_ else attn_mask
+
+        if attn_mask.dtype == ms.bool_:
+            attn_mask = attn_mask.to(ms.float32)
+            attn_mask = attn_mask.masked_fill((1 - attn_mask).to(ms.bool_), -1e5)
+        attn_mask = attn_mask.to(query.dtype)
+
         attn_weight = ops.softmax(
             ops.cast(ops.matmul(query, key.swapaxes(-2, -1)) / (query.shape[-1] ** 0.5) + attn_mask, ms.float32),
             axis=-1,

@@ -26,10 +26,17 @@ from ezcolorlog import root_logger as logger
 
 def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=False, **kwargs):
 
-    kwargs['torch_dtype'] = ms.float16
-
     if use_flash_attn:
         kwargs['attn_implementation'] = 'flash_attention'
+
+    load_8bit = kwargs.pop("load_8bit", False)
+    load_4bit = kwargs.pop("load_8bit", False)
+    if load_8bit:
+        raise NotImplementedError
+    elif load_4bit:
+        raise NotImplementedError
+    else:
+        kwargs['mindspore_dtype'] = ms.float16
 
     if 'cambrian' in model_name.lower():
         # Load Cambrian model
@@ -71,11 +78,7 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
             else:
                 logger.info(f'Loading Cambrian from {model_path}')
                 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
-                model = CambrianLlamaForCausalLM.from_pretrained(
-                    model_path,
-                    low_cpu_mem_usage=True,
-                    **kwargs
-                )
+                model = CambrianLlamaForCausalLM.from_pretrained(model_path, **kwargs)
     else:
         raise NotImplementedError
 
@@ -96,7 +99,8 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
         for vision_tower_aux in vision_tower_aux_list:
             if not vision_tower_aux.is_loaded:
                 vision_tower_aux.load_model()
-            vision_tower_aux.to(ms.float16)
+
+            vision_tower_aux.to_float(ms.float16)
 
         image_processor = [vision_tower_aux.image_processor for vision_tower_aux in vision_tower_aux_list]
 

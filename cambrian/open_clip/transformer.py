@@ -150,7 +150,7 @@ class Attention(nn.Cell):
         self.logit_scale_max = logit_scale_max
 
         # keeping in_proj in this form (instead of nn.Dense) to match weight scheme of original
-        self.in_proj_weight = Parameter(Tensor(np.random.randn((dim * 3, dim)) * self.scale, ms.float32), name='in_proj_weight')
+        self.in_proj_weight = Parameter(Tensor(np.random.randn(dim * 3, dim) * self.scale, ms.float32), name='in_proj_weight')
         if qkv_bias:
             self.in_proj_bias = Parameter(Tensor(np.random.zeros(dim * 3), ms.float32), name='in_proj_bias')
         else:

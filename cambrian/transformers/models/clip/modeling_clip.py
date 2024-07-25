@@ -56,13 +56,13 @@ class CLIPAttention(nn.Cell):
         key_states = key_states.view(*proj_shape)
         value_states = value_states.view(*proj_shape)
 
-        src_len = key_states.size(1)
+        src_len = key_states.shape[1]
         attn_weights = ops.BatchMatMul()(query_states, key_states.swapdims(1, 2))
 
         # if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
         #     raise ValueError(
         #         f"Attention weights should be of size {(bsz * self.num_heads, tgt_len, src_len)}, but is"
-        #         f" {attn_weights.size()}"
+        #         f" {attn_weights.shape}"
         #     )
 
         # apply the causal_attention_mask first
@@ -70,7 +70,7 @@ class CLIPAttention(nn.Cell):
             # if causal_attention_mask.shape != (bsz, 1, tgt_len, src_len):
             #     raise ValueError(
             #         f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is"
-            #         f" {causal_attention_mask.size()}"
+            #         f" {causal_attention_mask.shape}"
             #     )
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + causal_attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
@@ -78,7 +78,7 @@ class CLIPAttention(nn.Cell):
         if attention_mask is not None:
             # if attention_mask.shape != (bsz, 1, tgt_len, src_len):
             #     raise ValueError(
-            #         f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.size()}"
+            #         f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.shape}"
             #     )
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
@@ -102,7 +102,7 @@ class CLIPAttention(nn.Cell):
         # if attn_output.shape != (bsz * self.num_heads, tgt_len, self.head_dim):
         #     raise ValueError(
         #         f"`attn_output` should be of size {(bsz, self.num_heads, tgt_len, self.head_dim)}, but is"
-        #         f" {attn_output.size()}"
+        #         f" {attn_output.shape}"
         #     )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
@@ -288,7 +288,7 @@ class CLIPVisionEmbeddings(nn.Cell):
         target_dtype = self.patch_embedding.weight.dtype
         patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
         patch_embeds = ops.flatten(patch_embeds, start_dim=2).swapdims(1, 2)
-        class_embeds = ops.broadcast_to(self.class_embedding, (batch_size, 1, -1))
+        class_embeds = ops.broadcast_to(self.class_embedding, (batch_size, 1, -1)).to(patch_embeds.dtype)
 
         embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
         embeddings = embeddings + self.position_embedding(self.position_ids)

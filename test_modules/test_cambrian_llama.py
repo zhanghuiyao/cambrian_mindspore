@@ -3,11 +3,7 @@ import numpy as np
 from cambrian.model.language_model.cambrian_llama import CambrianLlamaModel, CambrianLlamaForCausalLM
 
 
-def test_CambrianLlamaModel(model_path: str):
-    cambrian_llama = CambrianLlamaModel.from_pretrained(model_path)
-
-
-def test_CambrianLlamaForCausalLM(model_path: str):
+def test_cambrian_llama_causal(model_path: str):
     cambrian_llama_causal = CambrianLlamaForCausalLM.from_pretrained(model_path)
 
 
@@ -27,5 +23,5 @@ def test_generate_wo_image(model_path: str):
 
 if __name__ == '__main__':
     model_path = ""
-    test_CambrianLlamaModel(model_path)
+    test_generate_wo_image(model_path)
     # test_CambrianLlamaForCausalLM(model_path)

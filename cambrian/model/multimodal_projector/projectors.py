@@ -71,7 +71,7 @@ class Projector(nn.Cell):
 
 class ConvProjector(Projector):
     def _forward(self, x):
-        hw = int(x.size(1) ** 0.5)
+        hw = int(x.shape[1] ** 0.5)
 
         # rearrange(x, "b (h w) d -> b d h w", h=hw, w=hw)
         b, _, d = x.shape

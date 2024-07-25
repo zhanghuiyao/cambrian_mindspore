@@ -50,7 +50,7 @@ class CrossAttention(nn.Cell):
         if attention_mask is not None:
             # if attention_mask.shape != (bsz, 1, q_len, v_len):
             #     raise ValueError(
-            #         f"Attention mask should be of size {(bsz, 1, q_len, v_len)}, but is {attention_mask.size()}"
+            #         f"Attention mask should be of size {(bsz, 1, q_len, v_len)}, but is {attention_mask.shape}"
             #     )
             assert attention_mask.shape == (bsz, 1, q_len, v_len)
 
@@ -166,7 +166,7 @@ class MultiKVCrossAttention(nn.Cell):
         vision_latents_list = vision_latents_attention_mask_list[:self.num_of_kvs]
         attention_mask_list = vision_latents_attention_mask_list[self.num_of_kvs:]
 
-        bsz, q_len, _ = queries.size()
+        bsz, q_len, _ = queries.shape
 
         query_states = self.q_proj(queries)
         # key_states = ops.cat(
@@ -192,7 +192,7 @@ class MultiKVCrossAttention(nn.Cell):
         if attention_mask is not None:
             # if attention_mask.shape != (bsz, 1, q_len, v_len):
             #     raise ValueError(
-            #         f"Attention mask should be of size {(bsz, 1, q_len, v_len)}, but is {attention_mask.size()}"
+            #         f"Attention mask should be of size {(bsz, 1, q_len, v_len)}, but is {attention_mask.shape}"
             #     )
             assert attention_mask.shape == (bsz, 1, q_len, v_len)
 
@@ -241,6 +241,10 @@ class VisionCrossAttentionLayer(nn.Cell):
                 #         Parameter(Tensor(np.random.randn(kv_size**2, hidden_dim), ms.float32)))
                 pos_embeds.append(
                     Parameter(Tensor(np.random.randn(kv_size ** 2, hidden_dim), ms.float32), name=f"pos_embed_{i}")
+                )
+            else:
+                pos_embeds.append(
+                    Parameter(Tensor(np.zeros(1), ms.float32), name=f"pos_embed_{i}_ignore", requires_grad=False)
                 )
         self.pos_embeds = ParameterTuple(pos_embeds)
 

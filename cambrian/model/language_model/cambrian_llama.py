@@ -4,6 +4,7 @@ import mindspore as ms
 import numpy as np
 from mindspore import nn, ops, Tensor, Parameter
 
+from transformers import GenerationConfig
 from transformers.utils import logging
 
 from cambrian.transformers.models.llama import LlamaConfig, LlamaModel, LlamaForCausalLM
@@ -30,8 +31,16 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
     config_class = CambrianConfig
 
     def __init__(self, config):
-        super(CambrianLlamaModel, self).__init__(config)
         self.config = config
+        super(CambrianLlamaModel, self).__init__(config)
+
+        _name_list = [
+            'output_attentions', 'output_hidden_states', 'use_cache',
+            "connector_only", "start_of_vision_sampler_layers", "stride_of_vision_sampler_layers",
+            "image_position", "image_token_len", "query_num_list", "mm_projector_type"
+        ]
+        for name in _name_list:
+            setattr(self, name, getattr(config, name))
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path):
@@ -51,6 +60,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         )
         return cls(config)
 
+    @ms.jit
     def construct(
         self,
         input_ids: Tensor = None,
@@ -68,11 +78,14 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         final_vision_feature_size: Optional[List[tuple]] = None,
         global_context_feature: Optional[Tensor] = None,
     ) -> Union[Tuple]:
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_attentions = output_attentions if output_attentions is not None else self.output_attentions
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.output_hidden_states
         )
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
+        use_cache = use_cache if use_cache is not None else self.use_cache
+
+        assert not output_attentions
+        assert not output_hidden_states
 
         # retrieve input_ids and inputs_embeds
         if input_ids is not None and inputs_embeds is not None:
@@ -108,15 +121,8 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
 
         # embed positions
         hidden_states = inputs_embeds
-        # decoder layers
-        all_hidden_states = () if output_hidden_states else None
-        all_self_attns = () if output_attentions else None
-        next_decoder_cache = None
 
         for i, decoder_layer in enumerate(self.layers):
-            if output_hidden_states:
-                all_hidden_states += (hidden_states,)
-
             layer_outputs = decoder_layer(
                 hidden_states,
                 attention_mask=attention_mask,
@@ -126,24 +132,24 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                 use_cache=use_cache,
             )
 
-            hidden_states = layer_outputs[0]
+            hidden_states, _, next_cache = layer_outputs[0]
 
-            if not self.config.connector_only:
+            if not self.connector_only:
 
-                cross_layers_start_idx = self.config.start_of_vision_sampler_layers
-                cross_index_step = self.config.stride_of_vision_sampler_layers
+                cross_layers_start_idx = self.start_of_vision_sampler_layers
+                cross_index_step = self.stride_of_vision_sampler_layers
                 cross_layers_start_idx_list = [
                     cross_layers_start_idx + cross_index * cross_index_step
                     for cross_index in range(len(self.vision_sampler_layers))
                 ]
 
                 if vision_tower_aux_feature_list is not None and i in cross_layers_start_idx_list:
-                    latent_query_start_idx = self.config.image_position
+                    latent_query_start_idx = self.image_position
 
                     if EXPAND_FOR_BATCH:
-                        image_token_len_per_side = int(self.config.image_token_len ** 0.5)
-                        latent_query_newline_num = self.config.image_token_len + image_token_len_per_side
-                        latent_query_num = self.config.image_token_len
+                        image_token_len_per_side = int(self.image_token_len ** 0.5)
+                        latent_query_newline_num = self.image_token_len + image_token_len_per_side
+                        latent_query_num = self.image_token_len
                         latent_query_with_newline = hidden_states[:, latent_query_start_idx:latent_query_start_idx+latent_query_newline_num, :]
                         bs = latent_query_with_newline.shape[0]
                         latent_query_with_newline = latent_query_with_newline.view(bs, image_token_len_per_side, image_token_len_per_side+1, -1)
@@ -204,26 +210,15 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                             hidden_states[batch_i:batch_i+1, latent_query_start_idx:latent_query_start_idx+cur_latent_query_newline_num] = cur_latent_query_with_newline[:, :, :]
 
             if use_cache:
-                _idx = (2 if output_attentions else 1)
-                next_decoder_cache = layer_outputs[_idx]
+                past_key_values[i] = layer_outputs[2]
 
-            if output_attentions:
-                all_self_attns += (layer_outputs[1],)
-
-        hidden_states = self.norm(hidden_states)
-
-        # add hidden states from the last decoder layer
-        if output_hidden_states:
-            all_hidden_states += (hidden_states,)
-
-        next_cache = None
         # if use_cache:
         #     next_cache = next_decoder_cache.to_legacy_cache() if use_legacy_cache else next_decoder_cache
 
-        _last_hidden_state, _past_key_values, _hidden_states, _attentions = \
-            hidden_states, next_cache, all_hidden_states, all_self_attns
+        hidden_states = self.norm(hidden_states)
 
-        return _last_hidden_state, _past_key_values, _hidden_states, _attentions
+        # last_hidden_state, past_key_values, hidden_states, attentions
+        return hidden_states, past_key_values
 
 
 class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
@@ -242,11 +237,13 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         self.tokenizer_model_max_length = config.tokenizer_model_max_length
         self.tokenizer_padding_side = config.tokenizer_padding_side
 
+        self.embed_tokens = self.get_model().embed_tokens
+
         # TODO: Initialize weights and apply final processing
         # self.post_init()
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path):
+    def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
         config, _ = CambrianConfig.from_pretrained(
             pretrained_model_name_or_path,
             cache_dir=None,
@@ -261,7 +258,37 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             _from_auto=False,
             _from_pipeline=None,
         )
-        return cls(config)
+
+        generation_config = GenerationConfig.from_pretrained(
+            pretrained_model_name_or_path,
+            cache_dir=None,
+            force_download=False,
+            resume_download=False,
+            proxies=None,
+            local_files_only=False,
+            token=None,
+            revision="main",
+            subfolder="",
+            _from_auto=False,
+            _from_pipeline=None,
+        )
+
+        # FIXME: support cache
+        if generation_config.use_cache:
+            generation_config.use_cache = False
+            print(f"not support use_cache, `generation_config.use_cache` force to `False`")
+
+        model = cls(config)
+        setattr(model, "generation_config", generation_config)
+        setattr(model, "config", config)
+
+        dtype = kwargs.pop("mindspore_dtype", ms.float32)
+        if dtype == ms.float16:
+            model.to_float(ms.float16)
+        elif dtype == "bfloat16":
+            model.to_float(ms.bfloat16)
+
+        return model
 
     def set_use_cache(self, use_cache: bool):
         self.use_cache = use_cache
@@ -395,73 +422,11 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
         return _loss, _logits, _past_key_values, _hidden_states, _attentions
 
-    def preprocess_input_before_generate(
-            self,
-            input_ids: np.ndarray,
-            labels: np.ndarray = None,
-            position_ids: np.ndarray = None,
-            attention_mask: np.ndarray = None,
-    ):
-
-        # init empty array
-        bs = len(input_ids)
-        padded_input_ids, input_ids_mask = \
-            np.zeros((bs, self.tokenizer_model_max_length), np.int32), \
-            np.zeros((bs, self.tokenizer_model_max_length), np.bool)
-        padded_labels = np.full((bs, self.tokenizer_model_max_length), IGNORE_INDEX, np.int32)
-        padded_position_ids = np.zeros((bs, self.tokenizer_model_max_length), np.int32)
-        padded_attention_mask = np.zeros((bs, self.tokenizer_model_max_length), np.bool)
-
-        _labels = labels
-        _position_ids = position_ids
-        _attention_mask = attention_mask
-        if attention_mask is None:
-            attention_mask = np.ones_like(input_ids, dtype=ms.bool_)
-        else:
-            attention_mask = attention_mask.astype(np.bool)
-        if position_ids is None:
-            position_ids = np.arange(0, input_ids.shape[1], dtype=np.int32)
-        if labels is None:
-            labels = np.full_like(input_ids, IGNORE_INDEX)
-
-        input_ids = [cur_input_ids[cur_attention_mask] for cur_input_ids, cur_attention_mask in
-                     zip(input_ids, attention_mask)]
-        labels = [cur_labels[cur_attention_mask] for cur_labels, cur_attention_mask in zip(labels, attention_mask)]
-
-        for batch_idx, cur_input_ids in enumerate(input_ids):
-
-            cur_len = cur_input_ids.shape[1]
-
-            if self.tokenizer_padding_side == "right":
-                padded_input_ids[batch_idx, :cur_len] = cur_input_ids[:, :]
-                input_ids_mask[batch_idx, :cur_len] = 1
-
-                padded_labels[batch_idx, :cur_len] = labels[batch_idx, :]
-                padded_attention_mask[batch_idx, :cur_len] = attention_mask[:batch_idx, :]
-                padded_position_ids[batch_idx, :cur_len] = np.arange(0, cur_len, dtype=position_ids.dtype)
-            elif self.tokenizer_padding_side == "left":
-                # padded_input_ids[batch_idx, -cur_len:] = cur_input_ids[:]
-                # input_ids_mask[batch_idx, -cur_len:] = True
-                #
-                # padded_labels[batch_idx, -cur_len:] = labels[batch_idx, :]
-                # padded_attention_mask[batch_idx, -cur_len:] = attention_mask[:batch_idx, :]
-                # padded_position_ids[batch_idx, -cur_len:] = np.arange(0, cur_len, dtype=position_ids.dtype)
-                raise ValueError
-            else:
-                raise ValueError
-
-        new_input_ids = padded_input_ids
-        new_labels = None if _labels is None else padded_labels
-        new_position_ids = None if _position_ids is None else padded_position_ids
-        new_attention_mask = None if _attention_mask is None else padded_attention_mask
-
-        return new_input_ids, new_labels, new_position_ids, new_attention_mask, input_ids_mask
-
     def generate(
             self,
-            inputs: Optional[np.ndarray] = None,
-            images: Optional[np.ndarray] = None,
-            image_sizes: Optional[np.ndarray] = None,
+            inputs: Optional[Tensor] = None,
+            images: Optional[Tuple[Tensor]] = None,
+            image_sizes: Optional[Tuple] = None,
             position_ids = None,
             attention_mask = None,
             inputs_embeds = None,
@@ -472,16 +437,10 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         #     raise NotImplementedError("`inputs_embeds` is not supported")
         assert inputs_embeds is None
 
-        inputs, _, position_ids, attention_mask, input_ids_mask = \
-            self.preprocess_input_before_generate(inputs, None, position_ids, attention_mask)
-
-        inputs, position_ids, attention_mask, images, image_sizes, input_ids_mask = \
-            Tensor(inputs) if inputs else None, \
-            Tensor(position_ids) if position_ids else None, \
-            Tensor(attention_mask) if attention_mask else None, \
-            Tensor(images) if images else None, \
-            Tensor(image_sizes) if image_sizes else None, \
-            Tensor(input_ids_mask) if input_ids_mask else None,
+        # TODO: pad input_ids
+        # inputs, _, position_ids, attention_mask, input_ids_mask = \
+        #     self.preprocess_input_before_generate(inputs, None, position_ids, attention_mask)
+        input_ids_mask = None
 
         if images is not None:
             (
@@ -510,7 +469,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             self.final_vision_feature_size = final_vision_feature_size
             self.global_context_feature = global_context_feature
         else:
-            inputs_embeds = self.get_model().embed_tokens(inputs)
+            inputs_embeds = self.embed_tokens(inputs)
 
         return super().generate(
             position_ids=position_ids,
@@ -536,4 +495,3 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         if image_sizes is not None:
             inputs['image_sizes'] = image_sizes
         return inputs
-

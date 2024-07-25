@@ -326,3 +326,32 @@ class TemperatureLogitsWarper(LogitsWarper):
     def __call__(self, input_ids: Tensor, scores: Tensor) -> Tensor:
         scores_processed = scores / self.temperature
         return scores_processed
+
+
+class TopKLogitsWarper(LogitsWarper):
+    r"""
+    [`LogitsWarper`] that performs top-k, i.e. restricting to the k highest probability elements. Often used together
+    with [`TemperatureLogitsWarper`] and [`TopPLogitsWarper`].
+
+    Args:
+        top_k (`int`):
+            The number of highest probability vocabulary tokens to keep for top-k-filtering.
+        filter_value (`float`, *optional*, defaults to -inf):
+            All filtered values will be set to this float value.
+        min_tokens_to_keep (`int`, *optional*, defaults to 1):
+            Minimum number of tokens that cannot be filtered.
+    """
+
+    def __init__(self, top_k: int, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
+        if not isinstance(top_k, int) or top_k <= 0:
+            raise ValueError(f"`top_k` has to be a strictly positive integer, but is {top_k}")
+
+        self.top_k = max(top_k, min_tokens_to_keep)
+        self.filter_value = filter_value
+
+    def __call__(self, input_ids: Tensor, scores: Tensor) -> Tensor:
+        top_k = min(self.top_k, scores.shape[-1])  # Safety check
+        # Remove all tokens with a probability less than the last token of the top-k
+        indices_to_remove = scores < ops.topk(scores, top_k)[0][..., -1, None]
+        scores_processed = scores.masked_fill(indices_to_remove, self.filter_value)
+        return scores_processed
