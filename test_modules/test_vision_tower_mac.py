@@ -70,8 +70,8 @@ if __name__ == '__main__':
 
     module_len = len(replace_dict['mm_vision_tower_aux_list'])
     for i, (module_name, token_len) in enumerate(zip(replace_dict["mm_vision_tower_aux_list"], replace_dict["mm_vision_tower_aux_token_len_list"])):
-        print(f"======> {i}/{module_len}, Before, model name: {module_name}")
+        print(f"======> {i + 1}/{module_len}, Before, model name: {module_name}")
 
         out = test_vision_tower(args, config, module_name, token_len)
 
-        print(f"======> {i}/{module_len}, After, model name: {module_name}, token_len: {token_len}, out.shape: {out.shape}")
+        print(f"======> {i + 1}/{module_len}, After, model name: {module_name}, token_len: {token_len}, out.shape: {out.shape}")

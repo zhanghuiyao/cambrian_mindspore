@@ -73,6 +73,7 @@ if __name__ == '__main__':
     args, _ = parser.parse_known_args()
 
     ms.set_context(mode=ms.GRAPH_MODE, device_target="CPU")
+    ms.set_context(jit_config={"jit_level": "O0"})
     # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
 
     # test_llama3(args.model_path)
