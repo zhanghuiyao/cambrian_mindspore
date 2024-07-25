@@ -795,7 +795,7 @@ class LlamaForCausalLM(PreTrainedModel):
         _position_ids = position_ids
         _attention_mask = attention_mask
         if attention_mask is None:
-            attention_mask = np.ones_like(input_ids, dtype=ms.bool_)
+            attention_mask = np.ones_like(input_ids, dtype=np.bool)
         else:
             attention_mask = attention_mask.astype(np.bool)
         if position_ids is None:

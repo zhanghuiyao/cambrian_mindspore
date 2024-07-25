@@ -178,8 +178,8 @@ if __name__ == '__main__':
     parser.add_argument("--prompt", type=str, default="hello world.")
     args, _ = parser.parse_known_args()
 
-    ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend")
-    ms.set_context(jit_config={"jit_level": "O0"})
-    # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
+    # ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend")
+    # ms.set_context(jit_config={"jit_level": "O0"})
+    ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True)
 
     test_cambrian_8b_inference(args)
