@@ -804,32 +804,36 @@ class LlamaForCausalLM(PreTrainedModel):
             labels = np.full_like(input_ids, IGNORE_INDEX)
 
         masked_input_ids = []
+        masked_labels = []
+        masked_attention_mask = []
         for i in range(len(input_ids)):
-            cur_input_ids, cur_attention_mask = input_ids[i], attention_mask[i]
+            cur_input_ids, cur_labels, cur_attention_mask = input_ids[i], labels[i], attention_mask[i]
             active_len = int(cur_attention_mask.sum())
             assert cur_attention_mask[:active_len].sum() == cur_attention_mask.sum()
             masked_input_ids.append(cur_input_ids[:active_len])
+            masked_labels.append(cur_labels[:active_len])
+            masked_attention_mask.append(cur_attention_mask[:active_len])
         input_ids = masked_input_ids
-
-        labels = [cur_labels[cur_attention_mask] for cur_labels, cur_attention_mask in zip(labels, attention_mask)]
+        labels = masked_labels
+        attention_mask = masked_attention_mask
 
         for batch_idx, cur_input_ids in enumerate(input_ids):
 
-            cur_len = cur_input_ids.shape[1]
+            cur_len = cur_input_ids.shape[0]
 
             if self.tokenizer_padding_side == "right":
-                padded_input_ids[batch_idx, :cur_len] = cur_input_ids[:, :]
+                padded_input_ids[batch_idx, :cur_len] = cur_input_ids[:]
                 input_ids_mask[batch_idx, :cur_len] = 1
 
-                padded_labels[batch_idx, :cur_len] = labels[batch_idx, :]
-                padded_attention_mask[batch_idx, :cur_len] = attention_mask[:batch_idx, :]
+                padded_labels[batch_idx, :cur_len] = labels[batch_idx][:]
+                padded_attention_mask[batch_idx, :cur_len] = attention_mask[batch_idx][:]
                 padded_position_ids[batch_idx, :cur_len] = np.arange(0, cur_len, dtype=position_ids.dtype)
             elif self.tokenizer_padding_side == "left":
                 # padded_input_ids[batch_idx, -cur_len:] = cur_input_ids[:]
-                # input_ids_mask[batch_idx, -cur_len:] = True
+                # input_ids_mask[batch_idx, -cur_len:] = 1
                 #
-                # padded_labels[batch_idx, -cur_len:] = labels[batch_idx, :]
-                # padded_attention_mask[batch_idx, -cur_len:] = attention_mask[:batch_idx, :]
+                # padded_labels[batch_idx, -cur_len:] = labels[batch_idx][:]
+                # padded_attention_mask[batch_idx, -cur_len:] = attention_mask[batch_idx][:]
                 # padded_position_ids[batch_idx, -cur_len:] = np.arange(0, cur_len, dtype=position_ids.dtype)
                 raise ValueError
             else:
