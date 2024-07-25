@@ -442,7 +442,7 @@ class CambrianMetaForCausalLM:
         return image_aux_features_list
 
 
-    @ms.jit
+    # @ms.jit
     def prepare_inputs_labels_for_multimodal(
         self, input_ids, position_ids, attention_mask, past_key_values, labels,
         images, image_aux_attention_masks_list=None, image_sizes=None, input_ids_mask=None
@@ -668,7 +668,7 @@ class CambrianMetaForCausalLM:
                 # 1 img
                 cur_image_features = image_features[batch_idx]
                 _index_table = ops.arange(0, cur_input_ids.shape[0], 1, dtype=ms.int32)
-                _im_positions = ops.masked_fill(_index_table, cur_input_ids != IMAGE_TOKEN_INDEX, -1)
+                _im_positions = ops.masked_fill(_index_table, cur_input_ids != IMAGE_TOKEN_INDEX, ops.full((), -1, ms.int32))
                 _im_positions = ops.topk(_im_positions, 1)[0]
                 _im_token_len = cur_image_features.shape[0]
 
@@ -684,12 +684,17 @@ class CambrianMetaForCausalLM:
                     cur_input_ids_mask = ops.gather(input_ids_mask[batch_idx], gather_index, axis=0)
                     neg_cur_input_ids_mask = not cur_input_ids_mask
 
+                # zhy_test
                 cur_input_embeds = self.embed_tokens(cur_input_ids)
                 # cur_input_embeds = ops.broadcast_to(cur_input_ids[:, None], (-1, 4096)).to(ms.float16)
 
+                # zhy_test
                 _img_indexes = ops.arange(0, _im_token_len, 1, dtype=ms.int32) + _im_positions
-                _img_indexes = ops.broadcast_to(_img_indexes[:, None], (-1, cur_image_features.shape[-1]))
-                new_input_embed = ops.scatter(cur_input_embeds, 0, _img_indexes, cur_image_features)
+                # _img_indexes = ops.broadcast_to(_img_indexes[:, None], (-1, cur_image_features.shape[-1]))
+                # new_input_embed = ops.scatter(cur_input_embeds, 0, _img_indexes, cur_image_features.to(cur_input_embeds.dtype))
+                cur_input_embeds[_img_indexes] = cur_image_features.to(cur_input_embeds.dtype)
+                new_input_embed = cur_input_embeds
+
                 if input_ids_mask:
                     # new_input_embed *= ops.cast(cur_input_ids_mask[:, None], new_input_embed.dtype)
                     new_input_embed = new_input_embed.masked_fill(neg_cur_input_ids_mask[:, None], 0)
