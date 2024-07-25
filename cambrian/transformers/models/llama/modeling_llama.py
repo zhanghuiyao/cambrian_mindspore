@@ -469,7 +469,6 @@ class LlamaModel(PreTrainedModel):
         self.enable_recompute = True
         raise NotImplementedError
 
-    # @ms.jit
     def construct(
         self,
         input_ids: Tensor = None,

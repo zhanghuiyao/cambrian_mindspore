@@ -731,7 +731,9 @@ class GenerationMixin:
         is_encoder_decoder: bool = False,
         standardize_cache_format: bool = False,
         num_new_tokens: int = 1,
+        next_tokens: Tensor = None
     ) -> Dict[str, Any]:
+
         # update past_key_values keeping its naming used in model code
         cache_name, cache = self._extract_past_from_model_output(
             outputs, standardize_cache_format=standardize_cache_format
@@ -742,8 +744,71 @@ class GenerationMixin:
 
         # update token_type_ids with last value
         if "token_type_ids" in model_kwargs:
-            token_type_ids = model_kwargs["token_type_ids"]
-            model_kwargs["token_type_ids"] = ops.cat([token_type_ids, token_type_ids[:, -1].unsqueeze(-1)], axis=-1)
+            raise NotImplementedError
+
+        use_cache = model_kwargs.get("use_cache", False)
+
+        if (
+                use_cache
+                and "cache_position" in model_kwargs
+                and model_kwargs["cache_position"] is not None
+        ):
+            model_kwargs["cache_position"] = model_kwargs["cache_position"][-1:] + num_new_tokens
+
+        if (
+                use_cache
+                and "past_key_values" in model_kwargs
+                and model_kwargs["past_key_values"] is not None
+        ):
+            model_kwargs["past_key_values"] = outputs.past_key_values
+
+        if not is_encoder_decoder and not use_cache and model_kwargs.get("inputs_embeds", None) is not None:
+            inputs_embeds = model_kwargs["inputs_embeds"]
+            position_ids = model_kwargs["position_ids"]
+            attention_mask = model_kwargs["attention_mask"]
+
+            is_pad = False
+            if attention_mask is not None:
+                assert attention_mask.shape[-1] == inputs_embeds.shape[-2]
+                if not attention_mask.all():
+                    is_pad = True
+
+            if position_ids is not None:
+                assert position_ids.shape[-1] == inputs_embeds.shape[-2]
+
+            if "labels" in model_kwargs:
+                raise NotImplementedError
+
+            next_token_embedding = self.embed_tokens(next_tokens)
+
+            if is_pad:
+                next_token_index = attention_mask.sum(-1)
+                assert next_token_index.max() < attention_mask.shape[-1]
+                attention_mask[:, next_token_index] = True
+                inputs_embeds[:, next_token_index, :] = next_token_embedding[:, :, :]
+
+                if position_ids is not None:
+                    position_ids[:, next_token_index] = next_token_index
+
+            else:
+
+                bs = model_kwargs["inputs_embeds"].shape[0]
+                if bs > 1:
+                    raise NotImplementedError
+
+                inputs_embeds = ops.cat([inputs_embeds, next_token_embedding], axis=-2)
+
+                if position_ids is not None:
+                    position_ids = ops.cat([position_ids, Tensor([position_ids.shape[-1]])[None, :]], axis=-1)
+                if attention_mask is not None:
+                    attention_mask = ops.cat([attention_mask, ops.ones((1, 1), dtype=attention_mask.dtype)], axis=-1)
+
+            model_kwargs["inputs_embeds"] = inputs_embeds
+            model_kwargs["position_ids"] = position_ids
+            model_kwargs["attention_mask"] = attention_mask
+
+            return model_kwargs
+
 
         if not is_encoder_decoder:
             # update attention mask
@@ -756,30 +821,7 @@ class GenerationMixin:
                     ], axis=-1
                 )
         else:
-            # update decoder attention mask
-            if "decoder_attention_mask" in model_kwargs:
-                decoder_attention_mask = model_kwargs["decoder_attention_mask"]
-                model_kwargs["decoder_attention_mask"] = ops.cat(
-                    [
-                        decoder_attention_mask,
-                        ops.ones((decoder_attention_mask.shape[0], 1), dtype=decoder_attention_mask.dtype)
-                    ],
-                    axis=-1,
-                )
-
-        if (
-            model_kwargs.get("use_cache", True)
-            and "cache_position" in model_kwargs
-            and model_kwargs["cache_position"] is not None
-        ):
-            model_kwargs["cache_position"] = model_kwargs["cache_position"][-1:] + num_new_tokens
-
-        if (
-            model_kwargs.get("use_cache", True)
-            and "past_key_values" in model_kwargs
-            and model_kwargs["past_key_values"] is not None
-        ):
-            model_kwargs["past_key_values"] = outputs.past_key_values
+            raise NotImplementedError
 
         return model_kwargs
 
@@ -1464,6 +1506,7 @@ class GenerationMixin:
                 outputs,
                 model_kwargs,
                 is_encoder_decoder=self.config.is_encoder_decoder,
+                next_tokens=next_tokens[:, None]
             )
 
             unfinished_sequences = unfinished_sequences & ~stopping_criteria(input_ids, scores)
