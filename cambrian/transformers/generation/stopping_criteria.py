@@ -5,6 +5,7 @@ from abc import ABC
 
 import mindspore as ms
 import mindspore.numpy as mnp
+import numpy as np
 from mindspore import ops, Tensor
 
 from transformers import logging
@@ -14,10 +15,18 @@ logger = logging.get_logger(__name__)
 
 
 class StoppingCriteriaList(list):
-    def __call__(self, input_ids: Tensor, scores: Tensor, **kwargs) -> Tensor:
-        is_done = ops.full((input_ids.shape[0],), False, dtype=ms.bool_)
-        for criteria in self:
-            is_done = ops.logical_or(is_done, criteria(input_ids, scores, **kwargs))
+    def __call__(self, input_ids: Union[Tensor, np.ndarray], scores: Union[Tensor, np.ndarray], **kwargs) -> Union[Tensor, np.ndarray]:
+        if isinstance(input_ids, Tensor):
+            is_done = ops.full((input_ids.shape[0],), False, dtype=ms.bool_)
+            for criteria in self:
+                is_done = ops.logical_or(is_done, criteria(input_ids, scores, **kwargs))
+        elif isinstance(input_ids, np.ndarray):
+            is_done = np.full((input_ids.shape[0],), False, dtype=np.bool_)
+            for criteria in self:
+                is_done = np.logical_or(is_done, criteria(input_ids, scores, **kwargs))
+        else:
+            raise NotImplementedError
+
         return is_done
 
     @property
@@ -57,7 +66,7 @@ class MaxLengthCriteria(StoppingCriteria):
         self.max_length = max_length
         self.max_position_embeddings = max_position_embeddings
 
-    def __call__(self, input_ids: Tensor, scores: Tensor, **kwargs) -> Tensor:
+    def __call__(self, input_ids: Union[Tensor, np.ndarray], scores: Union[Tensor, np.ndarray], **kwargs) -> Union[Tensor, np.ndarray]:
         cur_len = input_ids.shape[-1]
         is_done = cur_len >= self.max_length
         if self.max_position_embeddings is not None and not is_done and cur_len >= self.max_position_embeddings:
@@ -66,7 +75,13 @@ class MaxLengthCriteria(StoppingCriteria):
                 f"maximum length ({self.max_position_embeddings}). Depending on the model, you may observe "
                 "exceptions, performance degradation, or nothing at all."
             )
-        return ops.full((input_ids.shape[0],), is_done, dtype=ms.bool_)
+
+        if isinstance(input_ids, Tensor):
+            return ops.full((input_ids.shape[0],), is_done, dtype=ms.bool_)
+        elif isinstance(input_ids, np.ndarray):
+            return np.full((input_ids.shape[0],), is_done, dtype=np.bool_)
+        else:
+            raise NotImplementedError
 
 
 class MaxNewTokensCriteria(StoppingCriteria):
@@ -93,9 +108,15 @@ class MaxNewTokensCriteria(StoppingCriteria):
         self.max_new_tokens = max_new_tokens
         self.max_length = start_length + max_new_tokens
 
-    def __call__(self, input_ids: Tensor, scores: Tensor, **kwargs) -> Tensor:
+    def __call__(self, input_ids: Union[Tensor, np.ndarray], scores: Union[Tensor, np.ndarray], **kwargs) -> Union[Tensor, np.ndarray]:
         is_done = input_ids.shape[-1] >= self.max_length
-        return ops.full((input_ids.shape[0],), is_done, dtype=ms.bool_)
+
+        if isinstance(input_ids, Tensor):
+            return ops.full((input_ids.shape[0],), is_done, dtype=ms.bool_)
+        elif isinstance(input_ids, np.ndarray):
+            return np.full((input_ids.shape[0],), is_done, dtype=np.bool_)
+        else:
+            raise NotImplementedError
 
 
 class MaxTimeCriteria(StoppingCriteria):
@@ -115,9 +136,15 @@ class MaxTimeCriteria(StoppingCriteria):
         self.max_time = max_time
         self.initial_timestamp = time.time() if initial_timestamp is None else initial_timestamp
 
-    def __call__(self, input_ids: Tensor, scores: Tensor, **kwargs) -> Tensor:
+    def __call__(self, input_ids: Union[Tensor, np.ndarray], scores: Union[Tensor, np.ndarray], **kwargs) -> Union[Tensor, np.ndarray]:
         is_done = time.time() - self.initial_timestamp > self.max_time
-        return ops.full((input_ids.shape[0],), is_done, dtype=ms.bool_)
+
+        if isinstance(input_ids, Tensor):
+            return ops.full((input_ids.shape[0],), is_done, dtype=ms.bool_)
+        elif isinstance(input_ids, np.ndarray):
+            return np.full((input_ids.shape[0],), is_done, dtype=np.bool_)
+        else:
+            raise NotImplementedError
 
 
 class EosTokenCriteria(StoppingCriteria):
@@ -131,12 +158,18 @@ class EosTokenCriteria(StoppingCriteria):
     """
 
     def __init__(self, eos_token_id: Union[int, List[int], Tensor]):
-        if not isinstance(eos_token_id, Tensor):
-            if isinstance(eos_token_id, int):
-                eos_token_id = [eos_token_id]
-            eos_token_id = Tensor(eos_token_id)
+        # if not isinstance(eos_token_id, Tensor):
+        #     if isinstance(eos_token_id, int):
+        #         eos_token_id = [eos_token_id]
+        #     eos_token_id = Tensor(eos_token_id)
         self.eos_token_id = eos_token_id
 
-    def __call__(self, input_ids: Tensor, scores: Tensor, **kwargs) -> Tensor:
-        is_done = mnp.isin(input_ids[:, -1], self.eos_token_id)
+    def __call__(self, input_ids: Union[Tensor, np.ndarray], scores: Union[Tensor, np.ndarray], **kwargs) -> Union[Tensor, np.ndarray]:
+        if isinstance(input_ids, Tensor):
+            is_done = mnp.isin(input_ids[:, -1], self.eos_token_id)
+        elif isinstance(input_ids, np.ndarray):
+            is_done = np.isin(input_ids[:, -1], self.eos_token_id)
+        else:
+            raise NotImplementedError
+
         return is_done

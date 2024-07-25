@@ -1,6 +1,7 @@
 import copy
 import inspect
 import warnings
+import numpy as np
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -1439,6 +1440,9 @@ class GenerationMixin:
         cross_attentions = () if (return_dict_in_generate and output_attentions) else None
         decoder_hidden_states = () if (return_dict_in_generate and output_hidden_states) else None
 
+        # input_ids as numpy.ndarray
+        input_ids = input_ids.asnumpy()
+
         # keep track of which sequences are already finished
         batch_size = input_ids.shape[0]
         this_peer_finished = False
@@ -1495,7 +1499,8 @@ class GenerationMixin:
             next_tokens = next_tokens.to(ms.int32)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            # input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = np.concatenate([input_ids, next_tokens[:, None]], axis=-1)
 
             if streamer is not None:
                 streamer.put(next_tokens.asnumpy())
@@ -1507,7 +1512,11 @@ class GenerationMixin:
                 next_tokens=next_tokens[:, None]
             )
 
-            unfinished_sequences = unfinished_sequences & ~stopping_criteria(input_ids, scores)
+
+            # unfinished_sequences = unfinished_sequences & ~stopping_criteria(input_ids, scores)
+            is_done_tensor = Tensor(stopping_criteria(input_ids, scores), ms.bool_)
+            unfinished_sequences = unfinished_sequences & ~is_done_tensor
+
             this_peer_finished = unfinished_sequences.max() == 0
 
             # This is needed to properly delete outputs.logits which may be very large for first iteration
