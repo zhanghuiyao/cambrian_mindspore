@@ -160,8 +160,8 @@ def test_cambrian_8b_inference(args):
             do_sample=True if temperature > 0 else False,
             temperature=temperature,
             num_beams=1,
-            max_new_tokens=512,
-            use_cache=False  #True
+            max_new_tokens=20, # 512,
+            use_cache=False,  #True,
         )
 
         outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
