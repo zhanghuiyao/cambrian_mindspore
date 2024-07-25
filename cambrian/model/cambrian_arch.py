@@ -790,31 +790,42 @@ class CambrianMetaForCausalLM:
         assert model_kwargs.get("past_key_values", None) is None
         if position_ids is not None:
             assert position_ids.shape[-1] == inputs_embeds.shape[-2]
+
+        is_pad = False
         if attention_mask is not None:
             assert attention_mask.shape[-1] == inputs_embeds.shape[-2]
-
-        bs = model_kwargs["inputs_embeds"].shape[0]
-        if bs > 1:
-            raise NotImplementedError
+            if not attention_mask.all():
+                is_pad = True
 
         if "labels" in model_kwargs:
             raise NotImplementedError
 
         next_token_embedding = self.embed_tokens(next_tokens)
-        new_inputs_embeds = ops.cat([inputs_embeds, next_token_embedding], axis=-2)
 
-        if position_ids is not None:
-            new_position_ids = ops.cat([position_ids, Tensor([position_ids.shape[-1]])[None, :]], axis=-1)
+        if is_pad:
+            next_token_index = attention_mask.sum(-1)
+            assert next_token_index.max() < attention_mask.shape[-1]
+            attention_mask[:, next_token_index] = True
+            inputs_embeds[:, next_token_index, :] = next_token_embedding[:, :, :]
+
+            if position_ids is not None:
+                position_ids[:, next_token_index] = next_token_index
+
         else:
-            new_position_ids = None
 
-        if attention_mask is not None:
-            new_attention_mask = ops.cat([attention_mask, ops.ones((1, 1), dtype=attention_mask.dtype)], axis=-1)
-        else:
-            new_attention_mask = None
+            bs = model_kwargs["inputs_embeds"].shape[0]
+            if bs > 1:
+                raise NotImplementedError
 
-        model_kwargs["inputs_embeds"] = new_inputs_embeds
-        model_kwargs["position_ids"] = new_position_ids
-        model_kwargs["attention_mask"] = new_attention_mask
+            inputs_embeds = ops.cat([inputs_embeds, next_token_embedding], axis=-2)
+
+            if position_ids is not None:
+                position_ids = ops.cat([position_ids, Tensor([position_ids.shape[-1]])[None, :]], axis=-1)
+            if attention_mask is not None:
+                attention_mask = ops.cat([attention_mask, ops.ones((1, 1), dtype=attention_mask.dtype)], axis=-1)
+
+        model_kwargs["inputs_embeds"] = inputs_embeds
+        model_kwargs["position_ids"] = position_ids
+        model_kwargs["attention_mask"] = attention_mask
 
         return model_kwargs
