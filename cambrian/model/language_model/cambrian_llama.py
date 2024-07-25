@@ -342,6 +342,8 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
+        assert not output_attentions
+        assert not output_hidden_states
 
         # training
         if self.training:
@@ -394,7 +396,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                     return_dict=return_dict,
                 )
 
-        hidden_states = outputs[0]
+        hidden_states, past_key_values = outputs
         if self.config.pretraining_tp > 1:
             lm_head_slices = self.lm_head.weight.split(self.vocab_size // self.config.pretraining_tp, axis=0)
             logits = [ops.dense(hidden_states, lm_head_slices[i]) for i in range(self.config.pretraining_tp)]
@@ -416,11 +418,8 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             shift_labels = shift_labels.to(shift_logits.device)
             loss = loss_fct(shift_logits, shift_labels)
 
-        _, _past_key_values, _hidden_states, _attentions = outputs
-        _loss, _logits, _past_key_values, _hidden_states, _attentions = \
-            loss, logits, _past_key_values, _hidden_states, _attentions
-
-        return _loss, _logits, _past_key_values, _hidden_states, _attentions
+        # loss, logits, past_key_values, hidden_states, attentions
+        return loss, logits, past_key_values
 
     def generate(
             self,

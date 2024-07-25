@@ -684,7 +684,7 @@ class CambrianMetaForCausalLM:
                     input_ids_mask = input_ids_mask.to(ms.int32)
                     cur_input_ids_mask = ops.gather(input_ids_mask[batch_idx], gather_index, axis=0)
                     cur_input_ids_mask = cur_input_ids_mask.to(ms.bool_)
-                    neg_cur_input_ids_mask = not cur_input_ids_mask
+                    neg_cur_input_ids_mask = ops.logical_not(cur_input_ids_mask)
 
                 # zhy_test
                 cur_input_embeds = self.embed_tokens(cur_input_ids)
