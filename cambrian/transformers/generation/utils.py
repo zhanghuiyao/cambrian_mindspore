@@ -763,6 +763,8 @@ class GenerationMixin:
             model_kwargs["past_key_values"] = outputs.past_key_values
 
         if not is_encoder_decoder and not use_cache and model_kwargs.get("inputs_embeds", None) is not None:
+            assert next_tokens is not None
+
             inputs_embeds = model_kwargs["inputs_embeds"]
             position_ids = model_kwargs["position_ids"]
             attention_mask = model_kwargs["attention_mask"]
@@ -779,7 +781,7 @@ class GenerationMixin:
             if "labels" in model_kwargs:
                 raise NotImplementedError
 
-            next_token_embedding = self.embed_tokens(next_tokens)
+            next_token_embedding = self.embed_tokens(next_tokens).to(inputs_embeds.dtype)
 
             if is_pad:
                 next_token_index = attention_mask.sum(-1)
@@ -1490,9 +1492,10 @@ class GenerationMixin:
             # finished sentences should have their next token be a padding token
             if has_eos_stopping_criteria:
                 next_tokens = next_tokens * unfinished_sequences + pad_token_id * (1 - unfinished_sequences)
+            next_tokens = next_tokens.to(ms.int32)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None].to(ms.int32)], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
 
             if streamer is not None:
                 streamer.put(next_tokens.asnumpy())
