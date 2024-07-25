@@ -787,9 +787,11 @@ class CambrianMetaForCausalLM:
         attention_mask = model_kwargs["attention_mask"]
 
         assert not model_kwargs["use_cache"]
-        assert model_kwargs["past_key_values"] is None
-        assert position_ids.shape[-1] == inputs_embeds.shape[-2]
-        assert attention_mask.shape[-1] == inputs_embeds.shape[-2]
+        assert model_kwargs.get("past_key_values", None) is None
+        if position_ids is not None:
+            assert position_ids.shape[-1] == inputs_embeds.shape[-2]
+        if attention_mask is not None:
+            assert attention_mask.shape[-1] == inputs_embeds.shape[-2]
 
         bs = model_kwargs["inputs_embeds"].shape[0]
         if bs > 1:
@@ -800,8 +802,16 @@ class CambrianMetaForCausalLM:
 
         next_token_embedding = self.embed_tokens(next_tokens)
         new_inputs_embeds = ops.cat([inputs_embeds, next_token_embedding], axis=-2)
-        new_position_ids = ops.cat([position_ids, Tensor([position_ids.shape[-1]])[None, :]], axis=-1)
-        new_attention_mask = ops.cat([attention_mask, ops.ones((1, 1), dtype=attention_mask.dtype)], axis=-1)
+
+        if position_ids is not None:
+            new_position_ids = ops.cat([position_ids, Tensor([position_ids.shape[-1]])[None, :]], axis=-1)
+        else:
+            new_position_ids = None
+
+        if attention_mask is not None:
+            new_attention_mask = ops.cat([attention_mask, ops.ones((1, 1), dtype=attention_mask.dtype)], axis=-1)
+        else:
+            new_attention_mask = None
 
         model_kwargs["inputs_embeds"] = new_inputs_embeds
         model_kwargs["position_ids"] = new_position_ids
