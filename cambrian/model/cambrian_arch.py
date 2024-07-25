@@ -668,7 +668,7 @@ class CambrianMetaForCausalLM:
                 # 1 img
                 cur_image_features = image_features[batch_idx]
                 _index_table = ops.arange(0, cur_input_ids.shape[0], 1, dtype=ms.int32)
-                _im_positions = ops.masked_fill(_index_table, cur_input_ids != IMAGE_TOKEN_INDEX, ops.full((), -1, ms.int32))
+                _im_positions = ops.masked_fill(_index_table, cur_input_ids != IMAGE_TOKEN_INDEX, ops.full((), -1, dtype=ms.int32))
                 _im_positions = ops.topk(_im_positions, 1)[0]
                 _im_token_len = cur_image_features.shape[0]
 
