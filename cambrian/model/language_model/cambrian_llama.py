@@ -132,7 +132,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                 use_cache=use_cache,
             )
 
-            hidden_states, _, next_cache = layer_outputs[0]
+            hidden_states, _, next_cache = layer_outputs
 
             if not self.connector_only:
 
@@ -210,7 +210,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                             hidden_states[batch_i:batch_i+1, latent_query_start_idx:latent_query_start_idx+cur_latent_query_newline_num] = cur_latent_query_with_newline[:, :, :]
 
             if use_cache:
-                past_key_values[i] = layer_outputs[2]
+                past_key_values[i] = next_cache
 
         # if use_cache:
         #     next_cache = next_decoder_cache.to_legacy_cache() if use_legacy_cache else next_decoder_cache
