@@ -318,6 +318,11 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             cache_position=None
     ) -> Union[Tuple,]:
 
+        vision_tower_aux_feature_list = None
+        vision_tower_aux_attention_masks_list = None
+        final_vision_feature_size = None
+        global_context_feature = None
+
         if inputs_embeds is None:
             (
                 input_ids,
