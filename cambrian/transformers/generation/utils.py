@@ -1443,7 +1443,7 @@ class GenerationMixin:
                 next_tokens = next_tokens * unfinished_sequences + pad_token_id * (1 - unfinished_sequences)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None].to(ms.int32)], axis=-1)
 
             # when not use_cache and inputs_embeds
             if not use_cache and model_kwargs.get("inputs_embeds", None) is not None:
