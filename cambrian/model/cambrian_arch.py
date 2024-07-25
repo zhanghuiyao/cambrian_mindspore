@@ -445,7 +445,7 @@ class CambrianMetaForCausalLM:
     # @ms.jit
     def prepare_inputs_labels_for_multimodal(
         self, input_ids, position_ids, attention_mask, past_key_values, labels,
-        images, image_aux_attention_masks_list=None, image_sizes=None, input_ids_mask=None
+        images, image_aux_attention_masks_list=None, image_sizes=None
     ):
         vision_tower_aux_list = self.get_model().get_vision_tower_aux_list()
 
@@ -632,15 +632,21 @@ class CambrianMetaForCausalLM:
             _labels = labels
             _position_ids = position_ids
             _attention_mask = attention_mask
+            if attention_mask is None:
+                attention_mask = ops.ones(input_ids, dtype=ms.bool_)
+            else:
+                attention_mask = attention_mask.to(ms.bool_)
             if labels is None:
                 labels = ops.full_like(input_ids, IGNORE_INDEX)
 
             new_input_embeds = []
             new_labels = []
-            new_attention_masks = []
             new_position_ids = []
             assert len(image_features) == len(input_ids)
             for batch_idx, cur_input_ids in enumerate(input_ids):
+
+                cur_attention_mask = attention_mask[batch_idx]
+
                 num_images = (cur_input_ids == IMAGE_TOKEN_INDEX).sum()
 
                 if num_images == 0:
@@ -648,19 +654,14 @@ class CambrianMetaForCausalLM:
                     cur_input_embeds = self.embed_tokens(cur_input_ids)
                     new_input_embed = cur_input_embeds
                     new_label = labels[batch_idx]
-                    new_attention_mask = ops.ones_like(cur_input_ids, dtype=cur_input_ids.dtype)
                     new_position_id = ops.arange(0, cur_input_ids.shape[0], 1, dtype=cur_input_ids.dtype)
 
-                    if input_ids_mask is not None:
-                        neg_cur_input_ids_mask = not input_ids_mask[batch_idx]
-                        new_input_embed = new_input_embed.masked_fill(neg_cur_input_ids_mask[:, None], 0)
-                        new_label = new_label.masked_fill(neg_cur_input_ids_mask, IGNORE_INDEX)
-                        new_attention_mask = new_attention_mask.masked_fill(neg_cur_input_ids_mask, 0)
-                        new_position_id = new_position_id.masked_fill(neg_cur_input_ids_mask, 0)
+                    new_input_embed = ops.masked_fill(new_input_embed, cur_attention_mask[:, None], ops.full((), 0, dtype=new_input_embed.dtype))
+                    new_label = ops.masked_fill(new_label, cur_attention_mask, ops.full((), IGNORE_INDEX, dtype=new_label.dtype))
+                    new_position_id = ops.masked_fill(new_position_id, cur_attention_mask, ops.full((), 0, dtype=new_position_id.dtype))
 
                     new_input_embeds.append(new_input_embed)
                     new_labels.append(new_label)
-                    new_attention_masks.append(new_attention_mask)
                     new_position_ids.append(new_position_id)
 
                     continue
@@ -679,12 +680,7 @@ class CambrianMetaForCausalLM:
                     _index_table > (_im_positions + _im_token_len - 1), _index_table - _im_token_len, gather_index)
                 cur_input_ids = ops.gather(cur_input_ids, gather_index, axis=0)
                 cur_labels = ops.gather(labels[batch_idx], gather_index, axis=0)
-                neg_cur_input_ids_mask = None
-                if input_ids_mask is not None:
-                    input_ids_mask = input_ids_mask.to(ms.int32)
-                    cur_input_ids_mask = ops.gather(input_ids_mask[batch_idx], gather_index, axis=0)
-                    cur_input_ids_mask = cur_input_ids_mask.to(ms.bool_)
-                    neg_cur_input_ids_mask = ops.logical_not(cur_input_ids_mask)
+                cur_attention_mask = ops.gather(cur_attention_mask, gather_index, axis=0)
 
                 # zhy_test
                 cur_input_embeds = self.embed_tokens(cur_input_ids)
@@ -696,36 +692,24 @@ class CambrianMetaForCausalLM:
                 # new_input_embed = ops.scatter(cur_input_embeds, 0, _img_indexes, cur_image_features.to(cur_input_embeds.dtype))
                 cur_input_embeds[_img_indexes] = cur_image_features.to(cur_input_embeds.dtype)
                 new_input_embed = cur_input_embeds
-
-                if input_ids_mask is not None:
-                    # new_input_embed *= ops.cast(cur_input_ids_mask[:, None], new_input_embed.dtype)
-                    new_input_embed = new_input_embed.masked_fill(neg_cur_input_ids_mask[:, None], 0)
-                new_input_embeds.append(new_input_embed)
-
-                _img_indexes = ops.arange(0, _im_token_len, 1, dtype=ms.int32) + _im_positions
                 new_label = ops.scatter(cur_labels, 0, _img_indexes, ops.full((_im_token_len,), IGNORE_INDEX, dtype=cur_labels.dtype))
-                if input_ids_mask is not None:
-                    new_label = new_label.masked_fill(neg_cur_input_ids_mask, IGNORE_INDEX)
-                new_labels.append(new_label)
-
-                new_attention_mask = ops.ones_like(cur_input_ids, dtype=ms.bool_)
                 new_position_id = ops.arange(0, cur_input_ids.shape[0], 1, dtype=ms.int32)
-                if input_ids_mask is not None:
-                    # new_attention_mask *= cur_input_ids_mask.to(cur_input_ids.dtype)
-                    # new_position_id *= cur_input_ids_mask.to(cur_input_ids.dtype)
-                    new_attention_mask = new_attention_mask.masked_fill(neg_cur_input_ids_mask, 0)
-                    new_position_id = new_position_id.masked_fill(neg_cur_input_ids_mask, 0)
-                new_attention_masks.append(new_attention_mask.to(ms.bool_))
+
+                new_input_embed = ops.masked_fill(new_input_embed, cur_attention_mask[:, None], ops.full((), 0, dtype=new_input_embed.dtype))
+                new_label = ops.masked_fill(new_label, cur_attention_mask, ops.full((), IGNORE_INDEX, dtype=new_label.dtype))
+                new_position_id = ops.masked_fill(new_position_id, cur_attention_mask, ops.full((), 0, dtype=new_position_id.dtype))
+
+                new_input_embeds.append(new_input_embed)
+                new_labels.append(new_label)
                 new_position_ids.append(new_position_id.to(ms.int32))
 
             new_input_embeds = ops.stack(new_input_embeds, axis=0)
             new_labels = ops.stack(new_labels, axis=0)
-            new_attention_masks = ops.stack(new_attention_masks, axis=0)
             new_position_ids = ops.stack(new_position_ids, axis=0)
 
             input_embeds = new_input_embeds
+            attention_mask = attention_mask if _attention_mask is not None else None
             labels = new_labels if _labels is not None else None
-            attention_mask = new_attention_masks if _attention_mask is not None else None
             position_ids = new_position_ids if _position_ids is not None else None
 
             return None, position_ids, attention_mask, past_key_values, input_embeds, labels, vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final, final_size, global_context_feature_final

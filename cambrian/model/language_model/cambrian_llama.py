@@ -436,7 +436,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         #     raise NotImplementedError("`inputs_embeds` is not supported")
         assert inputs_embeds is None
 
-        inputs, _, position_ids, attention_mask, input_ids_mask = \
+        inputs, _, position_ids, attention_mask = \
             self.preprocess_input_before_generate(inputs, None, position_ids, attention_mask)
 
         if images is not None:
@@ -459,7 +459,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 None,
                 images,
                 image_sizes=image_sizes,
-                input_ids_mask=input_ids_mask
             )
             self.vision_tower_aux_feature_list = vision_tower_aux_feature_list
             self.vision_tower_aux_attention_masks_list = vision_tower_aux_attention_masks_list

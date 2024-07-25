@@ -783,9 +783,7 @@ class LlamaForCausalLM(PreTrainedModel):
 
         # init empty array
         bs = len(input_ids)
-        padded_input_ids, input_ids_mask = \
-            np.zeros((bs, self.tokenizer_model_max_length), np.int32), \
-            np.zeros((bs, self.tokenizer_model_max_length), np.bool)
+        padded_input_ids = np.zeros((bs, self.tokenizer_model_max_length), np.int32)
         padded_labels = np.full((bs, self.tokenizer_model_max_length), IGNORE_INDEX, np.int32)
         padded_position_ids = np.zeros((bs, self.tokenizer_model_max_length), np.int32)
         padded_attention_mask = np.zeros((bs, self.tokenizer_model_max_length), np.bool)
@@ -822,14 +820,12 @@ class LlamaForCausalLM(PreTrainedModel):
 
             if self.tokenizer_padding_side == "right":
                 padded_input_ids[batch_idx, :cur_len] = cur_input_ids[:]
-                input_ids_mask[batch_idx, :cur_len] = 1
 
                 padded_labels[batch_idx, :cur_len] = labels[batch_idx][:]
                 padded_attention_mask[batch_idx, :cur_len] = attention_mask[batch_idx][:]
                 padded_position_ids[batch_idx, :cur_len] = np.arange(0, cur_len, dtype=position_ids.dtype)
             elif self.tokenizer_padding_side == "left":
                 # padded_input_ids[batch_idx, -cur_len:] = cur_input_ids[:]
-                # input_ids_mask[batch_idx, -cur_len:] = 1
                 #
                 # padded_labels[batch_idx, -cur_len:] = labels[batch_idx][:]
                 # padded_attention_mask[batch_idx, -cur_len:] = attention_mask[batch_idx][:]
@@ -839,12 +835,11 @@ class LlamaForCausalLM(PreTrainedModel):
                 raise ValueError
 
         new_input_ids = Tensor(padded_input_ids)
+        new_attention_mask = Tensor(padded_attention_mask)
         new_labels = None if _labels is None else Tensor(padded_labels)
         new_position_ids = None if _position_ids is None else Tensor(padded_position_ids)
-        new_attention_mask = None if _attention_mask is None else Tensor(padded_attention_mask)
-        input_ids_mask = Tensor(input_ids_mask)
 
-        return new_input_ids, new_labels, new_position_ids, new_attention_mask, input_ids_mask
+        return new_input_ids, new_labels, new_position_ids, new_attention_mask
 
     def prepare_inputs_for_generation(
         self,
