@@ -299,7 +299,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
     def get_model(self):
         return self.model
 
-    @ms.jit
     def construct(
             self,
             input_ids: Tensor = None,

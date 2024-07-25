@@ -173,13 +173,18 @@ def test_cambrian_8b_inference(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="test")
+    parser.add_argument("--ms_mode", type=int, default=0, help="0 is Graph, 1 is Pynative")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
     parser.add_argument("--image_path", type=str, default="./images/cambrian.png")
     parser.add_argument("--prompt", type=str, default="hello world.")
     args, _ = parser.parse_known_args()
 
-    # ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend")
-    # ms.set_context(jit_config={"jit_level": "O0"})
-    ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True)
+    if args.ms_mode == 0:
+        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend")
+        ms.set_context(jit_config={"jit_level": "O0"})
+    elif args.ms_mode == 1:
+        ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True)
+    else:
+        raise ValueError
 
     test_cambrian_8b_inference(args)
