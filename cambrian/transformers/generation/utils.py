@@ -1491,14 +1491,6 @@ class GenerationMixin:
             # update generated ids, model inputs, and length for next step
             input_ids = ops.cat([input_ids, next_tokens[:, None].to(ms.int32)], axis=-1)
 
-            # when not use_cache and inputs_embeds
-            if not use_cache and model_kwargs.get("inputs_embeds", None) is not None:
-                if hasattr(self, "_update_model_kwargs_for_next_token"):
-                    model_kwargs = self._update_model_kwargs_for_next_token(model_kwargs, next_tokens[:, None])
-                else:
-                    raise NotImplementedError
-
-
             if streamer is not None:
                 streamer.put(next_tokens.asnumpy())
 
