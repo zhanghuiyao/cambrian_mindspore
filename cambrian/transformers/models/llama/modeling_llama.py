@@ -803,8 +803,11 @@ class LlamaForCausalLM(PreTrainedModel):
         if labels is None:
             labels = np.full_like(input_ids, IGNORE_INDEX)
 
-        input_ids = [cur_input_ids[cur_attention_mask] for cur_input_ids, cur_attention_mask in
-                     zip(input_ids, attention_mask)]
+        input_ids = []
+        for i in range(len(input_ids)):
+            cur_input_ids, cur_attention_mask = input_ids[i], attention_mask[i]
+            input_ids.append(cur_input_ids[cur_attention_mask])
+
         labels = [cur_labels[cur_attention_mask] for cur_labels, cur_attention_mask in zip(labels, attention_mask)]
 
         for batch_idx, cur_input_ids in enumerate(input_ids):
