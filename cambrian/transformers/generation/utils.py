@@ -1521,7 +1521,7 @@ class GenerationMixin:
 
             # This is needed to properly delete outputs.logits which may be very large for first iteration
             # Otherwise a reference to outputs is kept which keeps the logits alive in the next iteration
-            del outputs
+            # del outputs
 
         if streamer is not None:
             streamer.end()

@@ -12,7 +12,7 @@ from cambrian.model.multimodal_projector.builder import build_vision_projector
 from cambrian.model.vision_sampler import VisionTokenSampler
 from cambrian.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 
-
+from transformers import PreTrainedModel
 class CambrianMetaModel:
 
     def __init__(self, config):
