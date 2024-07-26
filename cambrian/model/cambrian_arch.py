@@ -31,7 +31,7 @@ class CambrianMetaModel:
                 query_num_list = config.query_num_list
                 connector_only = config.connector_only
                 connector_depth = config.connector_depth
-                vision_tower_aux_list = build_vision_tower_aux_list(config, delay_load=True)
+                vision_tower_aux_list = build_vision_tower_aux_list(config, delay_load=False)
                 self.vision_tower_aux_list = nn.CellList(vision_tower_aux_list)
                 self.mm_projector = nn.SequentialCell([
                     nn.Dense(vision_hidden_size * num_query_group, config.hidden_size),
@@ -117,7 +117,7 @@ class CambrianMetaModel:
                 )
 
             else:
-                vision_tower_aux_list = build_vision_tower_aux_list(config, delay_load=True)
+                vision_tower_aux_list = build_vision_tower_aux_list(config, delay_load=False)
                 self.vision_tower_aux_list = nn.CellList(vision_tower_aux_list)
                 config.mm_hidden_size = sum(
                     [vision_tower_aux.hidden_size for vision_tower_aux in self.vision_tower_aux_list])
@@ -155,7 +155,7 @@ class CambrianMetaModel:
         self.config.connector_only = connector_only
 
         if self.get_vision_tower_aux_list() is None:
-            vision_tower_aux_list = build_vision_tower_aux_list(model_args)
+            vision_tower_aux_list = build_vision_tower_aux_list(model_args, delay_load=False)
             if model_args.unfreeze_mm_vision_tower:
                 self.vision_tower_aux_list = nn.CellList(vision_tower_aux_list)
             else:

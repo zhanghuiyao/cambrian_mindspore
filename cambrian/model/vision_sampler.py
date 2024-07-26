@@ -244,7 +244,7 @@ class VisionCrossAttentionLayer(nn.Cell):
                 )
             else:
                 pos_embeds.append(
-                    Parameter(Tensor(np.zeros(1), ms.float32), name=f"pos_embed_{i}_ignore", requires_grad=False)
+                    Parameter(Tensor(np.zeros(1), ms.float32), name=f"pos_embed_{i}_buffer", requires_grad=False)
                 )
         self.pos_embeds = ParameterTuple(pos_embeds)
 

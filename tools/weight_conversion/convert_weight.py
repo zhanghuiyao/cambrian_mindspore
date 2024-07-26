@@ -11,25 +11,55 @@ from .load_pt_weight import load_from_folder
 def name_replace_cambrian_8b(weight_name: str):
     """replace weight name"""
 
-    # prefix
+    # mm projector
+    weight_name = weight_name.replace('model.mm_projector_aux_', 'model.mm_projector_auxes.')
+    weight_name = weight_name.replace('model.mm_projector_aux_', 'model.mm_projector_auxes.')
+    if weight_name.startswith("model.mm_projector_auxes."):
+        weight_name.replace(".3.weight", ".3.gamma")
+        weight_name.replace(".3.bias", ".3.beta")
 
     # vision sampler
-    weight_name = weight_name.replace('model.vision_sampler_', 'model.vision_sampler_layers.')
+    weight_name = weight_name.replace('model.vision_sampler_', 'model.vision_samplers.')
+    weight_name = weight_name.replace('cross_attn.k_proj_', 'cross_attn.k_projs.')
+    weight_name = weight_name.replace('cross_attn.v_proj_', 'cross_attn.v_projs.')
+    if weight_name.startswith("model.vision_samplers.") or weight_name.startswith("model.vision_sampler_layers."):
+        if "cross_attn.k_projs." in weight_name or "cross_attn.v_projs." in weight_name or "cross_attn.q_proj.":
+            weight_name.replace(".0.weight", ".0.gamma")
+            weight_name.replace(".0.bias", ".0.beta")
 
-    # norm
+    # other norm layers
     weight_name = weight_name.replace('norm.weight', 'norm.gamma')
     weight_name = weight_name.replace('norm.bias', 'norm.beta')
-    # k_proj
 
+    return weight_name
+
+
+def name_replace_siglip(weight_name: str):
+    """replace weight name"""
+    return weight_name
+
+
+def name_replace_openai_clip(weight_name: str):
+    """replace weight name"""
+    return weight_name
+
+
+def name_replace_dinov2(weight_name: str):
+    """replace weight name"""
+    return weight_name
+
+
+def name_replace_openclip_convnext(weight_name: str):
+    """replace weight name"""
     return weight_name
 
 
 replace_func_map = {
     "cambrian-8b": name_replace_cambrian_8b,
-    "siglip": None,
-    "openai_clip": None,
-    "dinov2": None,
-    "openclip_convnext": None,
+    "siglip": name_replace_siglip,
+    "openai_clip": name_replace_openai_clip,
+    "dinov2": name_replace_dinov2,
+    "openclip_convnext": name_replace_openclip_convnext,
 }
 
 
