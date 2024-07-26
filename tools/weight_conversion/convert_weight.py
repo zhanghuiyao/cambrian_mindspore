@@ -8,7 +8,7 @@ from mindspore import Tensor, nn
 
 sys.path.append("../weight_conversion/")
 
-from .load_pt_weight import load_from_folder
+from load_pt_weight import load_from_folder
 
 
 def name_replace_cambrian_8b(weight_name: str):
