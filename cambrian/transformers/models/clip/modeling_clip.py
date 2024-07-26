@@ -8,6 +8,7 @@ from typing import Optional, Tuple
 from transformers import CLIPVisionConfig, CLIPConfig
 
 from cambrian.transformers.activations import ACT2FN
+from cambrian.transformers.modeling_utils import PreTrainedModel
 
 
 class CLIPAttention(nn.Cell):
@@ -345,32 +346,14 @@ class CLIPVisionTransformer(nn.Cell):
         return last_hidden_state, pooled_output, encoder_outputs[1], encoder_outputs[2]
 
 
-class CLIPVisionModel(nn.Cell):
+class CLIPVisionModel(PreTrainedModel):
     config_class = CLIPVisionConfig
     main_input_name = "pixel_values"
     _no_split_modules = ["CLIPEncoderLayer"]
 
     def __init__(self, config: CLIPVisionConfig):
-        super().__init__()
+        super().__init__(config)
         self.vision_model = CLIPVisionTransformer(config)
-
-    @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path):
-        config, _ = CLIPVisionConfig.from_pretrained(
-            pretrained_model_name_or_path,
-            cache_dir=None,
-            return_unused_kwargs=True,
-            force_download=False,
-            resume_download=False,
-            proxies=None,
-            local_files_only=False,
-            token=None,
-            revision="main",
-            subfolder="",
-            _from_auto=False,
-            _from_pipeline=None,
-        )
-        return cls(config)
 
     def get_input_embeddings(self) -> nn.Cell:
         return self.vision_model.embeddings.patch_embedding

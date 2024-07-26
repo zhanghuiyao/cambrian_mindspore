@@ -3,6 +3,7 @@ from typing import Optional
 import mindspore as ms
 from mindspore import nn, ops, Tensor, Parameter
 
+from transformers import PretrainedConfig, GenerationConfig
 from transformers.utils import logging
 
 from cambrian.transformers.generation.utils import GenerationMixin
@@ -52,6 +53,61 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
     # Has support for a `QuantoQuantizedCache` instance as `past_key_values`
     _supports_quantized_cache = False
 
+    def __init__(self, config):
+        super().__init__()
+        if not isinstance(config, PretrainedConfig):
+            raise ValueError(
+                f"Parameter config in `{self.__class__.__name__}(config)` should be an instance of class "
+                "`PretrainedConfig`. To create a model from a pretrained model use "
+                f"`model = {self.__class__.__name__}.from_pretrained(PRETRAINED_MODEL_NAME)`"
+            )
+
+        self.config = config
+        self.generation_config = GenerationConfig.from_model_config(config) if self.can_generate() else None
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path):
+        assert isinstance(cls.config_class, PretrainedConfig)
+        config, _ = cls.config_class.from_pretrained(
+            pretrained_model_name_or_path,
+            cache_dir=None,
+            return_unused_kwargs=True,
+            force_download=False,
+            resume_download=False,
+            proxies=None,
+            local_files_only=False,
+            token=None,
+            revision="main",
+            subfolder="",
+            _from_auto=False,
+            _from_pipeline=None,
+        )
+        model = cls(config)
+
+        # If it is a model with generation capabilities, attempt to load the generation config
+        if model.can_generate() and pretrained_model_name_or_path is not None:
+            try:
+                model.generation_config = GenerationConfig.from_pretrained(
+                    pretrained_model_name_or_path,
+                    cache_dir=None,
+                    force_download=False,
+                    resume_download=False,
+                    proxies=None,
+                    local_files_only=False,
+                    token=None,
+                    revision="main",
+                    subfolder="",
+                    _from_auto=False,
+                    _from_pipeline=None,
+                )
+            except OSError:
+                logger.info(
+                    "Generation config file not found, using a generation config created from the model config."
+                )
+                pass
+
+        return model
+
     def _init_weights(self, module):
         """
         Initialize the weights. This method should be overridden by derived class and is
@@ -84,6 +140,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
             self.set_output_embeddings(new_lm_head)
 
         return self.get_input_embeddings()
+
 
     def resize_token_embeddings(
             self, new_num_tokens: Optional[int] = None, pad_to_multiple_of: Optional[int] = None

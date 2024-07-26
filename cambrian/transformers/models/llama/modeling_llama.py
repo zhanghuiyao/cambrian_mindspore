@@ -417,6 +417,7 @@ class LlamaModel(PreTrainedModel):
     Args:
         config: LlamaConfig
     """
+    config_class = LlamaConfig
 
     def __init__(self, config: LlamaConfig):
         super().__init__(config)
@@ -440,24 +441,6 @@ class LlamaModel(PreTrainedModel):
         ]
         for name in _name_list:
             setattr(self, name, getattr(config, name))
-
-    @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path):
-        config, _ = LlamaConfig.from_pretrained(
-            pretrained_model_name_or_path,
-            cache_dir=None,
-            return_unused_kwargs=True,
-            force_download=False,
-            resume_download=False,
-            proxies=None,
-            local_files_only=False,
-            token=None,
-            revision="main",
-            subfolder="",
-            _from_auto=False,
-            _from_pipeline=None,
-        )
-        return cls(config)
 
     def get_input_embeddings(self):
         return self.embed_tokens
@@ -624,43 +607,6 @@ class LlamaForCausalLM(PreTrainedModel):
 
         # TODO: Initialize weights and apply final processing
         # self.post_init()
-
-    @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path):
-        config, _ = LlamaConfig.from_pretrained(
-            pretrained_model_name_or_path,
-            cache_dir=None,
-            return_unused_kwargs=True,
-            force_download=False,
-            resume_download=False,
-            proxies=None,
-            local_files_only=False,
-            token=None,
-            revision="main",
-            subfolder="",
-            _from_auto=False,
-            _from_pipeline=None,
-        )
-
-        generation_config = GenerationConfig.from_pretrained(
-            pretrained_model_name_or_path,
-            cache_dir=None,
-            force_download=False,
-            resume_download=False,
-            proxies=None,
-            local_files_only=False,
-            token=None,
-            revision="main",
-            subfolder="",
-            _from_auto=False,
-            _from_pipeline=None,
-        )
-
-        model = cls(config)
-        setattr(model, "config", config)
-        setattr(model, "generation_config", generation_config)
-
-        return model
 
     def get_input_embeddings(self):
         return self.model.embed_tokens

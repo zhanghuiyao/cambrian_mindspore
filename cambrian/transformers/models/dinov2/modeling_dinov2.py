@@ -10,6 +10,7 @@ from typing import Union, Optional, Tuple, Set
 from transformers import Dinov2Config
 
 from cambrian.transformers import ACT2FN
+from cambrian.transformers.modeling_utils import PreTrainedModel
 
 
 class Dinov2Embeddings(nn.Cell):
@@ -395,33 +396,16 @@ class Dinov2Encoder(nn.Cell):
         return _last_hidden_state, _hidden_states, _attentions
 
 
-class Dinov2Model(nn.Cell):
+class Dinov2Model(PreTrainedModel):
+    config_class = Dinov2Config
+
     def __init__(self, config: Dinov2Config):
         super().__init__(config)
-        self.config = config
 
         self.embeddings = Dinov2Embeddings(config)
         self.encoder = Dinov2Encoder(config)
 
         self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-
-    @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path):
-        config, _ = Dinov2Config.from_pretrained(
-            pretrained_model_name_or_path,
-            cache_dir=None,
-            return_unused_kwargs=True,
-            force_download=False,
-            resume_download=False,
-            proxies=None,
-            local_files_only=False,
-            token=None,
-            revision="main",
-            subfolder="",
-            _from_auto=False,
-            _from_pipeline=None,
-        )
-        return cls(config)
 
     def get_input_embeddings(self) -> Dinov2PatchEmbeddings:
         return self.embeddings.patch_embeddings
