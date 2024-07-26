@@ -67,7 +67,6 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path):
-        assert isinstance(cls.config_class, PretrainedConfig)
         config, _ = cls.config_class.from_pretrained(
             pretrained_model_name_or_path,
             cache_dir=None,
