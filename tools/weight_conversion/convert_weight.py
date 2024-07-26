@@ -141,7 +141,7 @@ def path_parse(args):
             else:
                 folder_name = f"{name}_folder"
 
-            if not os.path.isdir(getattr(args, folder_name)):
+            if getattr(args, folder_name) is None or not os.path.isdir(getattr(args, folder_name)):
 
                 for sub_folder in subfolders:
                     if name in sub_folder:
@@ -216,5 +216,7 @@ if __name__ == '__main__':
     parser.add_argument("--ms_checkpoint_path", type=str, default="cambrian-8b.ckpt")
 
     args, _ = parser.parse_known_args()
+
+
 
     convert_weight(args)
