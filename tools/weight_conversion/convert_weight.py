@@ -1,9 +1,12 @@
 import argparse
 import os
 import glob
+import sys
 
 import mindspore as ms
 from mindspore import Tensor, nn
+
+sys.path.append("../weight_conversion/")
 
 from .load_pt_weight import load_from_folder
 
