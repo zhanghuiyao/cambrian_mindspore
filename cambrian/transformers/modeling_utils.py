@@ -119,8 +119,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
     def _resize_token_embeddings(self, new_num_tokens, pad_to_multiple_of=None):
         old_embeddings = self.get_input_embeddings()
         new_embeddings = self._get_resized_embeddings(old_embeddings, new_num_tokens, pad_to_multiple_of)
-        old_embeddings_requires_grad = old_embeddings.requires_grad
-        new_embeddings.requires_grad = old_embeddings_requires_grad
+        new_embeddings.requires_grad = old_embeddings.requires_grad
         self.set_input_embeddings(new_embeddings)
         is_quantized = hasattr(self, "hf_quantizer") and self.hf_quantizer is not None
 
@@ -298,7 +297,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
         Returns the model's input embeddings.
 
         Returns:
-            `nn.Module`: A torch module mapping vocabulary to hidden states.
+            `nn.Cell`: A torch module mapping vocabulary to hidden states.
         """
         base_model = getattr(self, self.base_model_prefix, self)
         if base_model is not self:
@@ -311,7 +310,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
         Set model's input embeddings.
 
         Args:
-            value (`nn.Module`): A module mapping vocabulary to hidden states.
+            value (`nn.Cell`): A module mapping vocabulary to hidden states.
         """
         base_model = getattr(self, self.base_model_prefix, self)
         if base_model is not self:
@@ -324,7 +323,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
         Returns the model's output embeddings.
 
         Returns:
-            `nn.Module`: A torch module mapping hidden states to vocabulary.
+            `nn.Cell`: A torch module mapping hidden states to vocabulary.
         """
         return None  # Overwrite for models with output embeddings
 

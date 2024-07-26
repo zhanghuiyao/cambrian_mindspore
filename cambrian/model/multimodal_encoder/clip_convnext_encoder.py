@@ -63,22 +63,23 @@ class CLIPConvNextTower(BaseVisionTower):
         self.unfreeze_mm_vision_tower = getattr(args, 'unfreeze_mm_vision_tower', False)
         self.is_loaded = False
 
-        if not delay_load:
-            self.load_model()
-        elif self.unfreeze_mm_vision_tower:
-            self.load_model()
-        else:
-            assert "clip-convnext-L" in vision_tower or "clip-convnext-XXL" in vision_tower
-            if "clip-convnext-L" in vision_tower:
-                if "multi-stage" in vision_tower:
-                    self._hidden_size = sum([192, 384, 768, 1536])
-                else:
-                    self._hidden_size = 1536
+        if delay_load:
+            raise NotImplementedError
+
+        assert "clip-convnext-L" in vision_tower or "clip-convnext-XXL" in vision_tower
+        if "clip-convnext-L" in vision_tower:
+            if "multi-stage" in vision_tower:
+                self._hidden_size = sum([192, 384, 768, 1536])
             else:
-                if "multi-stage" in  vision_tower:
-                    self._hidden_size = sum([384, 768, 1536, 3072])
-                else:
-                    self._hidden_size = 3072
+                self._hidden_size = 1536
+        else:
+            if "multi-stage" in vision_tower:
+                self._hidden_size = sum([384, 768, 1536, 3072])
+            else:
+                self._hidden_size = 3072
+
+        self.load_model()
+
 
     def load_model(self, device_map=None):
         """

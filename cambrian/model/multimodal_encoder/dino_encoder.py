@@ -80,10 +80,12 @@ class DinoVisionTower(BaseVisionTower):
         self._interp_size = interp
         self._patch_size = 14  # default patch size
 
-        if not self.delay_load:
-            self.load_model()
-        else:
-            self.cfg_only = Dinov2Config.from_pretrained(self.vision_tower_name)
+        self.cfg_only = Dinov2Config.from_pretrained(self.vision_tower_name)
+
+        if self.delay_load:
+            raise NotImplementedError
+
+        self.load_model()
 
     def load_model(self, device_map=None):
 

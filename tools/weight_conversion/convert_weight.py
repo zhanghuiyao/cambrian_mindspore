@@ -18,6 +18,9 @@ def name_replace_cambrian_8b(weight_name: str):
         weight_name.replace(".3.weight", ".3.gamma")
         weight_name.replace(".3.bias", ".3.beta")
 
+    # embedding token
+    weight_name.replace("model.embed_tokens.weight", "model.embed_tokens.embedding_table")
+
     # vision sampler
     weight_name = weight_name.replace('model.vision_sampler_', 'model.vision_samplers.')
     weight_name = weight_name.replace('cross_attn.k_proj_', 'cross_attn.k_projs.')
@@ -36,21 +39,77 @@ def name_replace_cambrian_8b(weight_name: str):
 
 def name_replace_siglip(weight_name: str):
     """replace weight name"""
+
+    # only load vision model
+    if not weight_name.startswith("visual.trunk."):
+        return None
+
+    # norm layers
+    if "norm" in weight_name:
+        weight_name.replace(".weight", ".gamma")
+        weight_name.replace(".bias", ".beta")
+
     return weight_name
 
 
 def name_replace_openai_clip(weight_name: str):
     """replace weight name"""
+
+    # only load vision model
+    if not weight_name.startswith("vision_model."):
+        return None
+
+    # prefix name
+    weight_name.replace("vision_model.", "model.vision_tower_aux_list.1.vision_tower.vision_model.")
+
+    # norm layers
+    if "norm" in weight_name:
+        weight_name.replace(".weight", ".gamma")
+        weight_name.replace(".bias", ".beta")
+
     return weight_name
 
 
 def name_replace_dinov2(weight_name: str):
     """replace weight name"""
+
+    # prefix name
+    weight_name.replace("embeddings.", "model.vision_tower_aux_list.2.vision_tower.embeddings.", 1)  # just replace once
+    weight_name.replace("encoder.", "model.vision_tower_aux_list.2.vision_tower.encoder.")
+    weight_name.replace("layernorm.", "model.vision_tower_aux_list.2.vision_tower.encoder.")
+
+    # norm layers
+    if "norm" in weight_name:
+        weight_name.replace(".weight", ".gamma")
+        weight_name.replace(".bias", ".beta")
+
     return weight_name
 
 
 def name_replace_openclip_convnext(weight_name: str):
     """replace weight name"""
+
+    # only load vision model
+    if not weight_name.startswith("visual.trunk."):
+        return None
+
+    # prefix name
+    weight_name.replace("visual.trunk.", "model.vision_tower_aux_list.3.vision_tower.")
+
+    # special norm layers
+    weight_name.replace("stages.1.downsample.0.weight", "stages.1.downsample.0.gamma")
+    weight_name.replace("stages.1.downsample.0.bias", "stages.1.downsample.0.beta")
+    weight_name.replace("stages.2.downsample.0.weight", "stages.2.downsample.0.gamma")
+    weight_name.replace("stages.2.downsample.0.bias", "stages.2.downsample.0.beta")
+    weight_name.replace("stages.3.downsample.0.weight", "stages.3.downsample.0.gamma")
+    weight_name.replace("stages.3.downsample.0.bias", "stages.3.downsample.0.beta")
+    weight_name.replace("stem.1.weight", "stem.1.gamma")
+    weight_name.replace("stem.1.bias", "stem.1.beta")
+
+    # other norm layers
+    weight_name.replace("norm.weight", "norm.gamma")
+    weight_name.replace("norm.bias", "norm.beta")
+
     return weight_name
 
 
@@ -112,7 +171,8 @@ def pt_to_ms(args):
 
         for k in state_dict:
             new_k = replace_func(k)
-            ms_param_list.append({'name': new_k, 'data': Tensor(state_dict[k].numpy())})
+            if new_k is not None:
+                ms_param_list.append({'name': new_k, 'data': Tensor(state_dict[k].numpy())})
 
         num += 1
 

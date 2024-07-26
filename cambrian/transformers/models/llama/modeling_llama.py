@@ -410,7 +410,12 @@ class LlamaDecoderLayer(nn.Cell):
         return hidden_states, self_attn_weights, past_key_value
 
 
-class LlamaModel(PreTrainedModel):
+class LlamaPreTrainedModel(PreTrainedModel):
+    config_class = LlamaConfig
+    base_model_prefix = "model"
+
+
+class LlamaModel(LlamaPreTrainedModel):
     """
     Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`LlamaDecoderLayer`]
 
@@ -591,7 +596,7 @@ class LlamaModel(PreTrainedModel):
         return causal_mask
 
 
-class LlamaForCausalLM(PreTrainedModel):
+class LlamaForCausalLM(LlamaPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):

@@ -34,13 +34,14 @@ class ClipVisionTower(BaseVisionTower):
             logger.warning(f"ClipVisionTower, replace vision_tower_name to local path")
             self.vision_tower_name = replace_local_path
 
-        self._interp_size = interp 
-        if not self.delay_load:
-            self.load_model()
-        elif self.unfreeze_mm_vision_tower:
-            self.load_model()
-        else:
-            self.cfg_only = CLIPVisionConfig.from_pretrained(self.vision_tower_name)
+        self._interp_size = interp
+
+        self.cfg_only = CLIPVisionConfig.from_pretrained(self.vision_tower_name)
+
+        if self.delay_load:
+            raise NotImplementedError
+
+        self.load_model()
 
     def load_model(self):
         if self.is_loaded:

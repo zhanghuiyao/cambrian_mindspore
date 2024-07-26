@@ -49,12 +49,12 @@ class SiglipVisionTower(ClipVisionTower):
 
         self._image_size = res if res is not None else 512
         self._interp_size = interp
-        if not self.delay_load:
-            self.load_model()
-        elif self.unfreeze_mm_vision_tower:
-            self.load_model()
-        else:
-            self._hidden_size = 1152
+        self._hidden_size = 1152
+
+        if self.delay_load:
+            raise NotImplementedError
+
+        self.load_model()
 
     def load_model(self, device_map=None):
         self.vision_model = "siglip"

@@ -31,7 +31,6 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
     config_class = CambrianConfig
 
     def __init__(self, config):
-        self.config = config
         super(CambrianLlamaModel, self).__init__(config)
 
         _name_list = [
@@ -41,24 +40,6 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         ]
         for name in _name_list:
             setattr(self, name, getattr(config, name))
-
-    @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path):
-        config, _ = CambrianConfig.from_pretrained(
-            pretrained_model_name_or_path,
-            cache_dir=None,
-            return_unused_kwargs=True,
-            force_download=False,
-            resume_download=False,
-            proxies=None,
-            local_files_only=False,
-            token=None,
-            revision="main",
-            subfolder="",
-            _from_auto=False,
-            _from_pipeline=None,
-        )
-        return cls(config)
 
     def embedding_tokens(self, tokens):
         return self.embed_tokens(tokens)

@@ -14,6 +14,7 @@
 
 
 import os
+import time
 import warnings
 import mindspore as ms
 from transformers import AutoTokenizer, AutoConfig
@@ -29,6 +30,7 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
     if use_flash_attn:
         kwargs['attn_implementation'] = 'flash_attention'
 
+    checkpoint_path = kwargs.pop("checkpoint_path", None)
     load_8bit = kwargs.pop("load_8bit", False)
     load_4bit = kwargs.pop("load_8bit", False)
     if load_8bit:
@@ -48,13 +50,7 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
         elif model_base is not None:
             # this may be mm projector only
             logger.info(f'Loading Cambrian-1 from base model... {model_base}')
-            tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
-            cfg_pretrained = AutoConfig.from_pretrained(model_path)
-            model = CambrianLlamaForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=cfg_pretrained, **kwargs)
-
-            mm_projector_weights = ms.load_checkpoint(os.path.join(model_path, 'mm_projector.bin'))
-            mm_projector_weights = {k: v.to(ms.float16) for k, v in mm_projector_weights.items()}
-            model.load_state_dict(mm_projector_weights, strict=False)
+            raise NotImplementedError
         else:
             if 'mistral' in model_name.lower():
                 # tokenizer = AutoTokenizer.from_pretrained(model_path)
@@ -108,5 +104,19 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
         context_len = model.config.max_sequence_length
     else:
         context_len = 2048
+
+    if checkpoint_path is not None:
+        s_time = time.time()
+        print(f"checkpoint loading...")
+        state_dict = ms.load_checkpoint(checkpoint_path)
+        m, u = ms.load_param_into_net(model, state_dict)
+
+        m = [n for n in m if "_buffer" not in n]
+        if len(m) > 0:
+            print(f"WARNING: missing keys num: {len(m)}, top 10 name is: {m[:10]}")
+        if len(u) > 0:
+            print(f"WARNING: unexpected keys num: {len(u)}, top 10 name is: {u[:10]}")
+
+        print(f"load checkpoint from `{checkpoint_path}` success, time cost: {time.time()-s_time:.2f}s")
 
     return tokenizer, model, image_processor, context_len
