@@ -11,15 +11,16 @@ from .load_pt_weight import load_from_folder
 def name_replace_cambrian_8b(weight_name: str):
     """replace weight name"""
 
+    # FIXME: modify when resize embedding
+    # embedding token
+    weight_name.replace("model.embed_tokens.weight", "embed_tokens.embedding_table")
+
     # mm projector
     weight_name = weight_name.replace('model.mm_projector_aux_', 'model.mm_projector_auxes.')
     weight_name = weight_name.replace('model.mm_projector_aux_', 'model.mm_projector_auxes.')
     if weight_name.startswith("model.mm_projector_auxes."):
         weight_name.replace(".3.weight", ".3.gamma")
         weight_name.replace(".3.bias", ".3.beta")
-
-    # embedding token
-    weight_name.replace("model.embed_tokens.weight", "model.embed_tokens.embedding_table")
 
     # vision sampler
     weight_name = weight_name.replace('model.vision_sampler_', 'model.vision_samplers.')
