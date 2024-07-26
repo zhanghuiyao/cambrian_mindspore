@@ -123,6 +123,11 @@ class GenerateEncoderDecoderOutput(ModelOutput):
 
 class GenerationMixin:
 
+    def prepare_inputs_for_generation(self, *args, **kwargs):
+        raise NotImplementedError(
+            "A model class needs to define a `prepare_inputs_for_generation` method in order to use `.generate()`."
+        )
+
     def _prepare_generation_config(
         self, generation_config: Optional[GenerationConfig], **kwargs: Dict
     ) -> Tuple[GenerationConfig, Dict]:
