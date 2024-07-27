@@ -79,10 +79,10 @@ def load_from_folder(folder, prefer_safe=True):
     else:
         raise ValueError
 
-    WEIGHTS_NAME = name_dict.pop("WEIGHTS_NAME")
-    SAFE_WEIGHTS_NAME = name_dict.pop("SAFE_WEIGHTS_NAME")
-    WEIGHTS_INDEX_NAME = name_dict.pop("WEIGHTS_INDEX_NAME", None)
-    SAFE_WEIGHTS_INDEX_NAME = name_dict.pop("SAFE_WEIGHTS_INDEX_NAME", None)
+    WEIGHTS_NAME = name_dict.get("WEIGHTS_NAME")
+    SAFE_WEIGHTS_NAME = name_dict.get("SAFE_WEIGHTS_NAME")
+    WEIGHTS_INDEX_NAME = name_dict.get("WEIGHTS_INDEX_NAME", None)
+    SAFE_WEIGHTS_INDEX_NAME = name_dict.get("SAFE_WEIGHTS_INDEX_NAME", None)
 
     weights_file = os.path.join(folder, WEIGHTS_NAME)
     safe_weights_file = os.path.join(folder, SAFE_WEIGHTS_NAME)
