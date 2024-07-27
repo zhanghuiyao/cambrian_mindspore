@@ -14,6 +14,8 @@ from ezcolorlog import root_logger as logger
 import mindspore as ms
 from mindspore import context, Tensor
 
+from transformers import AutoTokenizer
+
 from cambrian.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from cambrian.conversation import conv_templates, SeparatorStyle
 from cambrian.model.builder import load_pretrained_model
@@ -36,15 +38,7 @@ def load_model_and_process(model_path, model_base, model_name, use_flash_attn=Fa
         if 'lora' in model_name.lower() and model_base is not None:
             raise NotImplementedError
         elif model_base is not None:
-            # this may be mm projector only
-            logger.info(f'Loading Cambrian-1 from base model... {model_base}')
-            tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
-            cfg_pretrained = AutoConfig.from_pretrained(model_path)
-            model = CambrianLlamaForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=cfg_pretrained, **kwargs)
-
-            mm_projector_weights = ms.load_checkpoint(os.path.join(model_path, 'mm_projector.bin'))
-            mm_projector_weights = {k: v.to(ms.float16) for k, v in mm_projector_weights.items()}
-            model.load_state_dict(mm_projector_weights, strict=False)
+            raise NotImplementedError
         else:
             if 'mistral' in model_name.lower():
                 # tokenizer = AutoTokenizer.from_pretrained(model_path)
@@ -124,6 +118,7 @@ def process(image, question, tokenizer, image_processor, model_config):
 
     image_size = [image.size]
     image_tensor = process_images([image], image_processor, model_config)
+    image_tensor = tuple([Tensor(i) for i in image_tensor])
 
     input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='ms').unsqueeze(0)
 
@@ -136,10 +131,11 @@ def test_cambrian_8b_inference(args):
 
     model_path = args.model_path
     image_path = args.image_path
-    question = args.prompt
+    question = args.question
 
     model_name = get_model_name_from_path(model_path)
-    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, None, model_name)
+    tokenizer, model, image_processor, context_len = \
+        load_pretrained_model(model_path, None, model_name, checkpoint_path=args.checkpoint_path)
 
     print(f"=====> Building model done.")
 
@@ -151,7 +147,6 @@ def test_cambrian_8b_inference(args):
 
         input_ids, image_tensor, image_sizes, prompt = process(image, question, tokenizer, image_processor,
                                                                model.config)
-        image_tensor = tuple([Tensor(i) for i in image_tensor])
 
         output_ids = model.generate(
             input_ids,
@@ -160,7 +155,7 @@ def test_cambrian_8b_inference(args):
             do_sample=True if temperature > 0 else False,
             temperature=temperature,
             num_beams=1,
-            max_new_tokens=20, # 512,
+            max_new_tokens=512, # 512,
             use_cache=False,  #True,
         )
 
@@ -175,14 +170,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--ms_mode", type=int, default=1, help="0 is Graph, 1 is Pynative")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
-    parser.add_argument("--image_path", type=str, default="./images/cambrian.png")
-    parser.add_argument("--prompt", type=str, default="hello world.")
+    parser.add_argument("--image_path", type=str, default="./demo/math.png")
+    parser.add_argument("--question", type=str, default="Please solve this question step by step.")
+    parser.add_argument("--checkpoint_path", type=str, default="./cambrian-8b.ckpt")
     args, _ = parser.parse_known_args()
 
     if args.ms_mode == 0:
         # FIXME: OOM on 9-th step
-        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend")
-        ms.set_context(jit_config={"jit_level": "O0"})
+        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"})
     elif args.ms_mode == 1:
         ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True)
     else:

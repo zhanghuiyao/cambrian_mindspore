@@ -118,5 +118,7 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
             print(f"WARNING: unexpected keys num: {len(u)}, top 10 name is: {u[:10]}")
 
         print(f"load checkpoint from `{checkpoint_path}` success, time cost: {time.time()-s_time:.2f}s")
+    else:
+        print(f"WARNING: No available pre-trained weights")
 
     return tokenizer, model, image_processor, context_len

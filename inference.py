@@ -10,7 +10,7 @@ from PIL import Image
 from tqdm import tqdm
 
 import mindspore as ms
-from mindspore import context
+from mindspore import context, Tensor
 
 from cambrian.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from cambrian.conversation import conv_templates, SeparatorStyle
@@ -37,32 +37,32 @@ def process(image, question, tokenizer, image_processor, model_config):
 
     image_size = [image.size]
     image_tensor = process_images([image], image_processor, model_config)
+    image_tensor = tuple([Tensor(i) for i in image_tensor])
 
     input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='ms').unsqueeze(0)
 
     return input_ids, image_tensor, image_size, prompt
 
 
-def inference():
+def inference(args):
     seed = 42
     ms.set_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
 
-    model_path = os.path.expanduser("nyu-visionx/cambrian-8b")
-    model_name = get_model_name_from_path(model_path)
-    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, None, model_name)
+    model_name = get_model_name_from_path(args.model_path)
+    tokenizer, model, image_processor, context_len = \
+        load_pretrained_model(args.model_path, None, model_name, checkpoint_path=args.checkpoint_path)
 
     temperature = 0
 
     while True:
-        image_path = input("image path: ")
+        image_path = input("image path [e.g. `demo/math.png`]: ")
         image = Image.open(image_path).convert('RGB')
-        question = input("question: ")
+        question = input("question [e.g. `Please solve this question step by step.`]: ")
 
         input_ids, image_tensor, image_sizes, prompt = process(image, question, tokenizer, image_processor,
                                                                model.config)
-        input_ids = input_ids.to(non_blocking=True)
 
         output_ids = model.generate(
             input_ids,
@@ -81,5 +81,20 @@ def inference():
 
 
 if __name__ == '__main__':
-    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend")
-    inference()
+
+    parser = argparse.ArgumentParser(description="test")
+    parser.add_argument("--ms_mode", type=int, default=1, help="0 is Graph, 1 is Pynative")
+    parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
+    parser.add_argument("--checkpoint_path", type=str, default="./cambrian-8b.ckpt")
+    args, _ = parser.parse_known_args()
+
+    if args.ms_mode == 0:
+        # FIXME: OOM on 9-th step
+        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"})
+        raise NotImplementedError
+    elif args.ms_mode == 1:
+        ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True)
+    else:
+        raise ValueError
+
+    inference(args.model_path)

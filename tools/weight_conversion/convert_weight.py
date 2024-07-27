@@ -203,16 +203,17 @@ def convert_weight(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="convert weight")
 
+    # model name
     parser.add_argument("--model_name", type=str, default="cambrian-8b")
     parser.add_argument("--task", type=str, default="pt2ms")
 
     # pt checkpoint path
     parser.add_argument("--full_folder", type=str, default=None)
-    parser.add_argument("--cambrian_folder", type=str, default=None)
-    parser.add_argument("--siglip_folder", type=str, default=None)
-    parser.add_argument("--openai_folder", type=str, default=None)
-    parser.add_argument("--dinov2_folder", type=str, default=None)
-    parser.add_argument("--convnext_folder", type=str, default=None)
+    parser.add_argument("--cambrian_folder", type=str, default=None, help="download from `https://huggingface.co/nyu-visionx/cambrian-8b`")
+    parser.add_argument("--siglip_folder", type=str, default=None, help="download from `https://huggingface.co/timm/ViT-SO400M-14-SigLIP-384`")
+    parser.add_argument("--openai_folder", type=str, default=None, help="download from `https://huggingface.co/openai/clip-vit-large-patch14-336`")
+    parser.add_argument("--dinov2_folder", type=str, default=None, help="download from `https://huggingface.co/facebook/dinov2-giant`")
+    parser.add_argument("--convnext_folder", type=str, default=None, help="download from `https://huggingface.co/laion/CLIP-convnext_xxlarge-laion2B-s34B-b82K-augreg-soup`")
 
     # ms checkpoint path
     parser.add_argument("--mindspore_checkpoint_path", type=str, default=None)
