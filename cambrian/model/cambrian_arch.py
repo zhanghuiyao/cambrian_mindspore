@@ -683,7 +683,7 @@ class CambrianMetaForCausalLM:
 
                 # zhy_test
                 cur_input_embeds = self.get_model().embedding_tokens(cur_input_ids)
-                # cur_input_embeds = ops.broadcast_to(cur_input_ids[:, None], (-1, 4096)).to(ms.float16)
+                # cur_input_embeds = ops.broadcast_to(cur_input_ids[:, None], (-1, 4096))
 
                 # zhy_test
                 _img_indexes = ops.arange(0, _im_token_len, 1, dtype=ms.int32) + _im_positions

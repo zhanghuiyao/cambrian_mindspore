@@ -38,7 +38,8 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
     elif load_4bit:
         raise NotImplementedError
     else:
-        kwargs['mindspore_dtype'] = ms.float16
+        # FIXME: mix-precision
+        kwargs['mindspore_dtype'] = ms.float32  # ms.float16
 
     if 'cambrian' in model_name.lower():
         # Load Cambrian model
@@ -96,7 +97,8 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
             if not vision_tower_aux.is_loaded:
                 vision_tower_aux.load_model()
 
-            vision_tower_aux.to_float(ms.float16)
+            # FIXME: mix-precision
+            # vision_tower_aux.to_float(ms.float16)
 
         image_processor = [vision_tower_aux.image_processor for vision_tower_aux in vision_tower_aux_list]
 

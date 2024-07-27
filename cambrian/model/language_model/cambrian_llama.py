@@ -218,9 +218,11 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
         dtype = kwargs.pop("mindspore_dtype", ms.float32)
         if dtype == ms.float16:
-            model.to_float(ms.float16)
-        elif dtype == "bfloat16":
-            model.to_float(ms.bfloat16)
+            model.to_float(dtype)
+            print("WARNING: The network is converted to FP16 for computation")
+        elif dtype == ms.bfloat16:
+            model.to_float(dtype)
+            print("WARNING: The network is converted to BF16 for computation")
 
         return model
 
