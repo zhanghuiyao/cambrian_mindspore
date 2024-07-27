@@ -180,11 +180,13 @@ def pt_to_ms(args):
 
         num += 1
 
-        print(f"{num}/5, convert {name} form {folder} done.")
+        print(f"=======> {num}/5, convert {name} form {folder} done.")
 
-    print(f"saving mindspore checkpoint...")
-    ms.save_checkpoint(ms_param_list, args.mindspore_ckpt_path)
-    print(f"save mindspore checkpoint...")
+    print(f"=======> saving mindspore checkpoint...")
+    ckpt_path = args.mindspore_checkpoint_path \
+        if args.mindspore_checkpoint_path is not None else f"{args.model_name}.ckpt"
+    ms.save_checkpoint(ms_param_list, ckpt_path)
+    print(f"=======> save mindspore checkpoint...")
 
 
 def convert_weight(args):
@@ -213,7 +215,7 @@ if __name__ == '__main__':
     parser.add_argument("--convnext_folder", type=str, default=None)
 
     # ms checkpoint path
-    parser.add_argument("--ms_checkpoint_path", type=str, default="cambrian-8b.ckpt")
+    parser.add_argument("--mindspore_checkpoint_path", type=str, default=None)
 
     args, _ = parser.parse_known_args()
 
