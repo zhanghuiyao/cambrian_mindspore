@@ -27,7 +27,11 @@ def name_replace_cambrian_8b(weight_name: str):
         weight_name = weight_name.replace(".3.bias", ".3.beta")
 
     # vision sampler
-    weight_name = weight_name.replace('model.vision_sampler_', 'model.vision_samplers.')
+    if weight_name.startswith("model.vision_sampler_layers."):
+        pass
+    else:
+        weight_name = weight_name.replace('model.vision_sampler_', 'model.vision_samplers.')
+
     weight_name = weight_name.replace('cross_attn.k_proj_', 'cross_attn.k_projs.')
     weight_name = weight_name.replace('cross_attn.v_proj_', 'cross_attn.v_projs.')
     if weight_name.startswith("model.vision_samplers.") or weight_name.startswith("model.vision_sampler_layers."):
@@ -54,6 +58,9 @@ def name_replace_siglip(weight_name: str):
     # only load vision model
     if not weight_name.startswith("visual.trunk."):
         return None
+
+    # prefix name
+    weight_name = weight_name.replace("visual.trunk.", "model.vision_tower_aux_list.0.vision_tower.")
 
     # norm layers
     if "norm" in weight_name:
