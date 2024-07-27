@@ -207,6 +207,23 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
 class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
     config_class = CambrianConfig
 
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
+        model = super(CambrianLlamaForCausalLM, cls).from_pretrained(pretrained_model_name_or_path)
+
+        # FIXME: support cache
+        if model.generation_config.use_cache:
+            model.generation_config.use_cache = False
+            print(f"not support use_cache, `generation_config.use_cache` force to `False`")
+
+        dtype = kwargs.pop("mindspore_dtype", ms.float32)
+        if dtype == ms.float16:
+            model.to_float(ms.float16)
+        elif dtype == "bfloat16":
+            model.to_float(ms.bfloat16)
+
+        return model
+
     def __init__(self, config):
         super(LlamaForCausalLM, self).__init__(config)
 
