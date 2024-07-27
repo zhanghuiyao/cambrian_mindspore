@@ -97,7 +97,7 @@ def name_replace_dinov2(weight_name: str):
     # prefix name
     weight_name = weight_name.replace("embeddings.", "model.vision_tower_aux_list.2.vision_tower.embeddings.", 1)  # just replace once
     weight_name = weight_name.replace("encoder.", "model.vision_tower_aux_list.2.vision_tower.encoder.")
-    weight_name = weight_name.replace("layernorm.", "model.vision_tower_aux_list.2.vision_tower.encoder.layernorm.")
+    weight_name = weight_name.replace("layernorm.", "model.vision_tower_aux_list.2.vision_tower.layernorm.")
 
     # norm layers
     if "norm" in weight_name:
