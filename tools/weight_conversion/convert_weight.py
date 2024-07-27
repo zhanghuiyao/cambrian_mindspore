@@ -16,14 +16,14 @@ def name_replace_cambrian_8b(weight_name: str):
 
     # FIXME: modify when resize embedding
     # embedding token
-    weight_name.replace("model.embed_tokens.weight", "embed_tokens.embedding_table")
+    weight_name = weight_name.replace("model.embed_tokens.weight", "embed_tokens.embedding_table")
 
     # mm projector
     weight_name = weight_name.replace('model.mm_projector_aux_', 'model.mm_projector_auxes.')
     weight_name = weight_name.replace('model.mm_projector_aux_', 'model.mm_projector_auxes.')
     if weight_name.startswith("model.mm_projector_auxes."):
-        weight_name.replace(".3.weight", ".3.gamma")
-        weight_name.replace(".3.bias", ".3.beta")
+        weight_name = weight_name.replace(".3.weight", ".3.gamma")
+        weight_name = weight_name.replace(".3.bias", ".3.beta")
 
     # vision sampler
     weight_name = weight_name.replace('model.vision_sampler_', 'model.vision_samplers.')
@@ -31,8 +31,14 @@ def name_replace_cambrian_8b(weight_name: str):
     weight_name = weight_name.replace('cross_attn.v_proj_', 'cross_attn.v_projs.')
     if weight_name.startswith("model.vision_samplers.") or weight_name.startswith("model.vision_sampler_layers."):
         if "cross_attn.k_projs." in weight_name or "cross_attn.v_projs." in weight_name or "cross_attn.q_proj.":
-            weight_name.replace(".0.weight", ".0.gamma")
-            weight_name.replace(".0.bias", ".0.beta")
+            weight_name = weight_name.replace(".0.weight", ".0.gamma")
+            weight_name = weight_name.replace(".0.bias", ".0.beta")
+
+    # skip rmsnorm
+    if weight_name.endswith("layernorm.weight"):
+        return weight_name
+    elif weight_name.endswith("model.norm.weight"):
+        return weight_name
 
     # other norm layers
     weight_name = weight_name.replace('norm.weight', 'norm.gamma')
@@ -50,8 +56,8 @@ def name_replace_siglip(weight_name: str):
 
     # norm layers
     if "norm" in weight_name:
-        weight_name.replace(".weight", ".gamma")
-        weight_name.replace(".bias", ".beta")
+        weight_name = weight_name.replace(".weight", ".gamma")
+        weight_name = weight_name.replace(".bias", ".beta")
 
     return weight_name
 
@@ -64,12 +70,12 @@ def name_replace_openai_clip(weight_name: str):
         return None
 
     # prefix name
-    weight_name.replace("vision_model.", "model.vision_tower_aux_list.1.vision_tower.vision_model.")
+    weight_name = weight_name.replace("vision_model.", "model.vision_tower_aux_list.1.vision_tower.vision_model.")
 
     # norm layers
     if "norm" in weight_name:
-        weight_name.replace(".weight", ".gamma")
-        weight_name.replace(".bias", ".beta")
+        weight_name = weight_name.replace(".weight", ".gamma")
+        weight_name = weight_name.replace(".bias", ".beta")
 
     return weight_name
 
@@ -78,14 +84,14 @@ def name_replace_dinov2(weight_name: str):
     """replace weight name"""
 
     # prefix name
-    weight_name.replace("embeddings.", "model.vision_tower_aux_list.2.vision_tower.embeddings.", 1)  # just replace once
-    weight_name.replace("encoder.", "model.vision_tower_aux_list.2.vision_tower.encoder.")
-    weight_name.replace("layernorm.", "model.vision_tower_aux_list.2.vision_tower.encoder.")
+    weight_name = weight_name.replace("embeddings.", "model.vision_tower_aux_list.2.vision_tower.embeddings.", 1)  # just replace once
+    weight_name = weight_name.replace("encoder.", "model.vision_tower_aux_list.2.vision_tower.encoder.")
+    weight_name = weight_name.replace("layernorm.", "model.vision_tower_aux_list.2.vision_tower.encoder.")
 
     # norm layers
     if "norm" in weight_name:
-        weight_name.replace(".weight", ".gamma")
-        weight_name.replace(".bias", ".beta")
+        weight_name = weight_name.replace(".weight", ".gamma")
+        weight_name = weight_name.replace(".bias", ".beta")
 
     return weight_name
 
@@ -98,21 +104,21 @@ def name_replace_openclip_convnext(weight_name: str):
         return None
 
     # prefix name
-    weight_name.replace("visual.trunk.", "model.vision_tower_aux_list.3.vision_tower.")
+    weight_name = weight_name.replace("visual.trunk.", "model.vision_tower_aux_list.3.vision_tower.")
 
     # special norm layers
-    weight_name.replace("stages.1.downsample.0.weight", "stages.1.downsample.0.gamma")
-    weight_name.replace("stages.1.downsample.0.bias", "stages.1.downsample.0.beta")
-    weight_name.replace("stages.2.downsample.0.weight", "stages.2.downsample.0.gamma")
-    weight_name.replace("stages.2.downsample.0.bias", "stages.2.downsample.0.beta")
-    weight_name.replace("stages.3.downsample.0.weight", "stages.3.downsample.0.gamma")
-    weight_name.replace("stages.3.downsample.0.bias", "stages.3.downsample.0.beta")
-    weight_name.replace("stem.1.weight", "stem.1.gamma")
-    weight_name.replace("stem.1.bias", "stem.1.beta")
+    weight_name = weight_name.replace("stages.1.downsample.0.weight", "stages.1.downsample.0.gamma")
+    weight_name = weight_name.replace("stages.1.downsample.0.bias", "stages.1.downsample.0.beta")
+    weight_name = weight_name.replace("stages.2.downsample.0.weight", "stages.2.downsample.0.gamma")
+    weight_name = weight_name.replace("stages.2.downsample.0.bias", "stages.2.downsample.0.beta")
+    weight_name = weight_name.replace("stages.3.downsample.0.weight", "stages.3.downsample.0.gamma")
+    weight_name = weight_name.replace("stages.3.downsample.0.bias", "stages.3.downsample.0.beta")
+    weight_name = weight_name.replace("stem.1.weight", "stem.1.gamma")
+    weight_name = weight_name.replace("stem.1.bias", "stem.1.beta")
 
     # other norm layers
-    weight_name.replace("norm.weight", "norm.gamma")
-    weight_name.replace("norm.bias", "norm.beta")
+    weight_name = weight_name.replace("norm.weight", "norm.gamma")
+    weight_name = weight_name.replace("norm.bias", "norm.beta")
 
     return weight_name
 
