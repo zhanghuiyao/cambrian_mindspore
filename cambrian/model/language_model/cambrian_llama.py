@@ -226,54 +226,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         # TODO: Initialize weights and apply final processing
         # self.post_init()
 
-    @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
-        config, _ = CambrianConfig.from_pretrained(
-            pretrained_model_name_or_path,
-            cache_dir=None,
-            return_unused_kwargs=True,
-            force_download=False,
-            resume_download=False,
-            proxies=None,
-            local_files_only=False,
-            token=None,
-            revision="main",
-            subfolder="",
-            _from_auto=False,
-            _from_pipeline=None,
-        )
-
-        generation_config = GenerationConfig.from_pretrained(
-            pretrained_model_name_or_path,
-            cache_dir=None,
-            force_download=False,
-            resume_download=False,
-            proxies=None,
-            local_files_only=False,
-            token=None,
-            revision="main",
-            subfolder="",
-            _from_auto=False,
-            _from_pipeline=None,
-        )
-
-        # FIXME: support cache
-        if generation_config.use_cache:
-            generation_config.use_cache = False
-            print(f"not support use_cache, `generation_config.use_cache` force to `False`")
-
-        model = cls(config)
-        setattr(model, "generation_config", generation_config)
-        setattr(model, "config", config)
-
-        dtype = kwargs.pop("mindspore_dtype", ms.float32)
-        if dtype == ms.float16:
-            model.to_float(ms.float16)
-        elif dtype == "bfloat16":
-            model.to_float(ms.bfloat16)
-
-        return model
-
     def set_use_cache(self, use_cache: bool):
         self.use_cache = use_cache
         self.model.use_cache = use_cache
