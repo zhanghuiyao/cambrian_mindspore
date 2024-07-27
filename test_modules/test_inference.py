@@ -100,9 +100,10 @@ if __name__ == '__main__':
 
     if args.ms_mode == 0:
         # FIXME: OOM on 9-th step
-        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"})
+        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"}, max_device_memory="59GB")
+        raise NotImplementedError
     elif args.ms_mode == 1:
-        ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True)
+        ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True, max_device_memory="59GB")
     else:
         raise ValueError
 
