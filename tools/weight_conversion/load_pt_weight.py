@@ -54,7 +54,7 @@ def load_from_folder(folder, prefer_safe=True):
     weights_file_transformers = os.path.join(folder, NAME_DICT_TRANSFORMERS["WEIGHTS_NAME"])
     safe_weights_file_transformers = os.path.join(folder, NAME_DICT_TRANSFORMERS["SAFE_WEIGHTS_NAME"])
     index_file_transformers = os.path.join(folder, NAME_DICT_TRANSFORMERS["WEIGHTS_INDEX_NAME"])
-    safe_index_file_transformers = os.path.join(folder, NAME_DICT_TRANSFORMERS["SAFE_WEIGHTS_INDEX"])
+    safe_index_file_transformers = os.path.join(folder, NAME_DICT_TRANSFORMERS["SAFE_WEIGHTS_INDEX_NAME"])
     weights_file_openclip = os.path.join(folder, NAME_DICT_OPENCLIP["WEIGHTS_NAME"])
     safe_weights_file_openclip = os.path.join(folder, NAME_DICT_OPENCLIP["SAFE_WEIGHTS_NAME"])
 
