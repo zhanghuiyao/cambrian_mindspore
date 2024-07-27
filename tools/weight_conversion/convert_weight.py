@@ -2,6 +2,7 @@ import argparse
 import os
 import glob
 import sys
+import time
 
 import mindspore as ms
 from mindspore import Tensor, nn
@@ -189,10 +190,11 @@ def pt_to_ms(args):
         print(f"=======> {num}/5, convert {name} form {folder} done.")
 
     print(f"=======> saving mindspore checkpoint...")
+    s_time = time.time()
     ckpt_path = args.mindspore_checkpoint_path \
         if args.mindspore_checkpoint_path is not None else f"{args.model_name}.ckpt"
     ms.save_checkpoint(ms_param_list, ckpt_path)
-    print(f"=======> save mindspore checkpoint...")
+    print(f"=======> save mindspore checkpoint to {ckpt_path} success, time cost: {time.time()-s_time:.2f}s")
 
 
 def convert_weight(args):

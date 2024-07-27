@@ -120,6 +120,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
         old_embeddings = self.get_input_embeddings()
         new_embeddings = self._get_resized_embeddings(old_embeddings, new_num_tokens, pad_to_multiple_of)
         new_embeddings.requires_grad = old_embeddings.requires_grad
+        new_embeddings.embedding_table.name = old_embeddings.embedding_table.name
         self.set_input_embeddings(new_embeddings)
         is_quantized = hasattr(self, "hf_quantizer") and self.hf_quantizer is not None
 
