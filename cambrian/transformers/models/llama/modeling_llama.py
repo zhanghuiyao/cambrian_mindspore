@@ -450,8 +450,14 @@ class LlamaModel(LlamaPreTrainedModel):
     def get_input_embeddings(self):
         return self.embed_tokens
 
-    def set_input_embeddings(self, value):
+    def set_input_embeddings(self, value: nn.Embedding):
+        if not isinstance(value, nn.Embedding):
+            raise NotImplementedError
+        ori_name = value.embedding_table.name
+
         self.embed_tokens = value
+
+        self.embed_tokens.embedding_table.name = ori_name
 
     def recompute(self):
         self.enable_recompute = True
