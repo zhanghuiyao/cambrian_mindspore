@@ -655,8 +655,8 @@ class CambrianMetaForCausalLM:
                     new_label = labels[batch_idx]
                     new_position_id = ops.arange(0, cur_input_ids.shape[0], 1, dtype=cur_input_ids.dtype)
 
-                    neg_cur_attention_mask = ops.logical_not(cur_attention_mask[:, None])
-                    new_input_embed = ops.masked_fill(new_input_embed, neg_cur_attention_mask, ops.full((), 0, dtype=new_input_embed.dtype))
+                    neg_cur_attention_mask = ops.logical_not(cur_attention_mask)
+                    new_input_embed = ops.masked_fill(new_input_embed, neg_cur_attention_mask[:, None], ops.full((), 0, dtype=new_input_embed.dtype))
                     new_label = ops.masked_fill(new_label, neg_cur_attention_mask, ops.full((), IGNORE_INDEX, dtype=new_label.dtype))
                     new_position_id = ops.masked_fill(new_position_id, neg_cur_attention_mask, ops.full((), 0, dtype=new_position_id.dtype))
 
@@ -695,7 +695,7 @@ class CambrianMetaForCausalLM:
                 new_label = ops.scatter(cur_labels, 0, _img_indexes, ops.full((_im_token_len,), IGNORE_INDEX, dtype=cur_labels.dtype))
                 new_position_id = ops.arange(0, cur_input_ids.shape[0], 1, dtype=ms.int32)
 
-                neg_cur_attention_mask = ops.logical_not(cur_attention_mask[:, None])
+                neg_cur_attention_mask = ops.logical_not(cur_attention_mask)
                 new_input_embed = ops.masked_fill(new_input_embed, neg_cur_attention_mask[:, None], ops.full((), 0, dtype=new_input_embed.dtype))
                 new_label = ops.masked_fill(new_label, neg_cur_attention_mask, ops.full((), IGNORE_INDEX, dtype=new_label.dtype))
                 new_position_id = ops.masked_fill(new_position_id, neg_cur_attention_mask, ops.full((), 0, dtype=new_position_id.dtype))
