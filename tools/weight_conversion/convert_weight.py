@@ -150,9 +150,9 @@ def path_parse(args):
 
     assert os.path.isdir(args.cambrian_folder)
     assert os.path.isdir(args.siglip_folder)
-    assert os.path.isdir(args.openai_clip_folder)
+    assert os.path.isdir(args.openai_folder)
     assert os.path.isdir(args.dinov2_folder)
-    assert os.path.isdir(args.openclip_convnext_folder)
+    assert os.path.isdir(args.convnext_folder)
 
     return args
 
