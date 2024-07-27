@@ -120,9 +120,9 @@ def name_replace_openclip_convnext(weight_name: str):
 replace_func_map = {
     "cambrian-8b": name_replace_cambrian_8b,
     "siglip": name_replace_siglip,
-    "openai_clip": name_replace_openai_clip,
+    "openai": name_replace_openai_clip,
     "dinov2": name_replace_dinov2,
-    "openclip_convnext": name_replace_openclip_convnext,
+    "convnext": name_replace_openclip_convnext,
 }
 
 
@@ -144,7 +144,7 @@ def path_parse(args):
             if getattr(args, folder_name) is None or not os.path.isdir(getattr(args, folder_name)):
 
                 for sub_folder in subfolders:
-                    if name in sub_folder:
+                    if name in sub_folder.lower():
                         setattr(args, folder_name, sub_folder)
                         break
 
@@ -208,9 +208,9 @@ if __name__ == '__main__':
     parser.add_argument("--full_folder", type=str, default=None)
     parser.add_argument("--cambrian_folder", type=str, default=None)
     parser.add_argument("--siglip_folder", type=str, default=None)
-    parser.add_argument("--openai_clip_folder", type=str, default=None)
+    parser.add_argument("--openai_folder", type=str, default=None)
     parser.add_argument("--dinov2_folder", type=str, default=None)
-    parser.add_argument("--openclip_convnext_folder", type=str, default=None)
+    parser.add_argument("--convnext_folder", type=str, default=None)
 
     # ms checkpoint path
     parser.add_argument("--ms_checkpoint_path", type=str, default="cambrian-8b.ckpt")
