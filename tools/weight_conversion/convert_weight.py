@@ -80,6 +80,9 @@ def name_replace_openai_clip(weight_name: str):
     # prefix name
     weight_name = weight_name.replace("vision_model.", "model.vision_tower_aux_list.1.vision_tower.vision_model.")
 
+    # embedding
+    weight_name = weight_name.replace("position_embedding.weight", "position_embedding.embedding_table")
+
     # norm layers
     if "norm" in weight_name:
         weight_name = weight_name.replace(".weight", ".gamma")
@@ -94,7 +97,7 @@ def name_replace_dinov2(weight_name: str):
     # prefix name
     weight_name = weight_name.replace("embeddings.", "model.vision_tower_aux_list.2.vision_tower.embeddings.", 1)  # just replace once
     weight_name = weight_name.replace("encoder.", "model.vision_tower_aux_list.2.vision_tower.encoder.")
-    weight_name = weight_name.replace("layernorm.", "model.vision_tower_aux_list.2.vision_tower.encoder.")
+    weight_name = weight_name.replace("layernorm.", "model.vision_tower_aux_list.2.vision_tower.encoder.layernorm.")
 
     # norm layers
     if "norm" in weight_name:
