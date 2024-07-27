@@ -1484,7 +1484,15 @@ class GenerationMixin:
 
             # Clone is needed to avoid keeping a hanging ref to outputs.logits which may be very large for first iteration
             # (the clone itself is always small)
-            next_token_logits = outputs.logits[:, -1, :]
+
+            if model_kwargs.get("attention_mask", None) is not None:
+                mask = model_kwargs["attention_mask"]
+                index = mask.to(ms.int32).sum(-1)  # (bs, n) -> (bs,)
+                bs_index = ops.arange(0, index.shape[0], dtype=ms.int32)
+                # assert pad_left
+                next_token_logits = outputs.logits[bs_index, index, :]   # (bs, dim)
+            else:
+                next_token_logits = outputs.logits[:, -1, :]
 
             # pre-process distribution
             next_token_scores = logits_processor(input_ids, next_token_logits)
