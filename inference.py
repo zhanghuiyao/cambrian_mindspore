@@ -50,9 +50,10 @@ def inference(args):
     np.random.seed(seed)
     random.seed(seed)
 
-    model_name = get_model_name_from_path(args.model_path)
+    model_path = args.model_path
+    model_name = get_model_name_from_path(model_path)
     tokenizer, model, image_processor, context_len = \
-        load_pretrained_model(args.model_path, None, model_name, checkpoint_path=args.checkpoint_path)
+        load_pretrained_model(model_path, None, model_name, checkpoint_path=args.checkpoint_path)
 
     temperature = 0
 
@@ -97,4 +98,4 @@ if __name__ == '__main__':
     else:
         raise ValueError
 
-    inference(args.model_path)
+    inference(args)
