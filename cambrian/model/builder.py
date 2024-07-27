@@ -111,7 +111,7 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
         state_dict = ms.load_checkpoint(checkpoint_path)
         m, u = ms.load_param_into_net(model, state_dict)
 
-        m = [n for n in m if "_buffer" not in n]
+        m = [n for n in m if ("_buffer" not in n) and (".inv_freq" not in n)]
         if len(m) > 0:
             print(f"WARNING: missing keys num: {len(m)}, top 10 name is: {m[:10]}")
         if len(u) > 0:
