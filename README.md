@@ -26,21 +26,21 @@ coming soon !!!
 ## Features
 
 - [ ] Cambrian Model
-  - [ ] Infer
+  - [x] Infer
   - [ ] Pretrain - Training Spatial Vision Aggregator
   - [ ] Finetune - Instruction Tuning
-- [ ] Base Modules
-  - [ ] Connector
-    - [ ] SVA, Spatial Vision Aggregator
-    - [ ] Projector (LLaVA style 2-layer MLP)
-  - [ ] Vision Encoders
-    - [ ] OpenAI CLIP ViT-L/14@336
-    - [ ] SigLIP ViT-SO400M/14@384
-    - [ ] OpenCLIP ConvNeXt-XXL@1024
-    - [ ] DINOv2 ViT-L/14@518
+- [x] Base Modules
+  - [x] Connector
+    - [x] SVA, Spatial Vision Aggregator
+    - [x] Projector (LLaVA style 2-layer MLP)
+  - [x] Vision Encoders
+    - [x] OpenAI CLIP ViT-L/14@336
+    - [x] SigLIP ViT-SO400M/14@384
+    - [x] OpenCLIP ConvNeXt-XXL@1024
+    - [x] DINOv2 ViT-L/14@518
   - [ ] LLMs
     - [ ] Phi-3B
-    - [ ] LLaMA-3-Instruct-8B
+    - [x] LLaMA-3-Instruct-8B
     - [ ] Vicuna-1.5-13B
     - [ ] Hermes-2-Yi-34B
 - [ ] Targeted Data Engine
@@ -49,9 +49,9 @@ coming soon !!!
 
 
 ## Contents
-- [Installation](#installation)
+- [Quick Start]()
 - [Cambrian Weights](#cambrian-weights)
-    - (Option) Weight Convert
+    - [Weight Convert]()
 - [Cambrian Instruction Tuning Data](#cambrian-instruction-tuning-data)
 - [Train](#train)
 - [Evaluation](#evaluation)

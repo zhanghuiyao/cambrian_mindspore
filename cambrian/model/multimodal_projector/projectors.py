@@ -44,7 +44,6 @@ class Projector(nn.Cell):
 
         # pos emb
         self.pos_emb = build_pos_embeds(num_input_tokens, encoder_hidden_size)
-        # self.pos_emb = None
 
         self.build_net()
 
@@ -63,7 +62,6 @@ class Projector(nn.Cell):
             x = x + self.pos_emb
 
         dtype = x.dtype
-        # x = self._forward(x.to(torch.float32))  # (B, L, output_hidden_size)
         x = self._forward(x)
 
         return x.to(dtype)

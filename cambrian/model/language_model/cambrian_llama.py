@@ -13,6 +13,7 @@ from cambrian.transformers.modeling_attn_mask_utils import _prepare_4d_causal_at
 
 from cambrian.model.cambrian_arch import CambrianMetaModel, CambrianMetaForCausalLM
 from cambrian.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
+from cambrian.mindspore_adapter import auto_mixed_precision
 
 
 logger = logging.get_logger(__name__)
@@ -218,11 +219,11 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
         dtype = kwargs.pop("mindspore_dtype", ms.float32)
         if dtype == ms.float16:
-            model.to_float(dtype)
-            print("WARNING: The network is converted to FP16 for computation")
+            model = auto_mixed_precision(model, "O2", ms.float16)
+            print("WARNING: The network is converted to FP16 for computation, amp_level O2.")
         elif dtype == ms.bfloat16:
-            model.to_float(dtype)
-            print("WARNING: The network is converted to BF16 for computation")
+            model = auto_mixed_precision(model, "O2", ms.bfloat16)
+            print("WARNING: The network is converted to BF16 for computation, amp_level O2.")
 
         return model
 
