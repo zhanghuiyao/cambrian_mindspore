@@ -1458,6 +1458,7 @@ class GenerationMixin:
 
         while not this_peer_finished:
             # prepare model inputs
+            # FIXME: zhy_test, model inputs dynamic shape
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
             use_cache = model_inputs.get("use_cache", False)

@@ -34,20 +34,13 @@ def auto_mixed_precision(network, amp_level="O0", dtype=ms.float16):
     elif amp_level == "O1":
         raise NotImplementedError
     elif amp_level == "O2":
-        try:
-            _auto_black_list(
-                network,
-                AMP_BLACK_LIST + [nn.GroupNorm, nn.SiLU],
-                ms.float16,
-            )
-        except Exception:
-            _auto_black_list(
-                network,
-                AMP_BLACK_LIST + [nn.GroupNorm, nn.SiLU],
-                dtype=dtype
-            )
+        _auto_black_list(
+            network,
+            AMP_BLACK_LIST + [nn.GroupNorm, nn.SiLU],
+            dtype,
+        )
     elif amp_level == "O3":
-        network.to_float(ms.float16)
+        network.to_float(dtype)
     else:
         raise ValueError("The amp level {} is not supported".format(amp_level))
     return network

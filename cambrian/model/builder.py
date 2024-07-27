@@ -38,7 +38,6 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
     elif load_4bit:
         raise NotImplementedError
     else:
-        # FIXME: mix-precision
         kwargs['mindspore_dtype'] = ms.float16
 
     if 'cambrian' in model_name.lower():
