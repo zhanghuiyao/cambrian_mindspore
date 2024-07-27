@@ -120,7 +120,7 @@ def process(image, question, tokenizer, image_processor, model_config):
     image_tensor = tuple([Tensor(i) for i in image_tensor])
     # FIXME: unpad image input
     # image_size = [image.size]
-    image_size = [i.shape for i in image_tensor]
+    image_size = [image_tensor[0].shape[-2:]]
 
     input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='ms').unsqueeze(0)
 
