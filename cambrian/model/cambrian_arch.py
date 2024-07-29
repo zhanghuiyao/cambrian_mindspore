@@ -707,12 +707,12 @@ class CambrianMetaForCausalLM:
                 new_position_id = ops.masked_fill(new_position_id, neg_cur_attention_mask, ops.full((), 0, dtype=new_position_id.dtype))
 
                 new_input_embeds.append(new_input_embed)
-                new_attention_masks.append(cur_attention_mask)
+                new_attention_masks.append(cur_attention_mask.to(ms.int32))
                 new_labels.append(new_label)
                 new_position_ids.append(new_position_id.to(ms.int32))
 
             new_input_embeds = ops.stack(new_input_embeds, axis=0)
-            new_attention_masks = ops.stack(new_attention_masks, axis=0)
+            new_attention_masks = ops.stack(new_attention_masks, axis=0).to(ms.bool_)
             new_labels = ops.stack(new_labels, axis=0)
             new_position_ids = ops.stack(new_position_ids, axis=0)
 
