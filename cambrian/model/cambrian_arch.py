@@ -441,7 +441,7 @@ class CambrianMetaForCausalLM:
             image_aux_features_list += (image_aux_features,)
         return image_aux_features_list
 
-    @ms.jit
+    # @ms.jit # zhy_test
     def prepare_inputs_labels_for_multimodal(
         self, input_ids, position_ids, attention_mask, past_key_values, labels,
         images, image_aux_attention_masks_list=None, image_sizes=None
@@ -647,6 +647,8 @@ class CambrianMetaForCausalLM:
                 cur_attention_mask = attention_mask[batch_idx]
 
                 num_images = (cur_input_ids == IMAGE_TOKEN_INDEX).sum()
+
+                import pdb;pdb.set_trace()  # zhy_test
 
                 if num_images == 0:
                     # cur_image_features = image_features[batch_idx]
