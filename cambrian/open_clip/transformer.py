@@ -11,6 +11,9 @@ from mindspore import Parameter, Tensor, nn, ops
 from mindspore.common import initializer as init
 
 
+DTYPE_FP16_MIN = np.finfo(np.float16).min
+
+
 def linear(x, weight, bias):
     x_shape = x.shape
     if len(x_shape) != 2:
@@ -187,7 +190,7 @@ class Attention(nn.Cell):
         if attn_mask is not None:
             if attn_mask.dtype == ms.bool_:
                 new_attn_mask = ops.zeros_like(attn_mask, dtype=q.dtype)
-                new_attn_mask = ops.masked_fill(new_attn_mask, attn_mask, -1e5)
+                new_attn_mask = ops.masked_fill(new_attn_mask, attn_mask, DTYPE_FP16_MIN)
                 attn_mask = new_attn_mask
             attn += attn_mask
 
@@ -502,7 +505,7 @@ class TextTransformer(nn.Cell):
     def build_attention_mask(self):
         # lazily create causal attention mask, with full attention between the tokens
         # mindspore uses additive attention mask; fill with -inf
-        mask = Tensor(np.ones((self.num_pos, self.num_pos)) * -1e5, ms.float32)
+        mask = Tensor(np.ones((self.num_pos, self.num_pos)) * DTYPE_FP16_MIN, ms.float32)
         mask = mask.triu(diagonal=1)  # zero out the lower diagonal
         return mask
 
@@ -510,7 +513,7 @@ class TextTransformer(nn.Cell):
         cls_mask = (text != self.pad_id).unsqueeze(1)
         cls_mask = ops.pad(cls_mask, (1, 0, cls_mask.shape[2], 0), value=1.0)
         additive_mask = ops.zeros(cls_mask.shape, dtype)
-        additive_mask = ops.masked_fill(additive_mask, ops.logical_not(cls_mask), -1e5)
+        additive_mask = ops.masked_fill(additive_mask, ops.logical_not(cls_mask), DTYPE_FP16_MIN)
         additive_mask = ops.repeat_interleave(additive_mask, self.heads, 0)
         return additive_mask
 

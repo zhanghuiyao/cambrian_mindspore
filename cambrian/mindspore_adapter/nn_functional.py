@@ -1,5 +1,8 @@
+import numpy as np
 import mindspore as ms
 from mindspore import ops
+
+DTYPE_FP16_MIN = np.finfo(np.float16).min
 
 
 def scaled_dot_product_attention(query, key, value, attn_mask=None, dtype=None):
@@ -12,7 +15,7 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dtype=None):
 
         if attn_mask.dtype == ms.bool_:
             attn_mask = attn_mask.to(ms.float32)
-            attn_mask = attn_mask.masked_fill((1 - attn_mask).to(ms.bool_), -1e5)
+            attn_mask = attn_mask.masked_fill((1 - attn_mask).to(ms.bool_), DTYPE_FP16_MIN)
         attn_mask = attn_mask.to(query.dtype)
 
         attn_weight = ops.softmax(

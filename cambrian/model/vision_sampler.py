@@ -3,7 +3,7 @@ import numpy as np
 import mindspore as ms
 from mindspore import nn, ops, Tensor, Parameter, ParameterTuple
 
-from cambrian.model.nn_functional import scaled_dot_product_attention
+from cambrian.mindspore_adapter.nn_functional import scaled_dot_product_attention
 
 
 class CrossAttention(nn.Cell):

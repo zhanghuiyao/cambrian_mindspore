@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
+import numpy as np
+
 import mindspore as ms
 from mindspore import nn, ops, Tensor
 
 
-DTYPE_MIN = -1e5
+DTYPE_FP16_MIN = np.finfo(np.float16).min
 
 
 @dataclass
@@ -112,7 +114,7 @@ class AttentionMaskConverter:
         expanded_attn_mask = self._expand_mask(attention_mask_2d, dtype, tgt_len=input_shape[-1])
 
         if causal_4d_mask is not None:
-            expanded_attn_mask = causal_4d_mask.masked_fill(expanded_attn_mask.astype(ms.bool_), ops.full((), DTYPE_MIN, dtype=causal_4d_mask.dtype))
+            expanded_attn_mask = causal_4d_mask.masked_fill(expanded_attn_mask.astype(ms.bool_), ops.full((), DTYPE_FP16_MIN, dtype=causal_4d_mask.dtype))
 
         # expanded_attn_mask + causal_4d_mask can cause some overflow
         expanded_4d_mask = expanded_attn_mask
@@ -130,7 +132,7 @@ class AttentionMaskConverter:
         Make causal mask used for bi-directional self-attention.
         """
         bsz, tgt_len = input_ids_shape
-        mask = ops.full((tgt_len, tgt_len), DTYPE_MIN)
+        mask = ops.full((tgt_len, tgt_len), DTYPE_FP16_MIN)
         mask_cond = ops.arange(mask.shape[-1])
         mask.masked_fill(mask_cond < (mask_cond + 1).view(mask.shape[-1], 1), ops.full((), 0, dtype=mask.dtype))
 
@@ -144,7 +146,7 @@ class AttentionMaskConverter:
             diagonal = past_key_values_length - sliding_window - 1
 
             context_mask = ops.tril(ops.ones_like(mask, dtype=ms.bool_), diagonal=diagonal)
-            mask.masked_fill(context_mask, ops.full((), DTYPE_MIN, dtype=mask.dtype))
+            mask.masked_fill(context_mask, ops.full((), DTYPE_FP16_MIN, dtype=mask.dtype))
 
         return mask[None, None, :, :].broadcast_to((bsz, 1, tgt_len, tgt_len + past_key_values_length))
 
@@ -160,7 +162,7 @@ class AttentionMaskConverter:
 
         inverted_mask = 1.0 - expanded_mask
 
-        return inverted_mask.masked_fill(inverted_mask.to(ms.bool_), ops.full((), DTYPE_MIN, dtype=inverted_mask.dtype))
+        return inverted_mask.masked_fill(inverted_mask.to(ms.bool_), ops.full((), DTYPE_FP16_MIN, dtype=inverted_mask.dtype))
 
     @staticmethod
     def _unmask_unattended(
@@ -305,7 +307,7 @@ def _prepare_4d_causal_attention_mask(
             # if the 4D mask has correct shape - invert it and fill with negative infinity
             inverted_mask = 1.0 - attention_mask
             attention_mask = inverted_mask.masked_fill(
-                inverted_mask.to(ms.bool_), ops.full((), DTYPE_MIN, dtype=inverted_mask.dtype)
+                inverted_mask.to(ms.bool_), ops.full((), DTYPE_FP16_MIN, dtype=inverted_mask.dtype)
             )
     else:
         attention_mask = attn_mask_converter.to_causal_4d(

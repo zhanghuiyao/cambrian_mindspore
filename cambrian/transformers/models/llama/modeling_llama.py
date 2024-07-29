@@ -14,6 +14,9 @@ from cambrian.transformers.modeling_utils import PreTrainedModel
 from cambrian.constants import IGNORE_INDEX
 
 
+DTYPE_FP16_MIN = np.finfo(np.float16).min
+
+
 logger = logging.get_logger(__name__)
 
 _CONFIG_FOR_DOC = "LlamaConfig"
@@ -559,7 +562,7 @@ class LlamaModel(LlamaPreTrainedModel):
         if self._attn_implementation == "sdpa" and not output_attentions:
             return None
 
-        dtype, min_dtype = input_tensor.dtype, -1e5
+        dtype, min_dtype = input_tensor.dtype, DTYPE_FP16_MIN
         sequence_length = input_tensor.shape[1]
 
         # if using_static_cache:
