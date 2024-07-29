@@ -106,6 +106,8 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         # embed positions
         hidden_states = inputs_embeds
 
+        import pdb;pdb.set_trace()
+
         for i, decoder_layer in enumerate(self.layers):
             layer_outputs = decoder_layer(
                 hidden_states,
@@ -363,6 +365,8 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                     output_hidden_states=output_hidden_states,
                     return_dict=return_dict,
                 )
+
+        import pdb;pdb.set_trace()  # zhy_test
 
         hidden_states, past_key_values = outputs
         if self.config.pretraining_tp > 1:
