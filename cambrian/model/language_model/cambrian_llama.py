@@ -98,6 +98,8 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
 
+        import pdb;pdb.set_trace()
+
         # 4d mask is passed through the layers
         attention_mask = _prepare_4d_causal_attention_mask(
             attention_mask, (batch_size, seq_length), inputs_embeds, past_key_values_length
