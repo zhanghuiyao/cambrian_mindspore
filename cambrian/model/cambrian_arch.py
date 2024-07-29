@@ -666,6 +666,7 @@ class CambrianMetaForCausalLM:
                     new_position_id = ops.masked_fill(new_position_id, neg_cur_attention_mask, ops.full((), 0, dtype=new_position_id.dtype))
 
                     new_input_embeds.append(new_input_embed)
+                    new_attention_masks.append(cur_attention_mask)
                     new_labels.append(new_label)
                     new_position_ids.append(new_position_id)
 
