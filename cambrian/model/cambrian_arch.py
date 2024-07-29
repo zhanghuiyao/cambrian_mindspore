@@ -441,7 +441,7 @@ class CambrianMetaForCausalLM:
             image_aux_features_list += (image_aux_features,)
         return image_aux_features_list
 
-    # @ms.jit
+    @ms.jit
     def prepare_inputs_labels_for_multimodal(
         self, input_ids, position_ids, attention_mask, past_key_values, labels,
         images, image_aux_attention_masks_list=None, image_sizes=None
@@ -712,7 +712,6 @@ class CambrianMetaForCausalLM:
                 new_position_ids.append(new_position_id.to(ms.int32))
 
             new_input_embeds = ops.stack(new_input_embeds, axis=0)
-            import pdb;pdb.set_trace()
             new_attention_masks = ops.stack(new_attention_masks, axis=0)
             new_labels = ops.stack(new_labels, axis=0)
             new_position_ids = ops.stack(new_position_ids, axis=0)
