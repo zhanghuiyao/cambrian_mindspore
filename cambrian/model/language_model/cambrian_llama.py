@@ -98,8 +98,6 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
 
-        # import pdb;pdb.set_trace()
-
         # 4d mask is passed through the layers
         attention_mask = _prepare_4d_causal_attention_mask(
             attention_mask, (batch_size, seq_length), inputs_embeds, past_key_values_length
@@ -107,8 +105,6 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
 
         # embed positions
         hidden_states = inputs_embeds
-
-        # import pdb;pdb.set_trace()
 
         for i, decoder_layer in enumerate(self.layers):
             layer_outputs = decoder_layer(
@@ -367,8 +363,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                     output_hidden_states=output_hidden_states,
                     return_dict=return_dict,
                 )
-
-        import pdb;pdb.set_trace()  # zhy_test
 
         hidden_states, past_key_values = outputs
         if self.config.pretraining_tp > 1:

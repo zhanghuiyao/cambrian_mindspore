@@ -255,13 +255,11 @@ class VisionCrossAttentionLayer(nn.Cell):
         *vision_latents_attention_mask_list,
     ) -> Tensor:
 
-        # import pdb;pdb.set_trace()  # zhy_test
-
         residual = queries
         # queries = self.proj_in(queries)
         context_feature = self.proj_context(context_feature).to(queries.dtype)
         # queries = queries + context_feature
-        queries = ops.cat([queries, context_feature], -1)
+        queries = ops.cat([queries, context_feature], -1)  # FIXME: after cat, queries has nan when pynative on MindSpore 2.3
 
         # if self.num_of_kvs > 1:
         #     kv_weight = self.weight_mlp(queries) # B * 1 * num_tower

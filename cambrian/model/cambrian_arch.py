@@ -501,8 +501,6 @@ class CambrianMetaForCausalLM:
 
                 # query_features_i = getattr(self.get_model(), "vision_sampler_{}".format(query_group_i))(query_features_i.flatten(start_dim=0, end_dim=1), global_context_feature_i, *vision_tower_aux_feature_list_i, *vision_tower_aux_attention_masks_list_i)
 
-                # import pdb;pdb.set_trace()  # zhy_test
-
                 query_features_i = self.get_model().vision_samplers[query_group_i](
                     query_features_i.flatten(start_dim=0, end_dim=1),
                     global_context_feature_i,
@@ -671,8 +669,6 @@ class CambrianMetaForCausalLM:
                     new_position_ids.append(new_position_id)
 
                     continue
-
-                # import pdb;pdb.set_trace()
 
                 # 1 img
                 cur_image_features = image_features[batch_idx]
