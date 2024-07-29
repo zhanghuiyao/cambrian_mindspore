@@ -666,6 +666,8 @@ class CambrianMetaForCausalLM:
 
                     continue
 
+                import pdb;pdb.set_trace()
+
                 # 1 img
                 cur_image_features = image_features[batch_idx]
                 _index_table = ops.arange(0, cur_input_ids.shape[0], 1, dtype=ms.int32)
