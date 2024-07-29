@@ -261,7 +261,7 @@ class VisionCrossAttentionLayer(nn.Cell):
 
         residual = queries
         # queries = self.proj_in(queries)
-        context_feature = self.proj_context(context_feature)
+        context_feature = self.proj_context(context_feature).to(queries.dtype)
         # queries = queries + context_feature
         queries = ops.cat([queries, context_feature], -1)
 
