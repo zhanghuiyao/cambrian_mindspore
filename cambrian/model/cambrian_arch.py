@@ -630,7 +630,6 @@ class CambrianMetaForCausalLM:
             # please open an issue / submit a PR, thanks.
             _labels = labels
             _position_ids = position_ids
-            _attention_mask = attention_mask
             if attention_mask is None:
                 attention_mask = ops.ones(input_ids, dtype=ms.bool_)
             else:
@@ -639,6 +638,7 @@ class CambrianMetaForCausalLM:
                 labels = ops.full_like(input_ids, IGNORE_INDEX)
 
             new_input_embeds = []
+            new_attention_masks = []
             new_labels = []
             new_position_ids = []
             assert len(image_features) == len(input_ids)
@@ -688,7 +688,6 @@ class CambrianMetaForCausalLM:
                 cur_input_embeds = self.get_model().embedding_tokens(cur_input_ids)
                 # cur_input_embeds = ops.broadcast_to(cur_input_ids[:, None], (-1, 4096))
 
-                # zhy_test
                 _img_indexes = ops.arange(0, _im_token_len, 1, dtype=ms.int32) + _im_positions
                 # _img_indexes = ops.broadcast_to(_img_indexes[:, None], (-1, cur_image_features.shape[-1]))
                 # new_input_embed = ops.scatter(cur_input_embeds, 0, _img_indexes, cur_image_features.to(cur_input_embeds.dtype))
@@ -703,15 +702,17 @@ class CambrianMetaForCausalLM:
                 new_position_id = ops.masked_fill(new_position_id, neg_cur_attention_mask, ops.full((), 0, dtype=new_position_id.dtype))
 
                 new_input_embeds.append(new_input_embed)
+                new_attention_masks.append(cur_attention_mask)
                 new_labels.append(new_label)
                 new_position_ids.append(new_position_id.to(ms.int32))
 
             new_input_embeds = ops.stack(new_input_embeds, axis=0)
+            new_attention_masks = ops.stack(new_attention_masks, axis=0)
             new_labels = ops.stack(new_labels, axis=0)
             new_position_ids = ops.stack(new_position_ids, axis=0)
 
             input_embeds = new_input_embeds
-            attention_mask = attention_mask if _attention_mask is not None else None
+            attention_mask = new_attention_masks
             labels = new_labels if _labels is not None else None
             position_ids = new_position_ids if _position_ids is not None else None
 
