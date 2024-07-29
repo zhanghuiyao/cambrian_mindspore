@@ -386,8 +386,6 @@ class LlamaDecoderLayer(nn.Cell):
                 into the model
         """
 
-        import pdb;pdb.set_trace()  # zhy_test
-
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
