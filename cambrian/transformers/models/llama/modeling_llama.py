@@ -385,6 +385,9 @@ class LlamaDecoderLayer(nn.Cell):
                 Arbitrary kwargs to be ignored, used for FSDP and other methods that injects code
                 into the model
         """
+
+        import pdb;pdb.set_trace()  # zhy_test
+
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
