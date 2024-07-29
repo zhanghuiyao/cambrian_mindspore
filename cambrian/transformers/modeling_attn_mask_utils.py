@@ -7,7 +7,7 @@ import mindspore as ms
 from mindspore import nn, ops, Tensor
 
 
-DTYPE_FP16_MIN = np.finfo(np.float16).min
+DTYPE_FP16_MIN = float(np.finfo(np.float16).min)
 
 
 @dataclass

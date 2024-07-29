@@ -14,7 +14,7 @@ from cambrian.transformers.modeling_utils import PreTrainedModel
 from cambrian.constants import IGNORE_INDEX
 
 
-DTYPE_FP16_MIN = np.finfo(np.float16).min
+DTYPE_FP16_MIN = float(np.finfo(np.float16).min)
 
 
 logger = logging.get_logger(__name__)

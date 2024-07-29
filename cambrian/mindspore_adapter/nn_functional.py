@@ -1,8 +1,8 @@
 import numpy as np
 import mindspore as ms
-from mindspore import ops
+from mindspore import ops, Tensor
 
-DTYPE_FP16_MIN = np.finfo(np.float16).min
+DTYPE_FP16_MIN = float(np.finfo(np.float16).min)
 
 
 def scaled_dot_product_attention(query, key, value, attn_mask=None, dtype=None):

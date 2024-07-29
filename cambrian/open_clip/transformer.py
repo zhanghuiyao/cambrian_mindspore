@@ -11,7 +11,7 @@ from mindspore import Parameter, Tensor, nn, ops
 from mindspore.common import initializer as init
 
 
-DTYPE_FP16_MIN = np.finfo(np.float16).min
+DTYPE_FP16_MIN = float(np.finfo(np.float16).min)
 
 
 def linear(x, weight, bias):
