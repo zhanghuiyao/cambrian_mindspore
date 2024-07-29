@@ -163,6 +163,8 @@ class MultiKVCrossAttention(nn.Cell):
             queries, *vision_latents_attention_mask_list,
     ):
 
+        import pdb;pdb.set_trace()  # zhy_test
+
         vision_latents_list = vision_latents_attention_mask_list[:self.num_of_kvs]
         attention_mask_list = vision_latents_attention_mask_list[self.num_of_kvs:]
 
@@ -254,6 +256,8 @@ class VisionCrossAttentionLayer(nn.Cell):
         context_feature,
         *vision_latents_attention_mask_list,
     ) -> Tensor:
+
+        import pdb;pdb.set_trace()  # zhy_test
 
         residual = queries
         # queries = self.proj_in(queries)

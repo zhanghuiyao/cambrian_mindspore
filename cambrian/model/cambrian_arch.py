@@ -487,8 +487,6 @@ class CambrianMetaForCausalLM:
                 vision_tower_aux_feature_list.append(image_aux_features)
 
             # perform vision sampling for each query group
-            import pdb;pdb.set_trace()  # zhy_test
-
             for query_group_i, query_num in enumerate(query_num_list):
                 query_features_i = self.get_model().vision_query[query_group_i, :].view(1, 1, 1, -1).broadcast_to((bs, query_num, -1, -1))
                 global_context_feature_i = global_context_feature.broadcast_to((-1, query_num, 1, -1)).flatten(start_dim=0, end_dim=1)
@@ -502,6 +500,9 @@ class CambrianMetaForCausalLM:
                         self.rearrange_vision_tower_features_inference(vision_tower_aux_feature_list, query_side_len, image_sizes)
 
                 # query_features_i = getattr(self.get_model(), "vision_sampler_{}".format(query_group_i))(query_features_i.flatten(start_dim=0, end_dim=1), global_context_feature_i, *vision_tower_aux_feature_list_i, *vision_tower_aux_attention_masks_list_i)
+
+                import pdb;pdb.set_trace()  # zhy_test
+
                 query_features_i = self.get_model().vision_samplers[query_group_i](
                     query_features_i.flatten(start_dim=0, end_dim=1), global_context_feature_i, *vision_tower_aux_feature_list_i,
                     *vision_tower_aux_attention_masks_list_i
