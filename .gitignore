@@ -1,4 +1,5 @@
 cambrian/__pycache__/
+cambrian/mindspore_adapter/__pycache__
 cambrian/model/__pycache__/
 cambrian/model/language_model/__pycache__/
 cambrian/model/multimodal_encoder/__pycache__/
@@ -14,6 +15,8 @@ cambrian/transformers/models/clip/__pycache__/
 cambrian/transformers/models/dinov2/__pycache__/
 cambrian/transformers/models/llama/__pycache__/
 cambrian/transformers/utils/__pycache__/
+cambrian/transformers/integrations/__pycache__
+cambrian/transformers/models/__pycache__      
 
 .idea
 
