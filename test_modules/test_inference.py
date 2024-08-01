@@ -43,7 +43,7 @@ def process(image, question, tokenizer, image_processor, model_config):
     # image_size = [image.size]
     image_size = [image_tensor[0].shape[-2:]]
 
-    input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='ms').unsqueeze(0)
+    input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='np')[None, ...]
 
     return input_ids, image_tensor, image_size, prompt
 

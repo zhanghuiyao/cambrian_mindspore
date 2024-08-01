@@ -571,8 +571,6 @@ conv_templates = {
     "vicuna_v1": conv_vicuna_v1,
     "vicuna_cambrian": conv_vicuna_cambrian,
     "cohere_v1": conv_cambrian_cohere,
-    "vicuna_cambrian": conv_vicuna_cambrian,
-    "cohere_v1": conv_cambrian_cohere,
     "llama_2": conv_llama_2,
     "llama_3": conv_llama_3,
     "llama_v3": conv_llama_3,
@@ -580,7 +578,6 @@ conv_templates = {
     "chatml_direct": conv_chatml_direct,
     "cambrian_chatml": conv_cambrian_chatml,
     "mistral_direct": conv_chatml_direct,
-    "mistral_v2": conv_mistral_v2,
     "mistral_v2": conv_mistral_v2,
 
     "plain": conv_cambrian_plain,

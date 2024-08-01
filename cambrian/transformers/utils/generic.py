@@ -1,3 +1,4 @@
+import inspect
 from enum import Enum
 from collections import OrderedDict
 from dataclasses import fields, is_dataclass
@@ -15,6 +16,17 @@ class ExplicitEnum(str, Enum):
         raise ValueError(
             f"{value} is not a valid {cls.__name__}, please select one of {list(cls._value2member_map_.keys())}"
         )
+
+
+class PaddingStrategy(ExplicitEnum):
+    """
+    Possible values for the `padding` argument in [`PreTrainedTokenizerBase.__call__`]. Useful for tab-completion in an
+    IDE.
+    """
+
+    LONGEST = "longest"
+    MAX_LENGTH = "max_length"
+    DO_NOT_PAD = "do_not_pad"
 
 
 class ModelOutput(OrderedDict):
@@ -145,3 +157,35 @@ class ModelOutput(OrderedDict):
         Convert self to a tuple containing all the attributes/keys that are not `None`.
         """
         return tuple(self[k] for k in self.keys())
+
+
+def can_return_loss(model_class):
+    """
+    Check if a given model can return loss.
+
+    Args:
+        model_class (`type`): The class of the model.
+    """
+    signature = inspect.signature(model_class.construct)  # PyTorch models
+
+    for p in signature.parameters:
+        if p == "return_loss" and signature.parameters[p].default is True:
+            return True
+
+    return False
+
+
+def find_labels(model_class):
+    """
+    Find the labels used by a given model.
+
+    Args:
+        model_class (`type`): The class of the model.
+    """
+    model_name = model_class.__name__
+    signature = inspect.signature(model_class.construct)  # TensorFlow models
+
+    if "QuestionAnswering" in model_name:
+        return [p for p in signature.parameters if "label" in p or p in ("start_positions", "end_positions")]
+    else:
+        return [p for p in signature.parameters if "label" in p]

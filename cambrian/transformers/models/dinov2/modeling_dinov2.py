@@ -9,7 +9,7 @@ from typing import Union, Optional, Tuple, Set
 
 from transformers import Dinov2Config
 
-from cambrian.transformers import ACT2FN
+from cambrian.transformers.activations import ACT2FN
 from cambrian.transformers.modeling_utils import PreTrainedModel
 
 

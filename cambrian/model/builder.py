@@ -33,9 +33,7 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
     checkpoint_path = kwargs.pop("checkpoint_path", None)
     load_8bit = kwargs.pop("load_8bit", False)
     load_4bit = kwargs.pop("load_8bit", False)
-    if load_8bit:
-        raise NotImplementedError
-    elif load_4bit:
+    if load_8bit or load_4bit:
         raise NotImplementedError
     else:
         kwargs['mindspore_dtype'] = ms.float16
@@ -53,23 +51,8 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
             raise NotImplementedError
         else:
             if 'mistral' in model_name.lower():
-                # tokenizer = AutoTokenizer.from_pretrained(model_path)
-                # model = CambrianMistralForCausalLM.from_pretrained(
-                #     model_path,
-                #     low_cpu_mem_usage=True,
-                #     use_flash_attention_2=False,
-                #     **kwargs
-                # )
                 raise NotImplementedError
             elif 'phi3' in model_name.lower():
-                # from cambrian.model.language_model.cambrian_phi3 import CambrianPhi3ForCausalLM
-                # tokenizer = AutoTokenizer.from_pretrained(model_path)
-                # model = CambrianPhi3ForCausalLM.from_pretrained(
-                #     model_path,
-                #     low_cpu_mem_usage=True,
-                #     use_flash_attention_2=False,
-                #     **kwargs
-                # )
                 raise NotImplementedError
             else:
                 logger.info(f'Loading Cambrian from {model_path}')

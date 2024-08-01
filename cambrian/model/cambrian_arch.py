@@ -12,7 +12,9 @@ from cambrian.model.multimodal_projector.builder import build_vision_projector
 from cambrian.model.vision_sampler import VisionTokenSampler
 from cambrian.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 
-from transformers import PreTrainedModel
+
+
+
 class CambrianMetaModel:
 
     def __init__(self, config):
@@ -46,13 +48,6 @@ class CambrianMetaModel:
 
                 mm_projector_auxes = []
                 for aux_i, vision_tower_aux in enumerate(self.vision_tower_aux_list):
-                    # setattr(self, 'mm_projector_aux_{}'.format(aux_i),
-                    #         nn.SequentialCell([
-                    #             nn.Dense(vision_tower_aux.hidden_size, vision_hidden_size),
-                    #             nn.GELU(),
-                    #             nn.Dense(vision_hidden_size, vision_hidden_size),
-                    #             nn.LayerNorm([vision_hidden_size])
-                    #         ]))
                     mm_projector_auxes.append(
                         nn.SequentialCell([
                             nn.Dense(vision_tower_aux.hidden_size, vision_hidden_size),
@@ -68,15 +63,6 @@ class CambrianMetaModel:
                     cross_att_token_len_list = [
                         int(vision_tower_aux_token_len ** 0.5) // int(query_num_list[query_group_i] ** 0.5) for
                         vision_tower_aux_token_len in vision_tower_aux_token_len_list]
-                    # setattr(self, "vision_sampler_{}".format(query_group_i),
-                    #         VisionTokenSampler(
-                    #             vision_hidden_size,
-                    #             vision_hidden_size,
-                    #             [vision_hidden_size] * len(self.vision_tower_aux_list),
-                    #             cross_att_token_len_list,
-                    #             vision_hidden_size,
-                    #             connector_depth
-                    #         ))
                     vision_samplers.append(
                         VisionTokenSampler(
                             vision_hidden_size,
@@ -106,11 +92,13 @@ class CambrianMetaModel:
                         ) for _ in range(0, num_of_vision_sampler_layers)
                     ])
 
+                # vision_embed_std = 1 / math.sqrt(vision_hidden_size)
                 self.vision_query = Parameter(
                     Tensor(np.random.randn(num_query_group, vision_hidden_size), dtype=self.dtype),
                     name="vision_query"
                 )
 
+                # embed_std = 1 / math.sqrt(config.hidden_size)
                 self.image_newline = Parameter(
                     Tensor(np.zeros(config.hidden_size), dtype=self.dtype),
                     name="image_newline"
@@ -122,6 +110,12 @@ class CambrianMetaModel:
                 config.mm_hidden_size = sum(
                     [vision_tower_aux.hidden_size for vision_tower_aux in self.vision_tower_aux_list])
                 self.mm_projector = build_vision_projector(config)
+
+                # embed_std = 1 / math.sqrt(config.hidden_size)
+                # self.image_newline = Parameter(
+                #     Tensor(np.random.randn(config.hidden_size) * embed_std, dtype=self.dtype),
+                #     name="image_newline"
+                # )
                 self.image_newline = Parameter(
                     Tensor(np.zeros(config.hidden_size), dtype=self.dtype),
                     name="image_newline"
@@ -155,11 +149,7 @@ class CambrianMetaModel:
         self.config.connector_only = connector_only
 
         if self.get_vision_tower_aux_list() is None:
-            vision_tower_aux_list = build_vision_tower_aux_list(model_args)
-            if model_args.unfreeze_mm_vision_tower:
-                self.vision_tower_aux_list = nn.CellList(vision_tower_aux_list)
-            else:
-                self.vision_tower_aux_list = vision_tower_aux_list
+            raise AttributeError("please build module on init function..")
         else:
             vision_tower_aux_list = self.vision_tower_aux_list
             for vision_tower_aux in vision_tower_aux_list:
@@ -172,89 +162,7 @@ class CambrianMetaModel:
         self.config.mm_vision_select_feature = mm_vision_select_feature
 
         if getattr(self, 'mm_projector', None) is None:
-
-            if self.config.mm_projector_type == 'sva':
-                self.mm_projector = nn.SequentialCell([
-                    nn.Dense(vision_hidden_size * num_query_group, self.config.hidden_size), nn.GELU(),
-                    nn.Dense(self.config.hidden_size, self.config.hidden_size)
-                ])
-
-                mm_projector_auxes = []
-                for aux_i, vision_tower_aux in enumerate(vision_tower_aux_list):
-                    # setattr(self, 'mm_projector_aux_{}'.format(aux_i),
-                    #         nn.SequentialCell([
-                    #             nn.Dense(vision_tower_aux.hidden_size, vision_hidden_size),
-                    #             nn.GELU(),
-                    #             nn.Dense(vision_hidden_size, vision_hidden_size),
-                    #             nn.LayerNorm([vision_hidden_size])
-                    #         ]))
-                    mm_projector_auxes.append(
-                        nn.SequentialCell([
-                            nn.Dense(vision_tower_aux.hidden_size, vision_hidden_size),
-                            nn.GELU(),
-                            nn.Dense(vision_hidden_size, vision_hidden_size),
-                            nn.LayerNorm([vision_hidden_size])
-                        ])
-                    )
-                self.mm_projector_auxes = nn.CellList(mm_projector_auxes)
-
-                # vision sampler for each group of query as the connector before the LLM
-                vision_samplers = []
-                for query_group_i in range(num_query_group):
-                    cross_att_token_len_list = [
-                        int(vision_tower_aux_token_len ** 0.5) // int(query_num_list[query_group_i] ** 0.5)
-                        for vision_tower_aux_token_len in vision_tower_aux_token_len_list
-                    ]
-                    # setattr(self, "vision_sampler_{}".format(query_group_i),
-                    #         VisionTokenSampler(
-                    #             vision_hidden_size, vision_hidden_size,
-                    #             [vision_hidden_size] * len(vision_tower_aux_list),
-                    #             cross_att_token_len_list, vision_hidden_size, connector_depth))
-                    vision_samplers.append(
-                        VisionTokenSampler(
-                            vision_hidden_size, vision_hidden_size,
-                            [vision_hidden_size] * len(vision_tower_aux_list),
-                            cross_att_token_len_list, vision_hidden_size, connector_depth
-                        )
-                    )
-                self.vision_samplers = nn.CellList(vision_samplers)
-
-                # sampler layers within LLM
-                if not connector_only:
-                    num_of_vision_sampler_layers = self.config.num_of_vision_sampler_layers = model_args.num_of_vision_sampler_layers
-                    self.config.start_of_vision_sampler_layers = model_args.start_of_vision_sampler_layers
-                    self.config.stride_of_vision_sampler_layers = model_args.stride_of_vision_sampler_layers
-                    cross_att_token_len_list = [int(vision_tower_aux_token_len ** 0.5) // int(image_token_len ** 0.5)
-                                                for vision_tower_aux_token_len in vision_tower_aux_token_len_list]
-                    self.vision_sampler_layers = nn.CellList([
-                        VisionTokenSampler(
-                            self.config.hidden_size, vision_hidden_size,
-                            [vision_hidden_size] * len(vision_tower_aux_list), cross_att_token_len_list,
-                            vision_hidden_size, 1
-                        )
-                        for _ in range(0, num_of_vision_sampler_layers)
-                    ])
-                vision_embed_std = 1 / math.sqrt(vision_hidden_size)
-
-                self.vision_query = Parameter(
-                    Tensor(np.random.randn((num_query_group, vision_hidden_size)) * vision_embed_std, dtype=self.dtype),
-                    name="vision_query"
-                )
-
-                embed_std = 1 / math.sqrt(self.config.hidden_size)
-                self.image_newline = Parameter(
-                    Tensor(np.random.randn(self.config.hidden_size) * embed_std, dtype=self.dtype),
-                    name="image_newline"
-                )
-
-            else:
-                self.config.mm_hidden_size = sum([vision_tower_aux.hidden_size for vision_tower_aux in vision_tower_aux_list])
-                self.mm_projector = build_vision_projector(self.config)
-                embed_std = 1 / math.sqrt(self.config.hidden_size)
-                self.image_newline = Parameter(
-                    Tensor(np.random.randn(self.config.hidden_size) * embed_std, dtype=self.dtype),
-                    name="image_newline"
-                )
+            raise AttributeError("please build module on init function..")
         else:
             # In case it is frozen by LoRA
             for p in self.mm_projector.get_parameters():

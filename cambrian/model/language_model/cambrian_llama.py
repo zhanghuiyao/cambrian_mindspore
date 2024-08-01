@@ -253,6 +253,36 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
     def get_model(self):
         return self.model
 
+    def gradient_checkpointing_enable(self, gradient_checkpointing_kwargs=None):
+        if gradient_checkpointing_kwargs is None:
+            gradient_checkpointing_kwargs = {
+                "mp_comm_recompute": True,
+                "parallel_optimizer_comm_recompute": True
+            }
+
+        # llama layers
+        for cell in [self.embed_tokens, *self.model.layers, self.model.norm]:
+            cell.recompute(**gradient_checkpointing_kwargs)
+
+        # visual layers
+        if hasattr(self.model, "vision_tower_aux_list"):
+            for cell in self.model.vision_tower_aux_list:
+                cell.recompute(**gradient_checkpointing_kwargs)
+
+        # projector
+        if hasattr(self.model, "mm_projector"):
+            for _, cell in self.model.mm_projector.cells_and_names():
+                cell.recompute(**gradient_checkpointing_kwargs)
+        if hasattr(self.model, "mm_projector_auxes"):
+            for _, cell in self.model.mm_projector_auxes.cells_and_names():
+                cell.recompute(**gradient_checkpointing_kwargs)
+        if hasattr(self.model, "vision_samplers"):
+            for _, cell in self.model.vision_samplers.cells_and_names():
+                cell.recompute(**gradient_checkpointing_kwargs)
+
+        # cambrian head
+        self.lm_head.recompute(**gradient_checkpointing_kwargs)
+
     def construct(
             self,
             input_ids: Tensor = None,
@@ -391,7 +421,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
     def generate(
             self,
-            inputs: Optional[Tensor] = None,
+            inputs: Optional[np.ndarray] = None,
             images: Optional[Tuple[Tensor]] = None,
             image_sizes: Optional[Tuple] = None,
             position_ids = None,
@@ -405,7 +435,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         assert inputs_embeds is None
 
         inputs, _, position_ids, attention_mask = \
-            self.preprocess_input_before_generate(inputs, None, position_ids, attention_mask)
+            self.preprocess_input_before_generate_numpy(inputs, None, position_ids, attention_mask)
 
         if images is not None:
             (

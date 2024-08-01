@@ -1,5 +1,4 @@
-from typing import Optional
-
+from typing import Optional, Dict, Union, Any
 import mindspore as ms
 from mindspore import nn, ops, Tensor, Parameter
 
@@ -12,7 +11,101 @@ from cambrian.transformers.generation.utils import GenerationMixin
 logger = logging.get_logger(__name__)
 
 
-class PreTrainedModel(nn.Cell, GenerationMixin):
+class ModuleUtilsMixin:
+
+    def num_parameters(self, only_trainable: bool = False, exclude_embeddings: bool = False) -> int:
+        """
+        Get number of (optionally, trainable or non-embeddings) parameters in the module.
+
+        Args:
+            only_trainable (`bool`, *optional*, defaults to `False`):
+                Whether or not to return only the number of trainable parameters
+
+            exclude_embeddings (`bool`, *optional*, defaults to `False`):
+                Whether or not to return only the number of non-embeddings parameters
+
+        Returns:
+            `int`: The number of parameters.
+        """
+
+        if exclude_embeddings:
+            embedding_param_names = [
+                f"{name}.embedding_table" for name, cell in self.cells_and_names() if isinstance(cell, nn.Embedding)
+            ]
+            total_parameters = [
+                parameter for name, parameter in self.parameters_and_names() if name not in embedding_param_names
+            ]
+        else:
+            total_parameters = list([p for p in self.get_parameters()])
+
+        total_numel = []
+        is_loaded_in_4bit = getattr(self, "is_loaded_in_4bit", False)
+
+        if is_loaded_in_4bit:
+            raise NotImplementedError(
+                "4 bit not support on MindSpore 2.3"
+            )
+
+        for param in total_parameters:
+            if param.requires_grad or not only_trainable:
+                # For 4bit models, we need to multiply the number of parameters by 2 as half of the parameters are
+                # used for the 4bit quantization (uint8 tensors are stored)
+                if is_loaded_in_4bit:
+                    raise NotImplementedError("4 bit not support on MindSpore 2.3")
+                else:
+                    total_numel.append(param.numel())
+
+        return sum(total_numel)
+
+    def estimate_tokens(self, input_dict: Dict[str, Union[Tensor, Any]]) -> int:
+        """
+        Helper function to estimate the total number of tokens from the model inputs.
+
+        Args:
+            inputs (`dict`): The model inputs.
+
+        Returns:
+            `int`: The total number of tokens.
+        """
+        if not hasattr(self, "warnings_issued"):
+            self.warnings_issued = {}
+        if self.main_input_name in input_dict:
+            return input_dict[self.main_input_name].numel()
+        elif "estimate_tokens" not in self.warnings_issued:
+            logger.warning(
+                "Could not estimate the number of tokens of the input, floating-point operations will not be computed"
+            )
+            self.warnings_issued["estimate_tokens"] = True
+        return 0
+
+    def floating_point_ops(
+        self, input_dict: Dict[str, Union[Tensor, Any]], exclude_embeddings: bool = True
+    ) -> int:
+        """
+        Get number of (optionally, non-embeddings) floating-point operations for the forward and backward passes of a
+        batch with this transformer model. Default approximation neglects the quadratic dependency on the number of
+        tokens (valid if `12 * d_model << sequence_length`) as laid out in [this
+        paper](https://arxiv.org/pdf/2001.08361.pdf) section 2.1. Should be overridden for transformers with parameter
+        re-use e.g. Albert or Universal Transformers, or if doing long-range modeling with very high sequence lengths.
+
+        Args:
+            batch_size (`int`):
+                The batch size for the forward pass.
+
+            sequence_length (`int`):
+                The number of tokens in each line of the batch.
+
+            exclude_embeddings (`bool`, *optional*, defaults to `True`):
+                Whether or not to count embedding and softmax operations.
+
+        Returns:
+            `int`: The number of floating-point operations.
+        """
+
+        return 6 * self.estimate_tokens(input_dict) * self.num_parameters(exclude_embeddings=exclude_embeddings)
+
+
+class PreTrainedModel(nn.Cell, ModuleUtilsMixin, GenerationMixin):
     config_class = None
     base_model_prefix = ""
     main_input_name = "input_ids"
@@ -429,3 +522,7 @@ class PreTrainedModel(nn.Cell, GenerationMixin):
         if "GenerationMixin" in str(cls.prepare_inputs_for_generation) and "GenerationMixin" in str(cls.generate):
             return False
         return True
+
+
+    def gradient_checkpointing_enable(self, gradient_checkpointing_kwargs=None):
+        raise NotImplementedError

@@ -439,7 +439,6 @@ class LlamaModel(LlamaPreTrainedModel):
             [LlamaDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.enable_recompute = False
 
         # TODO: Initialize weights and apply final processing
         # self.post_init()
@@ -462,10 +461,6 @@ class LlamaModel(LlamaPreTrainedModel):
         self.embed_tokens = value
 
         self.embed_tokens.embedding_table.name = ori_name
-
-    def recompute(self):
-        self.enable_recompute = True
-        raise NotImplementedError
 
     def construct(
         self,
@@ -734,7 +729,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         else:
             return loss, logits
 
-    def preprocess_input_before_generate(
+    def preprocess_input_before_generate_numpy(
         self,
         input_ids: np.ndarray,
         labels: np.ndarray = None,
