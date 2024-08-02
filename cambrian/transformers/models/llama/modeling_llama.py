@@ -476,7 +476,7 @@ class LlamaModel(LlamaPreTrainedModel):
         cache_position: Optional[Tensor] = None,
     ) -> Union[Tuple, ]:
         use_cache = use_cache if use_cache is not None else self.use_cache
-        if self.enable_recompute and self.training:
+        if self.training:
             assert not use_cache
 
         assert not output_attentions
@@ -722,7 +722,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             shift_labels = shift_labels.to(shift_logits.device)
             loss = self.cross_entropy_loss(shift_logits, shift_labels)
 
-        # loss, logits, past_key_values, hidden_states, attentions = \
+        # loss, logits, past_key_values, hidden_states, attentions
 
         if use_cache:
             return loss, logits, past_key_values

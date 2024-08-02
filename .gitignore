@@ -18,9 +18,11 @@ cambrian/transformers/utils/__pycache__/
 cambrian/transformers/integrations/__pycache__
 cambrian/transformers/models/__pycache__      
 
+test_modules/__pycache__/
+
 .idea
 
-./rank_*
+rank_*
 
-./irs
+irs
 

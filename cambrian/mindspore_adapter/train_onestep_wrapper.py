@@ -31,10 +31,23 @@ def create_loss_scaler(ms_loss_scaler="static", scale_value=1024, scale_factor=2
     return loss_scaler
 
 
+def _is_parallel():
+    is_parallel = context.get_auto_parallel_context("parallel_mode") in (
+        ParallelMode.DATA_PARALLEL, ParallelMode.HYBRID_PARALLEL
+    ) or _is_pynative_parallel()
+    return is_parallel
+
+
+def _is_cpu():
+    return context.get_context("device_target") == "CPU"
+
+
+def return_true(*args, **kwargs):
+    return ops.ones((), ms.bool_)
+
+
 def create_grad_reducer(trainable_parameters):
-    use_reducer = context.get_auto_parallel_context("parallel_mode") in (
-    ParallelMode.DATA_PARALLEL, ParallelMode.HYBRID_PARALLEL) \
-                  or _is_pynative_parallel()
+    use_reducer = _is_parallel()
 
     if use_reducer:
         mean = context.get_auto_parallel_context("gradients_mean")
@@ -90,19 +103,20 @@ class TrainOneStepWrapper(nn.Cell):
         else:
             raise NotImplementedError
         self.scaler = scaler
-        self.reducer = create_grad_reducer(self.network.trainable_params())
-        self.all_finite = ms.amp.all_finite
-        self.all_finite_reducer = ops.AllReduce()
+        self.reducer = create_grad_reducer(network.trainable_params())
+        self.all_finite = ms.amp.all_finite if not _is_cpu() else return_true
+        self.all_finite_reducer = ops.AllReduce() if _is_parallel() else nn.Identity()
         self.drop_overflow_step = Tensor(drop_overflow_step, ms.bool_)
 
         # clip grad
         assert clip_value > 0.0 and isinstance(clip_value, float), f"clip_value must be float > 0., but got {clip_value}"
+        self.clip_value = clip_value
         if clip_grad.lower() in ("global", "global_norm"):
             from cambrian.mindspore_adapter.clip_grad import clip_grad_global as clip_grad_global_
-            clip_grad_fn = ops.partial(clip_grad_global_, clip_value)
+            clip_grad_fn = clip_grad_global_
         elif clip_grad.lower() in ("local", "local_norm", "norm"):
             from cambrian.mindspore_adapter.clip_grad import clip_grad as clip_grad_
-            clip_grad_fn = ops.partial(clip_grad_, clip_value)
+            clip_grad_fn = clip_grad_
         elif clip_grad.lower() == "none":
             clip_grad_fn = None
         else:
@@ -121,7 +135,7 @@ class TrainOneStepWrapper(nn.Cell):
 
         if not self.accum_steps > 1:
             if self.clip_grad_fn is not None:
-                grads = self.clip_grad_fn(grads)   # FIXME: compare with torch.nn.utils.clip_grad_norm_
+                grads = self.clip_grad_fn(grads, self.clip_value)   # FIXME: compare with torch.nn.utils.clip_grad_norm_
             loss = ops.depend(loss, self.optimizer(grads))
             if self.ema is not None:
                 self.ema.ema_update()
@@ -132,7 +146,7 @@ class TrainOneStepWrapper(nn.Cell):
             loss = ops.depend(loss, ops.assign_add(self.cur_accum_step, ms.Tensor(1, ms.int32)))
             if self.cur_accum_step % self.accum_steps == 0:
                 if self.clip_grad_fn is not None:
-                    grads = self.clip_grad_fn(self.accumulated_grads)
+                    grads = self.clip_grad_fn(self.accumulated_grads, self.clip_value)
                     loss = ops.depend(loss, self.optimizer(grads))
                 else:
                     loss = ops.depend(loss, self.optimizer(self.accumulated_grads))
@@ -152,10 +166,12 @@ class TrainOneStepWrapper(nn.Cell):
         unscaled_grads = self.scaler.unscale(grads)
         finite = self.all_finite(unscaled_grads)
         finite = self.all_finite_reducer(finite)
-        _do_optim = finite or (not self.drop_overflow_step)
 
-        if _do_optim:
+        if not self.drop_overflow_step:
             loss = self.do_optim(loss, unscaled_grads)
+        else:
+            if finite:
+                loss = self.do_optim(loss, unscaled_grads)
 
         overflow_tag = not finite
         return self.scaler.unscale(loss), unscaled_grads, overflow_tag

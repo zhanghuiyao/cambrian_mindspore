@@ -4,11 +4,11 @@ from mindspore.ops import composite as C
 from mindspore.ops import functional as F
 
 
-_clip_grad = C.MultitypeFuncGraph("clip_grad")
+_clip_grad = ops.MultitypeFuncGraph('_clip_grad')
 
 
 @_clip_grad.register("Number", "Number", "Tensor")
-def _clip_grad(clip_type, clip_value, grad):
+def __clip_grad(clip_type, clip_value, grad):
     """
     Clip gradients.
 
@@ -22,25 +22,44 @@ def _clip_grad(clip_type, clip_value, grad):
     """
     if clip_type not in (0, 1):
         return grad
-    dt = F.dtype(grad)
     if clip_type == 0:
         new_grad = C.clip_by_value(
-            grad, F.cast(F.tuple_to_array((-clip_value,)), dt), F.cast(F.tuple_to_array((clip_value,)), dt)
+            grad, -clip_value, clip_value
         )
     else:
-        new_grad = nn.ClipByNorm()(grad, F.cast(F.tuple_to_array((clip_value,)), dt))
+        new_grad = ops.clip_by_norm(grad, clip_value)
     return new_grad
 
 
-apply_global_norm = C.MultitypeFuncGraph("_apply_global_norm")
+_apply_global_norm = ops.MultitypeFuncGraph('_apply_global_norm')
 
 
-@apply_global_norm.register("Tensor", "Tensor", "Tensor")
-def _apply_global_norm(clip_norm, global_norm, x):
+@_apply_global_norm.register("Number", "Tensor", "Tensor")
+def __apply_global_norm(clip_norm, global_norm, x):
     x_dtype = F.dtype(x)
     x = x * clip_norm / global_norm
     x = F.cast(x, x_dtype)
     return x
+
+
+_l2_norm = ops.MultitypeFuncGraph('_l2_norm')
+
+
+@_l2_norm.register("Tensor")
+def __l2_norm(x):
+    axis = ()
+    for i in range(x.dim()):
+        axis += (i,)
+    norm = ops.LpNorm(axis)(x)
+    return norm
+
+
+_square = ops.MultitypeFuncGraph('_square')
+
+
+@_square.register("Tensor")
+def __square(x):
+    return ops.square(x)
 
 
 class L2Norm(nn.Cell):
@@ -78,18 +97,31 @@ class _ClipByGlobalNormFix(nn.Cell):
 
         cond = self.greater_equal(global_norm, self.clip_norm)
         global_norm = F.select(cond, global_norm, self.clip_norm)
-        clip_x = self.hyper_map(F.partial(apply_global_norm, self.clip_norm, global_norm), x)
+        clip_x = self.hyper_map(F.partial(_apply_global_norm, self.clip_norm, global_norm), x)
         return clip_x
 
 
 hyper_map_op = ops.HyperMap()
 
 
-def clip_grad(clip_norm, x):
-    clip_value = hyper_map_op(F.partial(_clip_grad, 1, clip_norm), x)
+def _clip_grad_global_fix(clip_norm, grads):
+    # norms = hyper_map_op(_l2_norm, grads)
+    # norms_square = hyper_map_op(_square, norms)
+    # global_norm = ops.sqrt(ops.addn(norms_square)).astype(ms.float32)
+
+    global_norm = ops.ones((), ms.float32)
+
+    cond = ops.greater_equal(global_norm, clip_norm)
+    global_norm = F.select(cond, global_norm, clip_norm)
+    clip_grads = hyper_map_op(F.partial(_apply_global_norm, clip_norm, global_norm), grads)
+    return clip_grads
+
+
+def clip_grad(grads, clip_norm):
+    clip_value = hyper_map_op(F.partial(_clip_grad, 1, clip_norm), grads)
     return clip_value
 
 
-def clip_grad_global(clip_norm, x):
-    clip_value = _ClipByGlobalNormFix(clip_norm)(x)
+def clip_grad_global(grads, clip_norm):
+    clip_value = _clip_grad_global_fix(clip_norm, grads)
     return clip_value

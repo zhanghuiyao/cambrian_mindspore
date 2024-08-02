@@ -146,6 +146,10 @@ def train():
         TrainingArguments
     ))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
+    # FIXME: level 0, set_context
+
+
     local_rank = training_args.local_rank
     compute_dtype = (ms.float16 if training_args.fp16 else (ms.bfloat16 if training_args.bf16 else ms.float32))
 
@@ -333,5 +337,7 @@ def train():
     if training_args.lora_enable:
         raise NotImplementedError
     else:
-        safe_save_model_for_hf_trainer(trainer=trainer,
-                                       output_dir=training_args.output_dir)
+        pass
+        # FIXME: level 1, save trainer
+        # safe_save_model_for_hf_trainer(trainer=trainer,
+        #                                output_dir=training_args.output_dir)

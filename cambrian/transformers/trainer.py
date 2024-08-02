@@ -101,6 +101,8 @@ _re_checkpoint = re.compile(r"^" + PREFIX_CHECKPOINT_DIR + r"\-(\d+)$")
 
 class Trainer:
 
+    from .trainer_ms_utils import save_state
+
     def __init__(
             self,
             model: Union[PreTrainedModel, nn.Cell] = None,
@@ -906,7 +908,8 @@ class Trainer:
                 if step % args.gradient_accumulation_steps == 0:
                     self.control = self.callback_handler.on_step_begin(args, self.state, self.control)
 
-                tr_loss_step = self.training_step(self.train_model, inputs)
+                # FIXME: level 1, add overflow print
+                tr_loss_step, _, _ = self.training_step(self.train_model, inputs)
 
                 if (
                     args.logging_nan_inf_filter
