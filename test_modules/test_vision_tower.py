@@ -10,7 +10,7 @@ from cambrian.model.multimodal_encoder.builder import build_vision_tower_aux_lis
 from cambrian.mm_utils import process_images
 
 
-from test_modules.wrapper import build_train_net
+from test_modules.build_train_network import build_train_net
 
 
 def test_vision_tower(args, config, replace_name: str = None, replace_len: int = None):

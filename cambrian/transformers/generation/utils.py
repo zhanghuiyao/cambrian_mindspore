@@ -1,5 +1,6 @@
 import copy
 import inspect
+import time
 import warnings
 import numpy as np
 from dataclasses import dataclass
@@ -787,7 +788,7 @@ class GenerationMixin:
 
             assert next_tokens is not None
             assert hasattr(self, 'model')
-            next_token_embedding = self.get_model().embedding_tokens(next_tokens).to(inputs_embeds.dtype)
+            next_token_embedding = self.get_model().embed_tokens(next_tokens).to(inputs_embeds.dtype)
 
             if is_pad:
                 next_token_index = attention_mask.sum(-1)
@@ -1455,6 +1456,7 @@ class GenerationMixin:
         model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
 
         step = 0
+        s_time = time.time()
 
         while not this_peer_finished:
             # prepare model inputs
@@ -1468,7 +1470,9 @@ class GenerationMixin:
                 **model_inputs,
             )
 
-            print(f"======> zhy_test, step: {step}, sample outputs shape: {[o.shape for o in outputs if o is not None]}")
+            print(f"======> zhy_test, step: {step}, sample outputs shape: {[o.shape for o in outputs if o is not None]}, time cost: {time.time() - s_time:.3f}s")
+            s_time = time.time()
+
             step += 1
 
             if use_cache:
@@ -1488,7 +1492,7 @@ class GenerationMixin:
 
             if model_kwargs.get("attention_mask", None) is not None:
                 mask = model_kwargs["attention_mask"]
-                index = mask.to(ms.int32).sum(-1)  # (bs, n) -> (bs,)
+                index = mask.to(ms.int32).sum(-1) - 1  # (bs, n) -> (bs,)
                 bs_index = ops.arange(0, index.shape[0], dtype=ms.int32)
                 # assert pad_left
                 next_token_logits = outputs.logits[bs_index, index, :]   # (bs, dim)
@@ -1514,7 +1518,7 @@ class GenerationMixin:
 
             # update generated ids, model inputs, and length for next step
             # input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
-            input_ids = np.concatenate([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = np.concatenate([input_ids, next_tokens.asnumpy()[:, None]], axis=-1)
 
             if streamer is not None:
                 streamer.put(next_tokens.asnumpy())

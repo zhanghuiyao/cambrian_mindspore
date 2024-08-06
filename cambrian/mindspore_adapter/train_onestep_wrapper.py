@@ -84,6 +84,10 @@ class TrainOneStepWrapper(nn.Cell):
         super().__init__(auto_prefix=False)
 
         # grad and optimizer
+        self.network = network
+        self.network.set_train(True)
+        self.network.set_grad(True)
+
         self.grad_fn = ops.value_and_grad(network, grad_position=None, weights=optimizer.parameters)
         self.optimizer = optimizer
         self.ema = ema

@@ -1,4 +1,5 @@
 cambrian/__pycache__/
+cambrian/train/__pycache__/
 cambrian/mindspore_adapter/__pycache__
 cambrian/model/__pycache__/
 cambrian/model/language_model/__pycache__/

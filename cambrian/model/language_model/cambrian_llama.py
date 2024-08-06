@@ -42,13 +42,9 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         for name in _name_list:
             setattr(self, name, getattr(config, name))
 
-    def embedding_tokens(self, tokens):
-        return self.embed_tokens(tokens)
-
     def construct(
         self,
         input_ids: Tensor = None,
-        input_ids_mask: Tensor = None,
         attention_mask: Optional[Tensor] = None,
         position_ids: Optional[Tensor] = None,
         past_key_values: Optional[List[Tensor]] = None,
@@ -116,7 +112,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                 use_cache=use_cache,
             )
 
-            hidden_states, _, next_cache = layer_outputs
+            hidden_states = layer_outputs[0]
 
             if not self.connector_only:
 
@@ -194,6 +190,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                             hidden_states[batch_i:batch_i+1, latent_query_start_idx:latent_query_start_idx+cur_latent_query_newline_num] = cur_latent_query_with_newline[:, :, :]
 
             if use_cache:
+                next_cache = layer_outputs[1]
                 past_key_values[i] = next_cache
 
         # if use_cache:
@@ -261,7 +258,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             }
 
         # llama layers
-        for cell in [self.embed_tokens, *self.model.layers, self.model.norm]:
+        for cell in [self.model.embed_tokens, *self.model.layers, self.model.norm]:
             cell.recompute(**gradient_checkpointing_kwargs)
 
         # visual layers
@@ -271,13 +268,13 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
         # projector
         if hasattr(self.model, "mm_projector"):
-            for _, cell in self.model.mm_projector.cells_and_names():
+            for _, cell in self.model.mm_projector.name_cells().items():
                 cell.recompute(**gradient_checkpointing_kwargs)
         if hasattr(self.model, "mm_projector_auxes"):
-            for _, cell in self.model.mm_projector_auxes.cells_and_names():
+            for _, cell in self.model.mm_projector_auxes.name_cells().items():
                 cell.recompute(**gradient_checkpointing_kwargs)
         if hasattr(self.model, "vision_samplers"):
-            for _, cell in self.model.vision_samplers.cells_and_names():
+            for _, cell in self.model.vision_samplers.name_cells().items():
                 cell.recompute(**gradient_checkpointing_kwargs)
 
         # cambrian head
@@ -412,8 +409,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             loss_fct = nn.CrossEntropyLoss()
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
-            # Enable model parallelism
-            shift_labels = shift_labels.to(shift_logits.device)
             loss = loss_fct(shift_logits, shift_labels)
 
         # loss, logits, past_key_values, hidden_states, attentions
@@ -463,7 +458,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             self.final_vision_feature_size = final_vision_feature_size
             self.global_context_feature = global_context_feature
         else:
-            inputs_embeds = self.get_model().embedding_tokens(inputs)
+            inputs_embeds = self.get_model().embed_tokens(inputs)
 
         return super().generate(
             position_ids=position_ids,

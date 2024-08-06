@@ -62,20 +62,34 @@ def get_model_param_count(model, trainable_only=False):
     return sum(numel(p) for p in model.get_parameters() if not trainable_only or p.requires_grad)
 
 
-def get_parameter_names(model, forbidden_layer_types):
+def get_parameter_names(model: nn.Cell, forbidden_layer_types):
     """
     Returns the names of the model parameters that are not inside a forbidden layer.
     """
+
+    # method 1
+    # _neg_result = []
+    # for name, child in model.cells_and_names():
+    #     if isinstance(child, tuple(forbidden_layer_types)):
+    #         _neg_result += [n for n, _ in child.parameters_and_names(expand=False)]
+    #
+    # result = []
+    # for p_name, _ in model.parameters_and_names():
+    #     if p_name not in _neg_result:
+    #         result += [p_name,]
+    #
+    # return result
+
+    # method 2
     result = []
-    for name, child in model.cells_and_names():
+    for name, child in model.name_cells().items():
         result += [
-            n
+            f"{name}.{n}"
             for n in get_parameter_names(child, forbidden_layer_types)
             if not isinstance(child, tuple(forbidden_layer_types))
         ]
     # Add model specific parameters (defined with nn.Parameter) since they are not in any child.
-    result += [n for n, _ in model.parameters_and_names()]
-
+    result += [n for n, p in model.parameters_and_names(expand=False)]
     return result
 
 

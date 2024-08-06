@@ -265,6 +265,7 @@ class AttentionMaskConverter:
 attn_mask_converter = AttentionMaskConverter()
 
 
+@ms.jit
 def _prepare_4d_causal_attention_mask(
     attention_mask: Optional[Tensor],
     input_shape: Union[Tuple, List],

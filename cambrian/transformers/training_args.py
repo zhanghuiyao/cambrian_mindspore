@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import mindspore as ms
+from mindspore import context, ParallelMode
 from mindspore.communication.management import get_rank, get_group_size
 
 from cambrian.transformers.trainer_utils import (
@@ -20,7 +21,8 @@ from cambrian.transformers.trainer_utils import (
     HubStrategy
 )
 from cambrian.transformers.debug_utils import DebugOption
-from cambrian.transformers.utils.generic import ExplicitEnum
+from cambrian.transformers.utils.generic import ExplicitEnum, cached_property
+from cambrian.mindspore_adapter.utils import _is_parallel
 
 from transformers.utils import logging
 
@@ -653,7 +655,7 @@ class TrainingArguments:
             Whether to perform a evaluation step (sanity check) before the training to ensure the validation steps works correctly.
     """
 
-    framework = "ms"
+    framework = "mindspore"
     output_dir: str = field(
         metadata={"help": "The output directory where the model predictions and checkpoints will be written."},
     )
@@ -684,25 +686,6 @@ class TrainingArguments:
     )
     per_device_eval_batch_size: int = field(
         default=8, metadata={"help": "Batch size per GPU/TPU/MPS/NPU core/CPU for evaluation."}
-    )
-
-    per_gpu_train_batch_size: Optional[int] = field(
-        default=None,
-        metadata={
-            "help": (
-                "Deprecated, the use of `--per_device_train_batch_size` is preferred. "
-                "Batch size per GPU/TPU core/CPU for training."
-            )
-        },
-    )
-    per_gpu_eval_batch_size: Optional[int] = field(
-        default=None,
-        metadata={
-            "help": (
-                "Deprecated, the use of `--per_device_eval_batch_size` is preferred. "
-                "Batch size per GPU/TPU core/CPU for evaluation."
-            )
-        },
     )
 
     gradient_accumulation_steps: int = field(
@@ -1022,37 +1005,6 @@ class TrainingArguments:
         },
     )
 
-    # zhy_test
-    is_distribute: Optional[bool] = field(
-        default=False,
-        metadata={
-            "help": (
-                "Whether or not to use PyTorch Fully Sharded Data Parallel (FSDP) training (in distributed training"
-                " only). The base option should be `full_shard`, `shard_grad_op` or `no_shard` and you can add"
-                " CPU-offload to `full_shard` or `shard_grad_op` like this: full_shard offload` or `shard_grad_op"
-                " offload`. You can add auto-wrap to `full_shard` or `shard_grad_op` with the same syntax: full_shard"
-                " auto_wrap` or `shard_grad_op auto_wrap`."
-            ),
-        },
-    )
-    mix_precision: Optional[str] = field(
-        default="O2",
-        metadata={
-            "help": (
-                ""
-            )
-        },
-    )
-    zero: Optional[str] = field(
-        default=None,
-        metadata={
-            "help": (
-                "Enable zero parallelism, select from [stage1, stage2, stage3]"
-            )
-        },
-    )
-
-
     label_smoothing_factor: float = field(
         default=0.0, metadata={"help": "The label smoothing epsilon to apply (zero means no label smoothing)."}
     )
@@ -1295,7 +1247,12 @@ class TrainingArguments:
     def __post_init__(self):
         # Parse in args that could be `dict` sent in from the CLI as a string
         for field in _VALID_DICT_FIELDS:
+            if not hasattr(self, field):
+                logger.warning(f"cambrian.transformers not support args: {field}, skip.")
+                continue
+
             passed_value = getattr(self, field)
+
             # We only want to do this if the str starts with a bracket to indiciate a `dict`
             # else its likely a filename if supported
             if isinstance(passed_value, str) and passed_value.startswith("{"):
@@ -1486,34 +1443,19 @@ class TrainingArguments:
 
     @property
     def train_batch_size(self) -> int:
-        """
-        The actual batch size for training (may differ from `per_gpu_train_batch_size` in distributed training).
-        """
-        if self.per_gpu_train_batch_size:
-            logger.warning(
-                "Using deprecated `--per_gpu_train_batch_size` argument which will be removed in a future "
-                "version. Using `--per_device_train_batch_size` is preferred."
-            )
-        per_device_batch_size = self.per_gpu_train_batch_size or self.per_device_train_batch_size
+        per_device_batch_size = self.per_device_train_batch_size
         train_batch_size = per_device_batch_size * max(1, self.n_gpu)
         return train_batch_size
 
     @property
     def eval_batch_size(self) -> int:
-        """
-        The actual batch size for evaluation (may differ from `per_gpu_eval_batch_size` in distributed training).
-        """
-        if self.per_gpu_eval_batch_size:
-            logger.warning(
-                "Using deprecated `--per_gpu_eval_batch_size` argument which will be removed in a future "
-                "version. Using `--per_device_eval_batch_size` is preferred."
-            )
-        per_device_batch_size = self.per_gpu_eval_batch_size or self.per_device_eval_batch_size
+        per_device_batch_size = self.per_device_eval_batch_size
         eval_batch_size = per_device_batch_size * max(1, self.n_gpu)
         return eval_batch_size
 
+    @cached_property
     def _setup_devices(self):
-        self._n_gpu = get_group_size()
+        self._n_gpu = get_group_size() if _is_parallel() else 1
 
     @property
     def n_gpu(self):
@@ -1544,23 +1486,39 @@ class TrainingArguments:
         """
         The number of processes used in parallel.
         """
-        return get_group_size()
+        if self.framework == "mindspore":
+            if _is_parallel():
+                return get_group_size()
+        else:
+            raise NotImplementedError
+
+        return 1
 
     @property
     def process_index(self):
         """
         The index of the current process used.
         """
-        rank = get_rank()
-        return rank
+        if self.framework == "mindspore":
+            if _is_parallel():
+                return get_rank()
+        else:
+            raise NotImplementedError
+
+        return 0
 
     @property
     def local_process_index(self):
         """
         The index of the local process used.
         """
-        local_rank = get_rank() % 8
-        return local_rank
+        if self.framework == "mindspore":
+            if _is_parallel():
+                return get_rank() % 8
+        else:
+            raise NotImplementedError
+
+        return 0
 
     def get_process_log_level(self):
         """

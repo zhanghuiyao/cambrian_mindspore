@@ -272,7 +272,7 @@ class CambrianMetaForCausalLM:
     #     return self.get_model().get_vision_tower()
 
     def get_vision_tower_aux_list(self):
-        return self.get_model().get_vision_tower_aux_list()
+        return self.model.get_vision_tower_aux_list()
 
     def rearrange_vision_tower_features_train(self, vision_tower_aux_feature_list, vision_tower_aux_attention_masks_list, query_side_len):
         vision_tower_aux_feature_rearranged_list = []
@@ -342,7 +342,7 @@ class CambrianMetaForCausalLM:
         return vision_tower_aux_feature_rearranged_list, vision_tower_aux_attention_masks_rearranged_list
 
     def encode_images(self, image_aux_list):
-        vision_tower_aux_list = self.get_model().get_vision_tower_aux_list()
+        vision_tower_aux_list = self.model.get_vision_tower_aux_list()
         image_aux_features_list = ()
         for image_aux, vision_tower_aux in zip(image_aux_list, vision_tower_aux_list):
             image_aux_features = vision_tower_aux(image_aux)
@@ -354,20 +354,23 @@ class CambrianMetaForCausalLM:
         self, input_ids, position_ids, attention_mask, past_key_values, labels,
         images, image_aux_attention_masks_list=None, image_sizes=None
     ):
-        vision_tower_aux_list = self.get_model().get_vision_tower_aux_list()
+        vision_tower_aux_list = self.model.get_vision_tower_aux_list()
 
-        if vision_tower_aux_list is None or images is None or input_ids.shape[1] == 1:
-            return input_ids, position_ids, attention_mask, past_key_values, None, labels, None, None, None, None
+        assert vision_tower_aux_list is not None
+        assert images is not None
+        assert input_ids.shape[1] != 1
+        # if vision_tower_aux_list is None or images is None or input_ids.shape[1] == 1:
+        #     return input_ids, position_ids, attention_mask, past_key_values, None, labels, None, None, None, None
 
         image_aux_list = images
 
         bs = image_aux_list[0].shape[0]
         dtype = image_aux_list[0].dtype
 
-        image_token_len = self.get_model().image_token_len
-        query_num_list = self.get_model().query_num_list
+        image_token_len = self.model.image_token_len
+        query_num_list = self.model.query_num_list
 
-        final_height = final_width  = int(image_token_len**0.5)
+        final_height = final_width = int(image_token_len**0.5)
         assert final_width * final_height == image_token_len
 
         final_image_features_list = []
@@ -382,13 +385,13 @@ class CambrianMetaForCausalLM:
         vision_tower_aux_feature_list = []
         vision_tower_aux_attention_masks_list = []
         global_context_feature = None
-        if self.get_model().mm_projector_type == 'sva':
+        if self.model.mm_projector_type == 'sva':
             # get vision tokens from each vision tower
             for aux_i in range(len(vision_tower_aux_list)):
                 image_aux_features = image_aux_features_list[aux_i]
 
-                # image_aux_features = getattr(self.get_model(), 'mm_projector_aux_{}'.format(aux_i))(image_aux_features).to(dtype)
-                image_aux_features = self.get_model().mm_projector_auxes[aux_i](image_aux_features).to(dtype)
+                # image_aux_features = getattr(self.model, 'mm_projector_aux_{}'.format(aux_i))(image_aux_features).to(dtype)
+                image_aux_features = self.model.mm_projector_auxes[aux_i](image_aux_features).to(dtype)
                 if aux_i == 0:
                     global_context_feature = image_aux_features.mean(1).view(bs, 1, 1, -1)
 
@@ -396,7 +399,7 @@ class CambrianMetaForCausalLM:
 
             # perform vision sampling for each query group
             for query_group_i, query_num in enumerate(query_num_list):
-                query_features_i = self.get_model().vision_query[query_group_i, :].view(1, 1, 1, -1).broadcast_to((bs, query_num, -1, -1))
+                query_features_i = self.model.vision_query[query_group_i, :].view(1, 1, 1, -1).broadcast_to((bs, query_num, -1, -1))
                 global_context_feature_i = global_context_feature.broadcast_to((-1, query_num, 1, -1)).flatten(start_dim=0, end_dim=1)
                 query_side_len = int(query_num**0.5)
 
@@ -407,9 +410,9 @@ class CambrianMetaForCausalLM:
                     vision_tower_aux_feature_list_i, vision_tower_aux_attention_masks_list_i = \
                         self.rearrange_vision_tower_features_inference(vision_tower_aux_feature_list, query_side_len, image_sizes)
 
-                # query_features_i = getattr(self.get_model(), "vision_sampler_{}".format(query_group_i))(query_features_i.flatten(start_dim=0, end_dim=1), global_context_feature_i, *vision_tower_aux_feature_list_i, *vision_tower_aux_attention_masks_list_i)
+                # query_features_i = getattr(self.model, "vision_sampler_{}".format(query_group_i))(query_features_i.flatten(start_dim=0, end_dim=1), global_context_feature_i, *vision_tower_aux_feature_list_i, *vision_tower_aux_attention_masks_list_i)
 
-                query_features_i = self.get_model().vision_samplers[query_group_i](
+                query_features_i = self.model.vision_samplers[query_group_i](
                     query_features_i.flatten(start_dim=0, end_dim=1),
                     global_context_feature_i,
                     *vision_tower_aux_feature_list_i,
@@ -437,7 +440,7 @@ class CambrianMetaForCausalLM:
             final_image_features_list = image_aux_features_list
 
         image_features = ops.cat(final_image_features_list, -1)
-        image_features = self.get_model().mm_projector(image_features).to(dtype)
+        image_features = self.model.mm_projector(image_features).to(dtype)
 
         if self.training:
             image_features = image_features.view(image_features.shape[0], final_height, final_width, -1)
@@ -451,7 +454,7 @@ class CambrianMetaForCausalLM:
             image_features = image_features.view(bs, final_height, final_width, -1)
             image_features_unpadded = []
             final_size = []
-            if self.get_model().mm_projector_type == 'sva':
+            if self.model.mm_projector_type == 'sva':
                 vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final = \
                     self.rearrange_vision_tower_features_inference(vision_tower_aux_feature_list, final_height, image_sizes, unpad=True)
                 global_context_feature_final = []
@@ -472,10 +475,10 @@ class CambrianMetaForCausalLM:
                 cur_image_feature = cur_image_feature.flatten(start_dim=1, end_dim=2)
                 image_features_unpadded.append(cur_image_feature.squeeze(0))
 
-                if self.get_model().mm_projector_type == 'sva':
+                if self.model.mm_projector_type == 'sva':
                     cur_global_context_feature = global_context_feature[batch_i].broadcast_to((cur_h*cur_w, 1, -1))
                     global_context_feature_final.append(cur_global_context_feature)
-            if self.get_model().mm_projector_type == 'sva':
+            if self.model.mm_projector_type == 'sva':
                 global_context_feature_final = ops.cat(global_context_feature_final, 0)
 
             image_features = image_features_unpadded
@@ -489,7 +492,11 @@ class CambrianMetaForCausalLM:
 
             # embed the input_ids
             new_input_ids_padded_for_emb = ops.where(input_ids == IMAGE_TOKEN_INDEX, 0, input_ids)
-            input_embeds = self.get_model().embedding_tokens(new_input_ids_padded_for_emb)
+
+            # FIXME: level 3, replace `self.get_model()` with `self.model`
+            # input_embeds = self.get_model().embed_tokens(new_input_ids_padded_for_emb)
+            input_embeds = self.model.embed_tokens(new_input_ids_padded_for_emb)
+
             new_input_embeds = []
             cur_image_idx = 0
 
@@ -506,11 +513,19 @@ class CambrianMetaForCausalLM:
                 # 1 image
                 cur_image_features = image_features[cur_image_idx]
                 _index_table = ops.range(0, len(cur_input_ids), 1)
-                _index_table = ops.masked_fill(_index_table, cur_input_ids != IMAGE_TOKEN_INDEX, -1)
+                _index_table = ops.masked_fill(_index_table,
+                                               cur_input_ids != IMAGE_TOKEN_INDEX,
+                                               ops.full((), -1, dtype=_index_table.dtype))
                 _img_indexes_topk = ops.topk(_index_table, 1)[0]
                 _img_indexes = ops.range(0, len(cur_image_features), 1) + _img_indexes_topk[0]
-                _img_indexes = ops.broadcast_to(_img_indexes, (-1, cur_input_embeds.shape[-1]))
-                new_input_embed = ops.scatter(cur_input_embeds, 0, _img_indexes, cur_image_features)
+
+                # 1.
+                # _img_indexes = ops.broadcast_to(_img_indexes[None, :], (-1, cur_input_embeds.shape[-1]))
+                # new_input_embed = ops.scatter(cur_input_embeds, 0, _img_indexes, cur_image_features)
+                # 2.
+                cur_input_embeds[_img_indexes, :] = cur_image_features
+                new_input_embed = cur_input_embeds
+
                 new_input_embeds.append(new_input_embed)
 
                 # # n images
@@ -561,7 +576,7 @@ class CambrianMetaForCausalLM:
 
                 if num_images == 0:
                     # cur_image_features = image_features[batch_idx]
-                    cur_input_embeds = self.get_model().embedding_tokens(cur_input_ids)
+                    cur_input_embeds = self.model.embed_tokens(cur_input_ids)
                     new_input_embed = cur_input_embeds
                     new_label = labels[batch_idx]
                     new_position_id = ops.arange(0, cur_input_ids.shape[0], 1, dtype=cur_input_ids.dtype)
@@ -594,10 +609,7 @@ class CambrianMetaForCausalLM:
                 cur_labels = ops.gather(labels[batch_idx], gather_index, axis=0)
                 cur_attention_mask = ops.gather(cur_attention_mask.to(ms.int32), gather_index, axis=0).to(ms.bool_)
 
-                # zhy_test
-                cur_input_embeds = self.get_model().embedding_tokens(cur_input_ids)
-                # cur_input_embeds = ops.broadcast_to(cur_input_ids[:, None], (-1, 4096))
-
+                cur_input_embeds = self.model.embed_tokens(cur_input_ids)
                 _img_indexes = ops.arange(0, _im_token_len, 1, dtype=ms.int32) + _im_positions
                 # _img_indexes = ops.broadcast_to(_img_indexes[:, None], (-1, cur_image_features.shape[-1]))
                 # new_input_embed = ops.scatter(cur_input_embeds, 0, _img_indexes, cur_image_features.to(cur_input_embeds.dtype))

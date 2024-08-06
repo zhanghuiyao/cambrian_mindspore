@@ -1,5 +1,5 @@
 import mindspore as ms
-from mindspore import nn
+from mindspore import nn, context, ParallelMode
 from mindspore.train.amp import AMP_BLACK_LIST, AMP_WHITE_LIST, _auto_black_list
 
 
@@ -44,3 +44,9 @@ def auto_mixed_precision(network, amp_level="O0", dtype=ms.float16):
     else:
         raise ValueError("The amp level {} is not supported".format(amp_level))
     return network
+
+
+def _is_parallel():
+    is_parallel = context.get_auto_parallel_context("parallel_mode") not in \
+                  (ParallelMode.STAND_ALONE,)
+    return is_parallel

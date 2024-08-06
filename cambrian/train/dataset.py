@@ -9,10 +9,12 @@ import numpy as np
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Sequence, List
 from PIL import Image
+from packaging import version
 
 import mindspore as ms
 from mindspore import Tensor
 
+import tokenizers
 from transformers import PreTrainedTokenizer
 
 from cambrian import conversation as conversation_lib
@@ -24,6 +26,9 @@ from cambrian.constants import (
     DEFAULT_IM_END_TOKEN,
     IMAGE_TOKEN_INDEX
 )
+
+
+IS_TOKENIZER_GREATER_THAN_0_14 = version.parse(tokenizers.__version__) >= version.parse('0.14')
 
 
 def make_supervised_data_module(tokenizer: PreTrainedTokenizer,
@@ -232,17 +237,19 @@ class LazySupervisedDataset:
         return "image" in sample and not str(sample['image']) in ['', 'None', 'none', 'nan']
 
     def __getitem__(self, i) -> Dict[str, Tensor]:
-        # sources = self.list_data_dict[i]
 
+        if not isinstance(i, int):
+            i = int(i)
+
+        # sources = self.list_data_dict[i]
         with open(self.data_path, 'r') as file:
             for idx, line in enumerate(file):
                 if idx == i:
                     sources = json.loads(line.strip())
                     break
         dat = sources
-        if isinstance(i, int):
-            sources = [sources]
-        assert len(sources) == 1, "Don't know why it is wrapped to a list"  # FIXME
+        sources = [sources]
+
         has_image = self._has_image(dat)
         if has_image:
             image_file = dat['image']
@@ -292,9 +299,9 @@ class LazySupervisedDataset:
             sources,
             self.tokenizer,
             has_image=has_image)
-        if isinstance(i, int):
-            data_dict = dict(input_ids=data_dict["input_ids"][0],
-                             labels=data_dict["labels"][0])
+
+        data_dict = dict(input_ids=data_dict["input_ids"][0],
+                         labels=data_dict["labels"][0])
         if (data_dict['labels'] != IGNORE_INDEX).sum() == 0:
             print("WARNING: LazySupervisedDataset, got non labels, skip...")
             return self.__getitem__(0)
@@ -493,6 +500,92 @@ def preprocess_llama_3(
     )
 
 
+def preprocess_v1(
+    sources,
+    tokenizer: PreTrainedTokenizer,
+    has_image: bool = False
+) -> Dict:
+    conv = conversation_lib.default_conversation.copy()
+    roles = {"human": conv.roles[0], "gpt": conv.roles[1]}
+
+    # Apply prompt templates
+    conversations = []
+    for i, source in enumerate(sources):
+        if roles[source[0]["from"]] != conv.roles[0]:
+            # Skip the first one if it is not from human
+            source = source[1:]
+
+        conv.messages = []
+        for j, sentence in enumerate(source):
+            role = roles[sentence["from"]]
+            assert role == conv.roles[j % 2], f"{i}"
+            conv.append_message(role, sentence["value"])
+        conversations.append(conv.get_prompt())
+
+    # Tokenize conversations
+
+    if has_image:
+        input_ids = np.stack([tokenizer_image_token(prompt, tokenizer, return_tensors='np') for prompt in conversations], axis=0)
+    else:
+        input_ids = tokenizer(
+            conversations,
+            return_tensors="np",
+            padding="longest",
+            max_length=tokenizer.model_max_length,
+            truncation=True,
+        ).input_ids
+
+    targets = input_ids[:]
+
+    assert conv.sep_style == conversation_lib.SeparatorStyle.TWO
+
+    # Mask targets
+    sep = conv.sep + conv.roles[1] + ": "
+    for conversation, target in zip(conversations, targets):
+        total_len = int(np.not_equal(target, tokenizer.pad_token_id).sum())
+
+        rounds = conversation.split(conv.sep2)
+        cur_len = 1
+        target[:cur_len] = IGNORE_INDEX
+        for i, rou in enumerate(rounds):
+            if rou == "":
+                break
+
+            parts = rou.split(sep)
+            if len(parts) != 2:
+                break
+            parts[0] += sep
+
+            if has_image:
+                round_len = len(tokenizer_image_token(rou, tokenizer))
+                instruction_len = len(tokenizer_image_token(parts[0], tokenizer)) - 2
+            else:
+                round_len = len(tokenizer(rou).input_ids)
+                instruction_len = len(tokenizer(parts[0]).input_ids) - 2
+
+            if i != 0 and not tokenizer.legacy and IS_TOKENIZER_GREATER_THAN_0_14:
+                round_len -= 1
+                instruction_len -= 1
+
+            target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
+
+            cur_len += round_len
+        target[cur_len:] = IGNORE_INDEX
+
+        if cur_len < tokenizer.model_max_length:
+            if cur_len != total_len:
+                target[:] = IGNORE_INDEX
+                print(
+                    f"WARNING: tokenization mismatch: {cur_len} vs. {total_len}."
+                    f" (ignored)"
+                )
+
+    return dict(
+        input_ids=input_ids,
+        labels=targets,
+    )
+
+
 def preprocess(
         sources: Sequence[str],
         tokenizer: PreTrainedTokenizer,
@@ -512,7 +605,7 @@ def preprocess(
     if conversation_lib.default_conversation.sep_style == conversation_lib.SeparatorStyle.LLAMA_3:
         return preprocess_llama_3(sources, tokenizer, has_image=has_image)
     if conversation_lib.default_conversation.version.startswith("v1"):
-        raise NotImplementedError
+        return preprocess_v1(sources, tokenizer, has_image=has_image)
     if conversation_lib.default_conversation.version == "mpt":
         raise NotImplementedError
     if conversation_lib.default_conversation.version == "phi3":
@@ -568,8 +661,7 @@ class DataCollatorForSupervisedDataset:
         image_aux_token_len_list = self.image_aux_token_len_list
         image_position = self.image_position
 
-        input_ids, labels = tuple([instance[key] for instance in instances]
-                                  for key in ("input_ids", "labels"))
+        input_ids, labels = tuple([instance[key] for instance in instances] for key in ("input_ids", "labels"))
         max_length = self.tokenizer.model_max_length
 
         padding_side = self.tokenizer.padding_side
@@ -578,10 +670,12 @@ class DataCollatorForSupervisedDataset:
 
         if padding_side == "left":
             input_ids = [t[:max_length] if t.shape[0] >= max_length else np.pad(t, (max_length - t.shape[0], 0), 'constant', constant_values=self.tokenizer.pad_token_id) for t in input_ids]
-            labels = [t[:max_length] if t.shape[0] >= max_length else np.pad(t, ( max_length - t.shape[0], 0), 'constant', constant_values=IGNORE_INDEX) for t in labels]
+            labels = [t[:max_length] if t.shape[0] >= max_length else np.pad(t, (max_length - t.shape[0], 0), 'constant', constant_values=IGNORE_INDEX) for t in labels]
         else:
             input_ids = [t[:max_length] if t.shape[0] >= max_length else np.pad(t, (0, max_length - t.shape[0]), 'constant', constant_values=self.tokenizer.pad_token_id) for t in input_ids]
             labels = [t[:max_length] if t.shape[0] >= max_length else np.pad(t, (0, max_length - t.shape[0]), 'constant', constant_values=IGNORE_INDEX) for t in labels]
+
+        # import pdb;pdb.set_trace()
 
         input_ids = np.stack(input_ids)
         labels = np.stack(labels)
@@ -651,9 +745,9 @@ def prepare_image_info(image_size, image_token_len, newline=False):
     num_tokens_per_side = int(image_token_len**0.5)
     if newline:
         # for the newline embedding
-        attention_mask = np.ones(num_tokens_per_side, num_tokens_per_side+1, dtype=np.bool)
+        attention_mask = np.ones((num_tokens_per_side, num_tokens_per_side+1), dtype=np.bool)
     else:
-        attention_mask = np.ones(num_tokens_per_side, num_tokens_per_side, dtype=np.bool)
+        attention_mask = np.ones((num_tokens_per_side, num_tokens_per_side), dtype=np.bool)
     left_offset, right_offset, top_offset, bottom_offset = get_padding_offset((num_tokens_per_side, num_tokens_per_side), image_size)
     if newline:
         if left_offset > 0:
@@ -770,5 +864,13 @@ def prepare_multimodal_data(input_ids, labels, attention_mask, image_sizes, imag
     new_position_ids = np.stack(new_position_ids)
     im_aux_attention_masks_list = [np.stack(im_aux_attention_masks) for im_aux_attention_masks in
                                    im_aux_attention_masks_list]
+
+    new_input_ids, new_labels, new_attention_mask, new_position_ids, im_aux_attention_masks_list = \
+        new_input_ids.astype(np.int32), \
+        new_labels.astype(np.int32), \
+        new_attention_mask.astype(np.bool_), \
+        new_position_ids.astype(np.int32), \
+        tuple([m.astype(np.bool_) for m in im_aux_attention_masks_list])
+
     return new_input_ids, new_labels, new_attention_mask, new_position_ids, im_aux_attention_masks_list
 

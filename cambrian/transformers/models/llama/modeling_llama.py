@@ -255,12 +255,12 @@ class LlamaAttention(nn.Cell):
         hidden_states: Tensor,
         attention_mask: Optional[Tensor] = None,
         position_ids: Optional[Tensor] = None,
-        past_key_value: Optional[Cache] = None,
+        past_key_value: Optional[Tensor] = None,
         output_attentions: bool = False,
         use_cache: bool = False,
         cache_position: Optional[Tensor] = None,
         **kwargs,
-    ) -> Tuple[Tensor, Optional[Tensor], Optional[Tuple[Tensor]]]:
+    ):
         bsz, q_len, _ = hidden_states.shape
 
         if self.pretraining_tp > 1:
@@ -292,10 +292,10 @@ class LlamaAttention(nn.Cell):
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
-        if past_key_value is not None:
-            # sin and cos are specific to RoPE models; cache_position needed for the static cache
-            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
-            key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+        # if past_key_value is not None:
+        #     # sin and cos are specific to RoPE models; cache_position needed for the static cache
+        #     cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+        #     key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
@@ -310,12 +310,6 @@ class LlamaAttention(nn.Cell):
         attn_weights = ops.softmax(attn_weights, axis=-1, dtype=ms.float32).to(query_states.dtype)
         attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
-
-        # if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
-        #     raise ValueError(
-        #         f"`attn_output` should be of size {(bsz, self.num_heads, q_len, self.head_dim)}, but is"
-        #         f" {attn_output.shape}"
-        #     )
         assert attn_output.shape == (bsz, self.num_heads, q_len, self.head_dim)
 
         attn_output = attn_output.swapdims(1, 2)
@@ -329,10 +323,17 @@ class LlamaAttention(nn.Cell):
         else:
             attn_output = self.o_proj(attn_output)
 
-        if not output_attentions:
-            attn_weights = None
+        # FIXME: level 0, bug when return None
+        # if not output_attentions:
+        #     attn_weights = None
+        # return attn_output, attn_weights, past_key_value
 
-        return attn_output, attn_weights, past_key_value
+        outputs = (attn_output,)
+        if past_key_value is not None:
+            outputs += (past_key_value,)
+
+        # attn_output, past_key_value
+        return outputs
 
 
 LLAMA_ATTENTION_CLASSES = {
@@ -365,7 +366,7 @@ class LlamaDecoderLayer(nn.Cell):
         use_cache: Optional[bool] = False,
         cache_position: Optional[Tensor] = None,
         **kwargs,
-    ) -> Tuple[Optional[Tensor]]:
+    ):
         """
         Args:
             hidden_states (`torch.FloatTensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
@@ -391,7 +392,7 @@ class LlamaDecoderLayer(nn.Cell):
         hidden_states = self.input_layernorm(hidden_states)
 
         # Self Attention
-        hidden_states, self_attn_weights, present_key_value = self.self_attn(
+        attn_output = self.self_attn(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -400,6 +401,8 @@ class LlamaDecoderLayer(nn.Cell):
             use_cache=use_cache,
             cache_position=cache_position,
         )
+        hidden_states = attn_output[0]
+
         hidden_states = residual + hidden_states
 
         # Fully Connected
@@ -408,10 +411,14 @@ class LlamaDecoderLayer(nn.Cell):
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 
-        if not use_cache:
-            past_key_value = None
+        past_key_value = None if len(attn_output) == 1 else attn_output[1]
 
-        return hidden_states, self_attn_weights, past_key_value
+        outputs = (hidden_states,)
+
+        if use_cache and past_key_value is not None:
+            outputs += (past_key_value,)
+
+        return outputs
 
 
 class LlamaPreTrainedModel(PreTrainedModel):
@@ -433,7 +440,6 @@ class LlamaModel(LlamaPreTrainedModel):
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
-        # FIXME: `padding_idx` is inactivated in MindSpore
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=self.padding_idx)
         self.layers = nn.CellList(
             [LlamaDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
@@ -467,7 +473,7 @@ class LlamaModel(LlamaPreTrainedModel):
         input_ids: Tensor = None,
         attention_mask: Optional[Tensor] = None,
         position_ids: Optional[Tensor] = None,
-        past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
+        past_key_values: Optional[Tensor] = None,
         inputs_embeds: Optional[Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
@@ -519,17 +525,18 @@ class LlamaModel(LlamaPreTrainedModel):
             hidden_states = layer_outputs[0]
 
             if use_cache:
-                next_cache = layer_outputs[2]
+                assert past_key_values is not None
+                next_cache = layer_outputs[1]
                 past_key_values[layer_idx] = next_cache
 
         hidden_states = self.norm(hidden_states)
 
-        # last_hidden_state, past_key_values, hidden_states, attentions = \
-        #     hidden_states, past_key_values, all_hidden_states, all_self_attns
-        if use_cache:
-            return hidden_states, past_key_values
-        else:
-            return hidden_states
+        outputs = (hidden_states,)
+        if past_key_values is not None and use_cache:
+            outputs += (past_key_values,)
+
+        # last_hidden_state, past_key_values, hidden_states, attentions
+        return outputs
 
     def _update_causal_mask(
         self,
@@ -696,11 +703,10 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             cache_position=cache_position,
         )
 
-        if use_cache:
-            hidden_states, past_key_values = outputs
-        else:
-            hidden_states = outputs
+        hidden_states = outputs[0]
 
+        if use_cache:
+            past_key_values = outputs[1]
 
         if self.pretraining_tp > 1:
             lm_head_slices = self.lm_head.weight.split(self.vocab_size // self.pretraining_tp, axis=0)
@@ -721,8 +727,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             # Enable model parallelism
             shift_labels = shift_labels.to(shift_logits.device)
             loss = self.cross_entropy_loss(shift_logits, shift_labels)
-
-        # loss, logits, past_key_values, hidden_states, attentions
 
         if use_cache:
             return loss, logits, past_key_values
@@ -852,6 +856,8 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             # The `contiguous()` here is necessary to have a static stride during decoding. torchdynamo otherwise
             # recompiles graphs as the stride of the inputs is a guard. Ref: https://github.com/huggingface/transformers/pull/29114
             # TODO: use `next_tokens` directly instead.
+            if not isinstance(input_ids, Tensor):
+                input_ids = Tensor(input_ids, dtype=ms.int32)
             model_inputs = {"input_ids": input_ids}
 
         input_length = position_ids.shape[-1] if position_ids is not None else input_ids.shape[-1]

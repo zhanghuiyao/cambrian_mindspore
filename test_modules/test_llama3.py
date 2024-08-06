@@ -7,7 +7,7 @@ from cambrian.transformers.models.llama import LlamaModel, LlamaForCausalLM
 from transformers import AutoTokenizer
 
 
-from test_modules.wrapper import build_train_net
+from test_modules.build_train_network import build_train_net
 
 
 def test_llama3(model_path: str):
@@ -70,7 +70,10 @@ def test_llama3_generate(model_path: str):
     input_ids = Tensor(tokenizer(prompt).input_ids, ms.int32)
 
     model_input = model.prepare_inputs_for_generation(input_ids)
-    result = model.generate(**model_input)
+    result = model.generate(
+        **model_input,
+        max_new_tokens=20
+    )
 
     print(f"=====> input prompt: {prompt}")
     print(f"=====> output result: {result}, time cost: {time.time() - s_time:.2f}s")
@@ -108,9 +111,9 @@ if __name__ == '__main__':
     args, _ = parser.parse_known_args()
 
     ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"})
-    # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
+    # ms.set_context(mode=ms.GRAPH_MODE, device_target="CPU", pynative_synchronize=True)
 
     # test_llama3(args.model_path)
-    # test_llama3_causal(args.model_path)
+    test_llama3_causal(args.model_path)
     # test_llama3_generate(args.model_path)
-    test_llama3_causal_bp(args.model_path)
+    # test_llama3_causal_bp(args.model_path)

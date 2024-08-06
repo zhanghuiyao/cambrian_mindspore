@@ -21,9 +21,9 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Un
 
 import mindspore as ms
 from mindspore import nn, ops, Tensor
-from mindspore.communication.management import get_rank, get_group_size
+from mindspore.communication.management import get_group_size
 
-from cambrian.mindspore_adapter.utils import auto_mixed_precision
+from cambrian.mindspore_adapter.utils import auto_mixed_precision, _is_parallel
 
 from cambrian.transformers.modeling_utils import PreTrainedModel
 from cambrian.transformers.trainer_ms_utils import (
@@ -497,13 +497,15 @@ class Trainer:
             "num_parallel_workers": self.args.dataloader_num_workers,
             "sampler": self._get_train_sampler(),
             "python_multiprocessing": False,
-            "num_shards": None,  # FIXME: confirm shard with sampler, dp & mp
+            "num_shards": None,  # FIXME: level 0, confirm shard with sampler, dp & mp
             "shard_id": None,
+            "column_names": "item"
         }
         ds_batch_params = {
-            "batch_size": self._train_batch_size,               # bs
-            "per_batch_map": data_collator,                     # collate_fn
-            "drop_remainder": self.args.dataloader_drop_last,   # drop_last
+            "num_parallel_workers": self.args.dataloader_num_workers,
+            "batch_size": self.args.per_device_train_batch_size,    # per device batch size
+            "per_batch_map": data_collator,                         # collate_fn
+            "drop_remainder": self.args.dataloader_drop_last,       # drop_last
         }
         ds_repeat_params = {
             "count": 1  # self.args.num_train_epochs            # num_train_epochs, loop at train func
@@ -665,7 +667,7 @@ class Trainer:
             if state.train_batch_size is not None:
                 self._train_batch_size = state.train_batch_size
 
-        inner_training_loop = self._inner_training_loop  # TODO: level 3, Add find_executable_batch_size function
+        inner_training_loop = functools.partial(self._inner_training_loop, batch_size=self._train_batch_size)  # TODO: level 3, Add find_executable_batch_size function
         if args.push_to_hub:
             raise NotImplementedError
         else:
@@ -862,7 +864,7 @@ class Trainer:
 
         total_batched_samples = 0
         for epoch in range(epochs_trained, num_train_epochs):
-            epoch_iterator = train_dataloader
+            epoch_iterator = train_dataloader.create_dict_iterator(num_epochs=1, output_numpy=True)
             # FIXME: level 3, consider resume, skip the previous steps
             if hasattr(epoch_iterator, "set_epoch"):
                 epoch_iterator.set_epoch(epoch)
@@ -872,7 +874,7 @@ class Trainer:
                 self._past = None
 
             steps_in_epoch = (
-                len(epoch_iterator)
+                len(train_dataloader)
                 if len_dataloader is not None
                 else args.max_steps * args.gradient_accumulation_steps
             )
@@ -889,6 +891,8 @@ class Trainer:
 
             step = -1
             for step, inputs in enumerate(epoch_iterator):
+                inputs = inputs["item"]
+
                 total_batched_samples += 1
 
                 if self.args.include_num_input_tokens_seen:
@@ -909,6 +913,8 @@ class Trainer:
                     self.control = self.callback_handler.on_step_begin(args, self.state, self.control)
 
                 # FIXME: level 1, add overflow print
+                self.model.set_train(True)
+                self.train_model.set_train(True)
                 tr_loss_step, _, _ = self.training_step(self.train_model, inputs)
 
                 if (
@@ -1061,6 +1067,22 @@ class Trainer:
                 checkpoints_sorted[i], checkpoints_sorted[i + 1] = checkpoints_sorted[i + 1], checkpoints_sorted[i]
         return checkpoints_sorted
 
+    def _nested_reduce_sum(self, tensors, name=None):
+        """
+        Gather value of `tensors` (tensor or list/tuple of nested tensors) and convert them to numpy before
+        concatenating them to `gathered`
+        """
+        if tensors is None:
+            return
+
+        if self.args.framework == "mindspore":
+            if _is_parallel():
+                return ops.AllReduce()(tensors).mean()
+        else:
+            raise NotImplementedError
+
+        return tensors
+
     def _maybe_log_save_evaluate(self, tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval):
         if self.control.should_log and self.state.global_step > self._globalstep_last_logged:
 
@@ -1068,8 +1090,8 @@ class Trainer:
 
             # get average loss over all processes
             # tr_loss_scalar = self._nested_gather(tr_loss).mean().item()
-            if get_group_size() > 1:
-                tr_loss_scalar = ops.AllReduce()(tr_loss).mean().item() / get_group_size()
+            if _is_parallel():
+                tr_loss_scalar = self._nested_reduce_sum(tr_loss).item() / get_group_size()
             else:
                 tr_loss_scalar = tr_loss.item()
 
@@ -1127,8 +1149,12 @@ class Trainer:
                 # NLP models inputs are int/uint and those get adjusted to the right dtype of the
                 # embedding. Other models such as wav2vec2's inputs are already float and thus
                 # may need special handling to match the dtypes of the model
+                if data.dtype in (ms.int32, ms.int64, ms.bool_):
+                    return data
+
                 kwargs = {"dtype": self.args.input_dtype}
                 return data.to(**kwargs)
+
         elif isinstance(data, np.ndarray):
             return self._prepare_input(Tensor(data))
 
@@ -1199,7 +1225,8 @@ class Trainer:
 
     def store_flos(self):
         # Storing the number of floating-point operations that went into the model
-        if get_group_size() > 1:
+
+        if _is_parallel():
             self.state.total_flos += (
                 ops.AllReduce()(Tensor(self.current_flos, ms.float32)).item()
             )

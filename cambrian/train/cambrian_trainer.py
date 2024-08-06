@@ -18,8 +18,8 @@ from cambrian.transformers.trainer import (
     has_length,
     ALL_LAYERNORM_LAYERS,
 )
+from cambrian.mindspore_adapter.utils import _is_parallel
 from cambrian.train.dataset import LengthGroupedSampler
-
 
 
 
@@ -40,8 +40,24 @@ class CambrianTrainer(Trainer):
         else:
             return super()._get_train_sampler()
 
+    def _prepare_inputs_dict2list(self, dict_inputs: dict):
+        # Work for Cambrian Causal Model
+        input_keys = [
+            "input_ids", "attention_mask", "position_ids", "past_key_values",
+            "inputs_embeds", "labels", "use_cache", "output_attentions", "output_hidden_states",
+            "images", "image_aux_attention_masks_list", "image_sizes",
+            "return_dict", "cache_position"
+        ]
+
+        list_inputs = []
+        for k in input_keys:
+            list_inputs.append(dict_inputs.get(k, None))
+
+        return list_inputs
+
     def training_step(self, model: nn.Cell, inputs: Dict[str, Union[Tensor, Any]]) -> Tensor:
-        model.train()
+        model.set_train(True)
+
         inputs = self._prepare_inputs(inputs)
 
         loss = self.compute_loss(model, inputs)
@@ -52,7 +68,12 @@ class CambrianTrainer(Trainer):
         return loss / self.args.gradient_accumulation_steps
 
     def compute_loss(self, model, inputs, **kwargs):
-        outputs = model(**inputs)
+        # 1. dict input
+        # outputs = model(**inputs)
+        # 2. list input
+        inputs = self._prepare_inputs_dict2list(inputs)
+        outputs = model(*inputs)
+
         loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
         return loss
 
@@ -251,7 +272,8 @@ class CambrianTrainer(Trainer):
         logger.info(f"Saving model checkpoint to {output_dir}")
 
         # Name of files to save
-        rank, world_size = get_rank(), get_group_size()
+        rank, world_size = get_rank() if _is_parallel() else 0, \
+                           get_group_size() if _is_parallel() else 1
         WEIGHTS_NAME = f'weights_rank-{rank:08d}-of-{world_size:08d}-{WEIGHTS_NAME}'
         WEIGHTS_NAME_OPT = f'optimizer_rank-{rank:08d}-of-{world_size:08d}-{WEIGHTS_NAME}'
 
@@ -287,7 +309,8 @@ class CambrianTrainer(Trainer):
         ckpt_prefix = os.path.join(output_dir, "model_ckpt")
         output_dir = output_dir if output_dir is not None else self.args.output_dir
         os.makedirs(output_dir, exist_ok=True)
-        rank, world_size = get_rank(), get_group_size()
+        rank, world_size = get_rank() if _is_parallel() else 0, \
+                           get_group_size() if _is_parallel() else 1
         ckpt_path = f'{ckpt_prefix}_rank-{rank:08d}-of-{world_size:08d}.ckpt'
         os.makedirs(os.path.dirname(ckpt_path), exist_ok=True)
 

@@ -18,12 +18,6 @@ from mindspore.communication.management import init, get_rank, get_group_size
 import tokenizers
 from transformers import PreTrainedTokenizer, AutoTokenizer
 
-from cambrian.transformers import TrainingArguments as _TrainingArguments
-from cambrian.transformers import (
-    PreTrainedModel,
-    HfArgumentParser,
-    LlamaForCausalLM
-)
 from cambrian.constants import (
     IGNORE_INDEX,
     IMAGE_TOKEN_INDEX,
@@ -31,13 +25,23 @@ from cambrian.constants import (
     DEFAULT_IM_START_TOKEN,
     DEFAULT_IM_END_TOKEN
 )
+from cambrian import conversation as conversation_lib
+
 from cambrian.train.cambrian_trainer import CambrianTrainer
 from cambrian.train.dataset import DataArguments, make_supervised_data_module
 
 from cambrian.mm_utils import tokenizer_image_token, tokenizer_image_token_llama3
 from cambrian.model import CambrianLlamaForCausalLM
 
+from cambrian.transformers import TrainingArguments as _TrainingArguments
+from cambrian.transformers import (
+    PreTrainedModel,
+    HfArgumentParser,
+    LlamaForCausalLM
+)
 
+from cambrian.mindspore_adapter.training_args import init_environment, MindSporeArguments
+from cambrian.mindspore_adapter.utils import _is_parallel
 
 
 logger.setLevel(logging.WARNING)
@@ -88,7 +92,7 @@ class ModelArguments:
 
 
 @dataclass
-class TrainingArguments(_TrainingArguments):
+class TrainingArguments(MindSporeArguments, _TrainingArguments):
     cache_dir: Optional[str] = field(default=None)
     optim: str = field(default="adamw_mindspore")
     remove_unused_columns: bool = field(default=False)
@@ -147,15 +151,14 @@ def train():
     ))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
-    # FIXME: level 0, set_context
-
+    init_environment(training_args)
 
     local_rank = training_args.local_rank
     compute_dtype = (ms.float16 if training_args.fp16 else (ms.bfloat16 if training_args.bf16 else ms.float32))
 
     # verify that the train_batch_size is set correctly
     if training_args.batch_size is not None:
-        world_size = get_group_size()
+        world_size = get_group_size() if _is_parallel() else 1
 
         if training_args.per_device_train_batch_size is None:
             raise ValueError("If train_batch_size is set, per_device_train_batch_size must be set")
@@ -241,7 +244,14 @@ def train():
         tokenizer.pad_token = "<|reserved_special_token_0|>"
         tokenizer.pad_token_id = 128002
     else:
-        raise NotImplementedError
+        tokenizer.pad_token = tokenizer.unk_token
+
+    # FIXME: level 0, The official implementation will not modify `default_comversation` in llama_v3
+    if model_args.version in conversation_lib.conv_templates:
+        conversation_lib.default_conversation = conversation_lib.conv_templates[model_args.version]
+    else:
+        logger.warning(f"Conversation version {model_args.version} not found. Using default `vicuna_v1`")
+        conversation_lib.default_conversation = conversation_lib.conv_templates["vicuna_v1"]
 
     if use_cohere:
         tokenizer.pad_token_id = 0
@@ -341,3 +351,7 @@ def train():
         # FIXME: level 1, save trainer
         # safe_save_model_for_hf_trainer(trainer=trainer,
         #                                output_dir=training_args.output_dir)
+
+
+if __name__ == "__main__":
+    train()
