@@ -745,9 +745,9 @@ def prepare_image_info(image_size, image_token_len, newline=False):
     num_tokens_per_side = int(image_token_len**0.5)
     if newline:
         # for the newline embedding
-        attention_mask = np.ones((num_tokens_per_side, num_tokens_per_side+1), dtype=np.bool)
+        attention_mask = np.ones((num_tokens_per_side, num_tokens_per_side+1), dtype=np.bool_)
     else:
-        attention_mask = np.ones((num_tokens_per_side, num_tokens_per_side), dtype=np.bool)
+        attention_mask = np.ones((num_tokens_per_side, num_tokens_per_side), dtype=np.bool_)
     left_offset, right_offset, top_offset, bottom_offset = get_padding_offset((num_tokens_per_side, num_tokens_per_side), image_size)
     if newline:
         if left_offset > 0:

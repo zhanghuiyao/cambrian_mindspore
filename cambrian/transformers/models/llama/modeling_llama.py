@@ -746,15 +746,15 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         padded_input_ids = np.zeros((bs, self.tokenizer_model_max_length), np.int32)
         padded_labels = np.full((bs, self.tokenizer_model_max_length), IGNORE_INDEX, np.int32)
         padded_position_ids = np.zeros((bs, self.tokenizer_model_max_length), np.int32)
-        padded_attention_mask = np.zeros((bs, self.tokenizer_model_max_length), np.bool)
+        padded_attention_mask = np.zeros((bs, self.tokenizer_model_max_length), np.bool_)
 
         _labels = labels
         _position_ids = position_ids
         _attention_mask = attention_mask
         if attention_mask is None:
-            attention_mask = np.ones_like(input_ids, dtype=np.bool)
+            attention_mask = np.ones_like(input_ids, dtype=np.bool_)
         else:
-            attention_mask = attention_mask.astype(np.bool)
+            attention_mask = attention_mask.astype(np.bool_)
         if position_ids is None:
             position_ids = np.arange(0, input_ids.shape[1], dtype=np.int32)
         if labels is None:
