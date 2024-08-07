@@ -1,5 +1,4 @@
-from typing import Dict
-
+from typing import Optional, Dict, List
 import mindspore as ms
 from mindspore import nn, ops, Tensor, Parameter, context, ParallelMode
 from mindspore.boost.grad_accumulation import gradient_accumulation_op as _grad_accum_op
@@ -14,11 +13,13 @@ def _is_pynative_parallel():
 
 def create_loss_scaler(ms_loss_scaler="static", scale_value=1024, scale_factor=2, scale_window=1000):
     if ms_loss_scaler == "dynamic":
-        from mindspore.amp import DynamicLossScaler
+        # from mindspore.amp import DynamicLossScaler
+        from cambrian.mindspore_adapter.amp import DynamicLossScaler
 
         loss_scaler = DynamicLossScaler(scale_value=scale_value, scale_factor=scale_factor, scale_window=scale_window)
     elif ms_loss_scaler == "static":
-        from mindspore.amp import StaticLossScaler
+        # from mindspore.amp import StaticLossScaler
+        from cambrian.mindspore_adapter.amp import StaticLossScaler
 
         loss_scaler = StaticLossScaler(scale_value=scale_value)
     elif ms_loss_scaler in ("none", "None"):
@@ -85,10 +86,12 @@ class TrainOneStepWrapper(nn.Cell):
 
         # grad and optimizer
         self.network = network
-        self.network.set_train(True)
-        self.network.set_grad(True)
+        self.network.set_train()
+        self.network.set_grad()
 
-        self.grad_fn = ops.value_and_grad(network, grad_position=None, weights=optimizer.parameters)
+        # self.value_and_grad = ops.value_and_grad(network, grad_position=None, weights=optimizer.parameters)
+        self.grad_fn = ops.GradOperation(get_by_list=True, sens_param=True)(self.network, optimizer.parameters)
+
         self.optimizer = optimizer
         self.ema = ema
 
@@ -164,10 +167,38 @@ class TrainOneStepWrapper(nn.Cell):
 
         return loss
 
-    def construct(self, *args, **kwargs):
-        loss, grads = self.grad_fn(*args, **kwargs)
+    def bak_construct(
+            self,
+            input_ids: Tensor = None,
+            attention_mask: Optional[Tensor] = None,
+            position_ids: Optional[Tensor] = None,
+            labels: Optional[Tensor] = None,
+            images: Optional[Tensor] = None,
+            image_aux_attention_masks_list: Optional[List[Tensor]] = None,
+    ):
+        # zhy_test
+        loss = self.network(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            labels=labels,
+            images=images,
+            image_aux_attention_masks_list=image_aux_attention_masks_list,
+        )
+        grads = self.grad_fn(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            labels=labels,
+            images=images,
+            image_aux_attention_masks_list=image_aux_attention_masks_list,
+        )
         grads = self.reducer(grads)
-        unscaled_grads = self.scaler.unscale(grads)
+
+        # zhy_test
+        # unscaled_grads = self.scaler.unscale(grads)
+        unscaled_grads = grads
+
         finite = self.all_finite(unscaled_grads)
         finite = self.all_finite_reducer(finite)
 
@@ -179,3 +210,26 @@ class TrainOneStepWrapper(nn.Cell):
 
         overflow_tag = not finite
         return self.scaler.unscale(loss), unscaled_grads, overflow_tag
+
+
+    def construct(self, *inputs):
+        loss = self.network(*inputs)
+
+        sens = ops.fill(loss.dtype, loss.shape, self.scaler.scale_value)
+        grads = self.grad_fn(*inputs, sens)
+        grads = self.reducer(grads)
+        unscaled_grads = self.scaler.unscale(grads)
+
+        finite = self.all_finite(unscaled_grads)
+        finite = self.all_finite_reducer(finite)
+        finite = ops.depend(finite, self.scaler.adjust(finite))
+
+        if not self.drop_overflow_step:
+            loss = self.do_optim(loss, unscaled_grads)
+        else:
+            if finite:
+                loss = self.do_optim(loss, unscaled_grads)
+
+        overflow_tag = not finite
+
+        return loss, unscaled_grads, overflow_tag

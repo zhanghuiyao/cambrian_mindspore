@@ -3,7 +3,7 @@ import dataclasses
 import json
 import time
 import random
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Tuple, Optional, Union, Any
 import numpy as np
 import io
 from ezcolorlog import root_logger as logger
@@ -20,7 +20,9 @@ from cambrian.transformers.trainer import (
 )
 from cambrian.mindspore_adapter.utils import _is_parallel
 from cambrian.train.dataset import LengthGroupedSampler
-
+from cambrian.model.language_model.cambrian_llama import CambrianLlamaForCausalLM, TrainWrapperForCambrianLlamaForCausalLM
+from cambrian.mindspore_adapter.train_onestep_wrapper import TrainOneStepWrapper
+from cambrian.mindspore_adapter.utils import auto_mixed_precision
 
 
 class CambrianTrainer(Trainer):
@@ -40,42 +42,80 @@ class CambrianTrainer(Trainer):
         else:
             return super()._get_train_sampler()
 
-    def _prepare_inputs_dict2list(self, dict_inputs: dict):
+    def _prepare_inputs_dict2list(self, dict_inputs: dict, train_model: Optional[TrainOneStepWrapper]):
         # Work for Cambrian Causal Model
-        input_keys = [
+        default_input_keys = [
             "input_ids", "attention_mask", "position_ids", "past_key_values",
             "inputs_embeds", "labels", "use_cache", "output_attentions", "output_hidden_states",
             "images", "image_aux_attention_masks_list", "image_sizes",
             "return_dict", "cache_position"
         ]
 
-        list_inputs = []
+        if isinstance(train_model, TrainOneStepWrapper):
+            input_keys = getattr(train_model.network, "input_keys", default_input_keys)
+        else:
+            input_keys = getattr(train_model, "input_keys", default_input_keys)
+
+        list_inputs = ()
         for k in input_keys:
-            list_inputs.append(dict_inputs.get(k, None))
+            v = dict_inputs.get(k, None)
+            if isinstance(v, (tuple, list)):
+                list_inputs += (*v,)
+            else:
+                list_inputs += (v,)
 
         return list_inputs
 
-    def training_step(self, model: nn.Cell, inputs: Dict[str, Union[Tensor, Any]]) -> Tensor:
-        model.set_train(True)
+    def _wrap_model(self, model, dataloader=None):
+        if self.args.jit_mode:
+            start_time = time.time()
+            model = self.mindspore_jit_model(model, dataloader)
 
+            # FIXME: level 3, just build model, time not included compile cost.
+            self.jit_compilation_time = round(time.time() - start_time, 4)
+
+        assert not (self.args.fp16 and self.args.bf16)
+        amp_level = self.args.amp_opt_level if self.args.amp_opt_level is not None else "O2"
+        if self.args.fp16:
+            model = auto_mixed_precision(model, amp_level, dtype=ms.float16)
+        if self.args.bf16:
+            model = auto_mixed_precision(model, amp_level, dtype=ms.bfloat16)
+
+        if isinstance(model, CambrianLlamaForCausalLM):
+            _model = TrainWrapperForCambrianLlamaForCausalLM(model)
+        else:
+            _model = model
+
+        train_model = TrainOneStepWrapper(
+            _model,
+            self.optimizer,
+            ema=None,
+            drop_overflow_step=True,
+            scaler="default",
+            scaler_config={"scale_value": 1024},
+            gradient_accumulation_steps=self.args.gradient_accumulation_steps,
+            clip_grad="global_norm",
+            clip_value=self.args.max_grad_norm
+        )
+
+        return model, train_model
+
+    def training_step(self, model: nn.Cell, inputs: Dict[str, Union[Tensor, Any]]) -> Tuple[Tensor, Tensor]:
+        train_model = model
+        train_model.set_train(True)
+
+        # inputs to tensor
         inputs = self._prepare_inputs(inputs)
 
-        loss = self.compute_loss(model, inputs)
+        # inputs dict to list
+        inputs = self._prepare_inputs_dict2list(dict_inputs=inputs, train_model=model)
+
+        loss, _, overflow = train_model(*inputs)
 
         if self.args.n_gpu > 1:
             loss = loss.mean()  # mean() to average on multi-gpu parallel training
 
-        return loss / self.args.gradient_accumulation_steps
-
-    def compute_loss(self, model, inputs, **kwargs):
-        # 1. dict input
-        # outputs = model(**inputs)
-        # 2. list input
-        inputs = self._prepare_inputs_dict2list(inputs)
-        outputs = model(*inputs)
-
-        loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
-        return loss
+        return loss / self.args.gradient_accumulation_steps, overflow
 
     def create_optimizer(self):
         """

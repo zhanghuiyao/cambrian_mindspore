@@ -190,16 +190,18 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                             hidden_states[batch_i:batch_i+1, latent_query_start_idx:latent_query_start_idx+cur_latent_query_newline_num] = cur_latent_query_with_newline[:, :, :]
 
             if use_cache:
+                # next_cache = next_decoder_cache.to_legacy_cache() if use_legacy_cache else next_decoder_cache
                 next_cache = layer_outputs[1]
                 past_key_values[i] = next_cache
 
-        # if use_cache:
-        #     next_cache = next_decoder_cache.to_legacy_cache() if use_legacy_cache else next_decoder_cache
-
         hidden_states = self.norm(hidden_states)
 
+        outputs = (hidden_states,)
+        if use_cache and past_key_values is not None:
+            outputs += (past_key_values,)
+
         # last_hidden_state, past_key_values, hidden_states, attentions
-        return hidden_states, past_key_values
+        return outputs
 
 
 class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
@@ -291,12 +293,12 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             use_cache: Optional[bool] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
-            images: Optional[Tensor] = None,
+            images: Optional[List[Tensor]] = None,
             image_aux_attention_masks_list: Optional[List[Tensor]] = None,
             image_sizes: Optional[List[List[int]]] = None,
             return_dict: Optional[bool] = None,
             cache_position=None
-    ) -> Union[Tuple,]:
+    ):
 
         vision_tower_aux_feature_list = None
         vision_tower_aux_attention_masks_list = None
@@ -305,10 +307,9 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
         if inputs_embeds is None:
             (
-                input_ids,
+                _,
                 position_ids,
                 attention_mask,
-                past_key_values,
                 inputs_embeds,
                 labels,
                 vision_tower_aux_feature_list,
@@ -319,24 +320,17 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 input_ids,
                 position_ids,
                 attention_mask,
-                past_key_values,
                 labels,
                 images,
                 image_aux_attention_masks_list,
                 image_sizes
             )
-
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-        )
-        assert not output_attentions
-        assert not output_hidden_states
+            input_ids = None
 
         # training
         if self.training:
             # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
-            outputs = self.model(
+            model_outputs = self.model(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 position_ids=position_ids,
@@ -363,7 +357,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                     final_vision_feature_size = self.final_vision_feature_size
                     global_context_feature = self.global_context_feature
 
-                outputs = self.model(
+                model_outputs = self.model(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     position_ids=position_ids,
@@ -379,7 +373,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                     global_context_feature=global_context_feature,
                 )
             else:
-                outputs = self.model(
+                model_outputs = self.model(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     position_ids=position_ids,
@@ -391,7 +385,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                     return_dict=return_dict,
                 )
 
-        hidden_states, past_key_values = outputs
+        hidden_states = model_outputs[0]
         if self.config.pretraining_tp > 1:
             lm_head_slices = self.lm_head.weight.split(self.vocab_size // self.config.pretraining_tp, axis=0)
             logits = [ops.dense(hidden_states, lm_head_slices[i]) for i in range(self.config.pretraining_tp)]
@@ -400,7 +394,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             logits = self.lm_head(hidden_states)
         logits = logits.to(ms.float32)
 
-        loss = None
+        loss = ops.zeros((), dtype=logits.dtype)
         if labels is not None:
             # Shift so that tokens < n predict n
             shift_logits = logits[..., :-1, :].contiguous()
@@ -411,8 +405,13 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             shift_labels = shift_labels.view(-1)
             loss = loss_fct(shift_logits, shift_labels)
 
+        outputs = (loss, logits)
+        if past_key_values is not None:
+            past_key_values = model_outputs[1]
+            outputs += (past_key_values,)
+
         # loss, logits, past_key_values, hidden_states, attentions
-        return loss, logits, past_key_values
+        return outputs
 
     def generate(
             self,
@@ -437,7 +436,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 inputs,
                 position_ids,
                 attention_mask,
-                _,
                 inputs_embeds,
                 _,
                 vision_tower_aux_feature_list,
@@ -448,7 +446,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 inputs,
                 position_ids,
                 attention_mask,
-                None,
                 None,
                 images,
                 image_sizes=image_sizes,
@@ -484,3 +481,49 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         if image_sizes is not None:
             inputs['image_sizes'] = image_sizes
         return inputs
+
+
+class TrainWrapperForCambrianLlamaForCausalLM(nn.Cell):
+    def __init__(self, network):
+        super().__init__(auto_prefix=False)
+
+        assert isinstance(network, CambrianLlamaForCausalLM)
+
+        self.cambrian_llama_causal = network
+        self.input_image_len = len(network.model.get_vision_tower_aux_list())
+
+        self.input_keys = [
+            "input_ids", "attention_mask", "position_ids", "labels",
+            "images", "image_aux_attention_masks_list",
+        ]
+
+    def construct(
+            self,
+            input_ids: Tensor = None,
+            attention_mask: Optional[Tensor] = None,
+            position_ids: Optional[Tensor] = None,
+            labels: Optional[Tensor] = None,
+            *images_and_masks
+    ):
+        assert len(images_and_masks) == self.input_image_len * 2
+        assert self.training
+
+        images = images_and_masks[:self.input_image_len]
+        image_aux_attention_masks_list = images_and_masks[self.input_image_len:]
+
+        return self.cambrian_llama_causal(
+            input_ids,
+            attention_mask,
+            position_ids,
+            None,
+            None,
+            labels,
+            None,
+            None,
+            None,
+            images,
+            image_aux_attention_masks_list,
+            None,
+            None,
+            None
+        )[0]

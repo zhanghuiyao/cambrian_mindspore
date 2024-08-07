@@ -110,8 +110,8 @@ if __name__ == '__main__':
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
     args, _ = parser.parse_known_args()
 
-    ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"})
-    # ms.set_context(mode=ms.GRAPH_MODE, device_target="CPU", pynative_synchronize=True)
+    ms.set_context(mode=ms.GRAPH_MODE, device_target="CPU", jit_config={"jit_level": "O0"})
+    # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
 
     # test_llama3(args.model_path)
     test_llama3_causal(args.model_path)

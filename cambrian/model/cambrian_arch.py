@@ -275,8 +275,8 @@ class CambrianMetaForCausalLM:
         return self.model.get_vision_tower_aux_list()
 
     def rearrange_vision_tower_features_train(self, vision_tower_aux_feature_list, vision_tower_aux_attention_masks_list, query_side_len):
-        vision_tower_aux_feature_rearranged_list = []
-        vision_tower_aux_attention_masks_rearranged_list = []
+        vision_tower_aux_feature_rearranged_list = ()
+        vision_tower_aux_attention_masks_rearranged_list = ()
         bs = vision_tower_aux_feature_list[0].shape[0]
         for vision_tower_aux_feature, vision_tower_aux_attention_masks in zip(vision_tower_aux_feature_list, vision_tower_aux_attention_masks_list):
             aux_height = aux_width = int(vision_tower_aux_feature.shape[1]**0.5)
@@ -289,13 +289,13 @@ class CambrianMetaForCausalLM:
 
             vision_tower_aux_attention_masks_rearranged = vision_tower_aux_attention_masks.view(bs * query_side_len * query_side_len, reduce_factor * reduce_factor)
 
-            vision_tower_aux_feature_rearranged_list.append(vision_tower_aux_feature_rearranged)
-            vision_tower_aux_attention_masks_rearranged_list.append(vision_tower_aux_attention_masks_rearranged)
+            vision_tower_aux_feature_rearranged_list += (vision_tower_aux_feature_rearranged,)
+            vision_tower_aux_attention_masks_rearranged_list += (vision_tower_aux_attention_masks_rearranged,)
         return vision_tower_aux_feature_rearranged_list, vision_tower_aux_attention_masks_rearranged_list
 
     def rearrange_vision_tower_features_inference(self, vision_tower_aux_feature_list, query_side_len, image_sizes, unpad=False):
-        vision_tower_aux_feature_rearranged_list = []
-        vision_tower_aux_attention_masks_rearranged_list = []
+        vision_tower_aux_feature_rearranged_list = ()
+        vision_tower_aux_attention_masks_rearranged_list = ()
         bs = vision_tower_aux_feature_list[0].shape[0]
         for vision_tower_aux_feature in vision_tower_aux_feature_list:
             aux_height = aux_width = int(vision_tower_aux_feature.shape[1]**0.5)
@@ -303,8 +303,8 @@ class CambrianMetaForCausalLM:
 
             reduce_factor = (aux_height//query_side_len)
 
-            vision_tower_aux_feature_rearranged = []
-            vision_tower_aux_attention_masks_rearranged = []
+            vision_tower_aux_feature_rearranged = ()
+            vision_tower_aux_attention_masks_rearranged = ()
             for batch_i in range(bs):
                 image_size = image_sizes[batch_i]
                 cur_vision_tower_aux_feature = vision_tower_aux_feature[batch_i]
@@ -329,15 +329,15 @@ class CambrianMetaForCausalLM:
                     True
                 )
 
-                vision_tower_aux_feature_rearranged.append(cur_vision_tower_aux_feature_rearranged)
-                vision_tower_aux_attention_masks_rearranged.append(cur_vision_tower_aux_attention_masks_rearranged)
+                vision_tower_aux_feature_rearranged += (cur_vision_tower_aux_feature_rearranged,)
+                vision_tower_aux_attention_masks_rearranged += (cur_vision_tower_aux_attention_masks_rearranged,)
 
             vision_tower_aux_feature_rearranged = ops.cat(vision_tower_aux_feature_rearranged, 0)
             vision_tower_aux_attention_masks_rearranged = ops.cat(vision_tower_aux_attention_masks_rearranged, 0)
 
 
-            vision_tower_aux_feature_rearranged_list.append(vision_tower_aux_feature_rearranged)
-            vision_tower_aux_attention_masks_rearranged_list.append(vision_tower_aux_attention_masks_rearranged)
+            vision_tower_aux_feature_rearranged_list += (vision_tower_aux_feature_rearranged,)
+            vision_tower_aux_attention_masks_rearranged_list += (vision_tower_aux_attention_masks_rearranged,)
 
         return vision_tower_aux_feature_rearranged_list, vision_tower_aux_attention_masks_rearranged_list
 
@@ -351,7 +351,7 @@ class CambrianMetaForCausalLM:
 
     @ms.jit
     def prepare_inputs_labels_for_multimodal(
-        self, input_ids, position_ids, attention_mask, past_key_values, labels,
+        self, input_ids, position_ids, attention_mask, labels,
         images, image_aux_attention_masks_list=None, image_sizes=None
     ):
         vision_tower_aux_list = self.model.get_vision_tower_aux_list()
@@ -360,7 +360,7 @@ class CambrianMetaForCausalLM:
         assert images is not None
         assert input_ids.shape[1] != 1
         # if vision_tower_aux_list is None or images is None or input_ids.shape[1] == 1:
-        #     return input_ids, position_ids, attention_mask, past_key_values, None, labels, None, None, None, None
+        #     return input_ids, position_ids, attention_mask, None, labels, None, None, None, None
 
         image_aux_list = images
 
@@ -382,8 +382,8 @@ class CambrianMetaForCausalLM:
 
         image_aux_features_list = self.encode_images(image_aux_list)
 
-        vision_tower_aux_feature_list = []
-        vision_tower_aux_attention_masks_list = []
+        vision_tower_aux_feature_list = ()
+        vision_tower_aux_attention_masks_list = ()
         global_context_feature = None
         if self.model.mm_projector_type == 'sva':
             # get vision tokens from each vision tower
@@ -395,7 +395,7 @@ class CambrianMetaForCausalLM:
                 if aux_i == 0:
                     global_context_feature = image_aux_features.mean(1).view(bs, 1, 1, -1)
 
-                vision_tower_aux_feature_list.append(image_aux_features)
+                vision_tower_aux_feature_list += (image_aux_features,)
 
             # perform vision sampling for each query group
             for query_group_i, query_num in enumerate(query_num_list):
@@ -449,11 +449,11 @@ class CambrianMetaForCausalLM:
                 self.model.image_newline[None, None, None, :].broadcast_to((image_features.shape[0], final_height, 1, -1)).to(image_features.dtype)
             ), axis=2)
             image_features = image_features.flatten(start_dim=1, end_dim=2)
-            final_size = [(final_height, final_width)] * bs
+            final_size = ((final_height, final_width),) * bs
         else:
             image_features = image_features.view(bs, final_height, final_width, -1)
             image_features_unpadded = []
-            final_size = []
+            final_size = ()
             if self.model.mm_projector_type == 'sva':
                 vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final = \
                     self.rearrange_vision_tower_features_inference(vision_tower_aux_feature_list, final_height, image_sizes, unpad=True)
@@ -465,7 +465,7 @@ class CambrianMetaForCausalLM:
                 cur_image_feature = unpad_image(cur_image_feature.unsqueeze(0), image_size)
 
                 cur_h, cur_w = cur_image_feature.shape[1:3]
-                final_size.append((cur_h, cur_w))
+                final_size += ((cur_h, cur_w),)
                 cur_image_feature = cur_image_feature.view(1, cur_h, cur_w, -1)
                 cur_image_feature = ops.cat(
                     (cur_image_feature,
@@ -547,7 +547,9 @@ class CambrianMetaForCausalLM:
                 # new_input_embeds.append(torch.cat(cur_input_embeds_im_replaced))
 
             new_input_embeds = ops.stack(new_input_embeds)
-            return None, position_ids, attention_mask, past_key_values, new_input_embeds, labels, vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final, final_size, global_context_feature_final
+            return None, position_ids, attention_mask, new_input_embeds, labels, \
+                   vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final, \
+                   final_size, global_context_feature_final
 
         else:
             # Let's just add dummy tensors if they do not exist,
@@ -638,7 +640,9 @@ class CambrianMetaForCausalLM:
             labels = new_labels if _labels is not None else None
             position_ids = new_position_ids if _position_ids is not None else None
 
-            return None, position_ids, attention_mask, past_key_values, input_embeds, labels, vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final, final_size, global_context_feature_final
+            return None, position_ids, attention_mask, input_embeds, labels, \
+                   vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final, \
+                   final_size, global_context_feature_final
 
     def initialize_vision_tokenizer(self, model_args, tokenizer):
         if model_args.mm_use_im_patch_token:

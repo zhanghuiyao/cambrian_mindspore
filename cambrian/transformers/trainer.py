@@ -915,7 +915,7 @@ class Trainer:
                 # FIXME: level 1, add overflow print
                 self.model.set_train(True)
                 self.train_model.set_train(True)
-                tr_loss_step, _, _ = self.training_step(self.train_model, inputs)
+                tr_loss_step, overflow = self.training_step(self.train_model, inputs)
 
                 if (
                     args.logging_nan_inf_filter

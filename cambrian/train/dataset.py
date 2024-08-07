@@ -712,12 +712,12 @@ class DataCollatorForSupervisedDataset:
             image_aux_list = [instance['image_aux_list'] for instance in instances]
             image_aux_list = [list(batch_image_aux) for batch_image_aux in zip(*image_aux_list)]
             if all(x is not None and x.shape == image_aux_list[0][0].shape for x in image_aux_list[0]):
-                batch['images'] = [np.stack(image_aux) for image_aux in image_aux_list]
+                batch['images'] = tuple([np.stack(image_aux) for image_aux in image_aux_list])
             else:
-                batch['images'] = image_aux_list
+                batch['images'] = tuple(image_aux_list)
 
         if self.return_tensor:
-            batch = {k: Tensor(v) if v is not None else v for k, v in batch.items() }
+            batch = {k: Tensor(v) if (v is not None and not isinstance(v, (list, tuple))) else v for k, v in batch.items()}
 
         return batch
 
