@@ -432,6 +432,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             self.preprocess_input_before_generate_numpy(inputs, None, position_ids, attention_mask)
 
         if images is not None:
+
             (
                 inputs,
                 position_ids,
@@ -442,13 +443,13 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 vision_tower_aux_attention_masks_list,
                 final_vision_feature_size,
                 global_context_feature,
-            ) = self.prepare_inputs_labels_for_multimodal(
+            ) = self.prepare_inputs_labels_for_multimodal_(
                 inputs,
                 position_ids,
                 attention_mask,
                 None,
-                images,
-                image_sizes=image_sizes,
+                *images,
+                *image_sizes,
             )
             self.vision_tower_aux_feature_list = vision_tower_aux_feature_list
             self.vision_tower_aux_attention_masks_list = vision_tower_aux_attention_masks_list

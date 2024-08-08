@@ -1463,8 +1463,6 @@ class GenerationMixin:
             # FIXME: zhy_test, model inputs dynamic shape
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
-            use_cache = model_inputs.get("use_cache", False)
-
             # forward pass to get next token
             outputs = self(
                 **model_inputs,
@@ -1475,6 +1473,7 @@ class GenerationMixin:
 
             step += 1
 
+            use_cache = model_inputs.get("use_cache", False)
             if use_cache:
                 outputs = CausalLMOutputWithPast(
                     loss=outputs[0],

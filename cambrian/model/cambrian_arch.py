@@ -350,6 +350,18 @@ class CambrianMetaForCausalLM:
         return image_aux_features_list
 
     @ms.jit
+    def prepare_inputs_labels_for_multimodal_(
+            self, input_ids, position_ids, attention_mask, labels, *images_and_sizes
+    ):
+        visual_num = len(self.model.vision_tower_aux_list)
+        assert len(images_and_sizes) == visual_num + 1
+        images, image_aux_attention_masks_list, image_sizes = \
+            images_and_sizes[:-1], None, images_and_sizes[-1:]
+
+        return self.prepare_inputs_labels_for_multimodal(input_ids, position_ids, attention_mask, labels,
+                                                         images, image_aux_attention_masks_list, image_sizes)
+
+    @ms.jit
     def prepare_inputs_labels_for_multimodal(
         self, input_ids, position_ids, attention_mask, labels,
         images, image_aux_attention_masks_list=None, image_sizes=None
