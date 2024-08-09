@@ -46,7 +46,7 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
             s_time = time.time()
 
     if run_backward:
-        optimizer = nn.AdamWeightDecay(model.trainable_params())
+        optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
         model = TrainWrapperForCambrianLlamaForCausalLM(model)
         train_model = TrainOneStepWrapper(model, optimizer)
 
