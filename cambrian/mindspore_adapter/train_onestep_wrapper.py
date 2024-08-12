@@ -245,10 +245,13 @@ class TrainOneStepWrapper(nn.Cell):
         # finite = ops.equal(self.all_finite_reducer(finite.to(ms.int32)),
         #                    self.all_finite_reducer(ops.ones((), ms.int32))).to(ms.bool_)
         # finite = ops.depend(finite, self.scaler.adjust(finite)).to(ms.bool_)
-        if ops.randn((10, 10), dtype=ms.float32).mean() > 0.5:
-            finite = ops.ones((), ms.bool_)
-        else:
-            finite = ops.zeros((), ms.bool_)
+        #
+        # if ops.randn((10, 10), dtype=ms.float32).mean() > 0.5:
+        #     finite = ops.ones((), ms.bool_)
+        # else:
+        #     finite = ops.zeros((), ms.bool_)
+        #
+        finite = ops.zeros((), ms.bool_)
 
         if not self.drop_overflow_step:
             loss = self.do_optim(loss, unscaled_grads)
