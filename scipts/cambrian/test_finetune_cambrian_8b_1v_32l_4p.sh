@@ -1,6 +1,7 @@
 #!/bin/bash
 
-export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+#export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export ASCEND_RT_VISIBLE_DEVICES=4,5,6,7
 export MS_ENABLE_NUMA=0
 export MS_MEMORY_STATISTIC=1
 export GLOG_v=2
@@ -9,29 +10,29 @@ export MS_DEV_RUNTIME_CONF="synchronize:True"
 
 
 # hyper-parameters
-task_name="cambrian-8b-finetune"
-model_name_or_path="your_path_to_llama3"
-image_folder="your_path_to_image_folder"
+task_name="cambrian-8b-finetune_4p"
 pretrain_mm_mlp_adapter="./checkpoints/cambrian-8b-pretrain/mm_projector.bin"
 ckpt_dir="checkpoints"
-data_path="your_path_to_pretrain_jsonl e.g. Cambrian7M_withsystemprompt.jsonl"
-per_device_train_batch_size=8
-enable_flash_attention="True"
+data_path="/Users/zhanghuiyao/Desktop/cambrian_mindspore/demo/toy-dataset/alignment_2.5m.jsonl"  #  e.g. Cambrian7M_withsystemprompt.jsonl
+model_name_or_path="/Users/zhanghuiyao/Desktop/cambrian_mindspore/cambrian/hf-configs/nyu-visionx-cambrian-8b"
+image_folder="/Users/zhanghuiyao/Desktop/cambrian_mindspore/demo/toy-dataset/images_from_coco"
+enable_flash_attention="False"
+per_device_train_batch_size=1
 optim="adamw_zero2_mindspore"
 adamw_zero_shard_size=8
 output_dir=$task_name"_FA-"$enable_flash_attention"_bs-"$per_device_train_batch_size
 
 
 
-msrun --bind_core=True --worker_num=8 --local_worker_num=8 --master_port=9001 --log_dir=$output_dir \
+msrun --bind_core=True --worker_num=8 --local_worker_num=8 --master_port=9101 --log_dir=$output_dir \
 python cambrian/train/train.py \
     --model_name_or_path $model_name_or_path \
     --version llama_v3 \
     --data_path $data_path \
     --image_folder $image_folder \
     --pretrain_mm_mlp_adapter $pretrain_mm_mlp_adapter \
-    --vision_tower_aux_list '["siglip/CLIP-ViT-SO400M-14-384", "openai/clip-vit-large-patch14-336", "facebook/dinov2-giant-res378", "clip-convnext-XXL-multi-stage"]' \
-    --vision_tower_aux_token_len_list '[576, 576, 576, 9216]' \
+    --vision_tower_aux_list '["siglip/CLIP-ViT-SO400M-14-384"]' \
+    --vision_tower_aux_token_len_list '[576]' \
     --image_token_len 576 \
     --num_query_group 1 \
     --query_num_list '[576]' \
@@ -71,11 +72,11 @@ python cambrian/train/train.py \
     --lazy_preprocess True \
     --run_name $task_name \
     \
+    --optim $optim \
+    --adamw_zero_shard_size $adamw_zero_shard_size \
+    \
     --save_safetensors False \
     --device_target Ascend \
     --dataloader_num_workers 1 \
-    \
-    --optim $optim \
-    --adamw_zero_shard_size $adamw_zero_shard_size \
     \
     > .log_msrun.txt 2>&1 &
