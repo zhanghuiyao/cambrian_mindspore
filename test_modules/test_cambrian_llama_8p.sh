@@ -16,5 +16,4 @@ msrun --bind_core=True --worker_num=8 --local_worker_num=8 --master_port=9001 --
 python test_modules/test_cambrian_llama.py \
     --device_target Ascend \
     --optim zero2 \
-    --shard_size 8 \
-    > .log_msrun.txt 2>&1 &
+    --shard_size 8
