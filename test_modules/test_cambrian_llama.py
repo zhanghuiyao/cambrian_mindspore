@@ -106,7 +106,7 @@ if __name__ == '__main__':
     parser.add_argument("--device_target", type=str, default="CPU")
     parser.add_argument("--max_device_memory", type=str, default="59GB")
     parser.add_argument("--is_distribute", type=ast.literal_eval, default=False)
-    parser.add_argument("--optim", type=str, default=None)
+    parser.add_argument("--optim", type=str, default="adamw")
     parser.add_argument("--shard_size", type=int, default=8)
     args, _ = parser.parse_known_args()
 
