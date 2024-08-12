@@ -73,6 +73,7 @@ python cambrian/train/train.py \
     --device_target Ascend \
     --dataloader_num_workers 1 \
     \
+    --is_distribute True \
     --optim $optim \
     --adamw_zero_shard_size $adamw_zero_shard_size \
     \

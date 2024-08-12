@@ -73,6 +73,7 @@ python cambrian/train/train.py \
     --lazy_preprocess True \
     --run_name $task_name \
     \
+    --is_distribute True \
     --optim $optim \
     --adamw_zero_shard_size $adamw_zero_shard_size \
     \
