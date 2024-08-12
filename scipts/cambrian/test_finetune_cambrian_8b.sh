@@ -14,6 +14,9 @@ image_folder="/Users/zhanghuiyao/Desktop/cambrian_mindspore/demo/toy-dataset/ima
 enable_flash_attention="False"
 per_device_train_batch_size=1
 
+optim="adamw_zero2_mindspore"
+adamw_zero_shard_size=8
+
 task_name="cambrian-8b-finetune"
 pretrain_mm_mlp_adapter="./checkpoints/cambrian-8b-pretrain/mm_projector.bin"
 ckpt_dir="checkpoints"
@@ -63,6 +66,9 @@ python cambrian/train/train.py \
     --dataloader_num_workers 4 \
     --lazy_preprocess True \
     --run_name $task_name \
+    \
+    --optim $optim \
+    --adamw_zero_shard_size $adamw_zero_shard_size \
     \
     --save_safetensors False \
     --device_target CPU \

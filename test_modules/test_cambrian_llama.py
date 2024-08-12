@@ -1,6 +1,7 @@
 import argparse
 import time
 import numpy as np
+from typing import Optional
 
 import mindspore as ms
 from mindspore import nn, ops, Tensor
@@ -15,7 +16,8 @@ def test_cambrian_llama(model_path: str):
     pass
 
 
-def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_backward: bool = True):
+def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_backward: bool = True,
+                               optim: Optional[str] = None, shard_size: Optional[int] = None):
 
     activate_len = 120
     temp_data = dict(
@@ -46,7 +48,15 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
             s_time = time.time()
 
     if run_backward:
-        optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
+        if optim.lower() == "zero1":
+            from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO1
+            optimizer = AdamWeightDecayZeRO1(model.trainable_params(), 1e-5, shard_size=shard_size)
+        elif optim.lower() == "zero2":
+            from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO2
+            optimizer = AdamWeightDecayZeRO2(model.trainable_params(), 1e-5, shard_size=shard_size)
+        else:
+            optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
+
         model = TrainWrapperForCambrianLlamaForCausalLM(model)
         train_model = TrainOneStepWrapper(model, optimizer)
 
@@ -89,10 +99,14 @@ def test_generate_wo_image(model_path: str):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
+    parser.add_argument("--optim", type=str, default="zero2")
+    parser.add_argument("--shard_size", type=int, default=8)
     args, _ = parser.parse_known_args()
 
     # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
     ms.set_context(mode=ms.GRAPH_MODE, device_target="CPU", jit_config = {"jit_level": "O0"})
 
     # test_generate_wo_image(args.model_path)
-    test_cambrian_llama_causal(args.model_path, run_forward=False, run_backward=True)
+    test_cambrian_llama_causal(
+        args.model_path, optim=args.optim, shard_size=args.shard_size,
+        run_forward=False, run_backward=True)

@@ -49,6 +49,8 @@ class OptimizerNames(ExplicitEnum):
     """
 
     ADAMW_MINDSPORE = "adamw_mindspore"
+    ADAMW_ZERO1_MINDSPORE = "adamw_zero1_mindspore"
+    ADAMW_ZERO2_MINDSPORE = "adamw_zero2_mindspore"
     # ADAMW_HF = "adamw_hf"
     # ADAMW_TORCH = "adamw_torch"
     # ADAMW_TORCH_FUSED = "adamw_torch_fused"

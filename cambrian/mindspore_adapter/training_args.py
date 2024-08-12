@@ -54,6 +54,14 @@ class MindSporeArguments:
             )
         },
     )
+    adamw_zero_shard_size: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": (
+                "Enable zero parallelism, select from [stage1, stage2, stage3]"
+            )
+        },
+    )
     max_device_memory: Optional[str] = field(
         default=None,
         metadata={

@@ -5,6 +5,13 @@ from mindspore.boost.grad_accumulation import gradient_accumulation_op as _grad_
 from mindspore.boost.grad_accumulation import gradient_clear_op as _grad_clear_op
 
 
+try:
+    from .adamw_zero import AdamWeightDecayZeRO1, AdamWeightDecayZeRO2
+    is_adamw_zero_available = True
+except ImportError:
+    is_adamw_zero_available = False
+
+
 def _is_pynative_parallel():
     parallel_mode = context.get_auto_parallel_context('parallel_mode')
     return context.get_context('mode') == context.PYNATIVE_MODE and parallel_mode in (
@@ -109,8 +116,18 @@ class TrainOneStepWrapper(nn.Cell):
             scaler = create_loss_scaler("none", **scaler_config)
         else:
             raise NotImplementedError
+
+        if is_adamw_zero_available and isinstance(optimizer, (AdamWeightDecayZeRO1, AdamWeightDecayZeRO2)):
+            assert hasattr(self.optimizer, "grad_reduce")
+            reducer = None
+            run_optimizer_reduce = True
+        else:
+            reducer = create_grad_reducer(network.trainable_params())
+            run_optimizer_reduce = False
+
         self.scaler = scaler
-        self.reducer = create_grad_reducer(network.trainable_params())
+        self.reducer = reducer
+        self.run_optimizer_reduce = run_optimizer_reduce
         self.all_finite = ms.amp.all_finite if not _is_cpu() else return_true
         self.all_finite_reducer = ops.AllReduce() if _is_parallel() else nn.Identity()
         self.drop_overflow_step = Tensor(drop_overflow_step, ms.bool_)
@@ -193,7 +210,10 @@ class TrainOneStepWrapper(nn.Cell):
             images=images,
             image_aux_attention_masks_list=image_aux_attention_masks_list,
         )
-        grads = self.reducer(grads)
+        if self.run_optimizer_reduce:
+            grads = self.optimizer.grad_reduce(grads)
+        else:
+            grads = self.reducer(grads)
 
         # zhy_test
         # unscaled_grads = self.scaler.unscale(grads)
@@ -217,7 +237,10 @@ class TrainOneStepWrapper(nn.Cell):
 
         sens = ops.fill(loss.dtype, loss.shape, self.scaler.scale_value)
         grads = self.grad_fn(*inputs, sens)
-        grads = self.reducer(grads)
+        if self.run_optimizer_reduce:
+            grads = self.optimizer.grad_reduce(grads)
+        else:
+            grads = self.reducer(grads)
         unscaled_grads = self.scaler.unscale(grads)
 
         finite = self.all_finite(unscaled_grads)

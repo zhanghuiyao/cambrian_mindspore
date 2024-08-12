@@ -15,7 +15,10 @@ ckpt_dir="checkpoints"
 data_path="your_path_to_pretrain_jsonl e.g. Cambrian7M_withsystemprompt.jsonl"
 per_device_train_batch_size=8
 enable_flash_attention="True"
+optim="adamw_zero2_mindspore"
+adamw_zero_shard_size=8
 output_dir=$task_name_FA-$enable_flash_attention_bs-$per_device_train_batch_size
+
 
 
 msrun --bind_core=True --worker_num=8 --local_worker_num=8 --master_port=9001 --log_dir=$output_dir \
@@ -64,4 +67,9 @@ python cambrian/train/train.py \
     --gradient_checkpointing True \
     --dataloader_num_workers 4 \
     --lazy_preprocess True \
-    --run_name $task_name > .log_msrun.txt 2>&1 &
+    --run_name $task_name \
+    \
+    --optim $optim \
+    --adamw_zero_shard_size $adamw_zero_shard_size \
+    \
+    > .log_msrun.txt 2>&1 &

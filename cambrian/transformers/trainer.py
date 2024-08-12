@@ -434,6 +434,24 @@ class Trainer:
         elif args.optim == OptimizerNames.ADAMW_MINDSPORE:
             optimizer_cls = nn.AdamWeightDecay
             optimizer_kwargs.update(adam_kwargs)
+        elif args.optim == OptimizerNames.ADAMW_ZERO1_MINDSPORE:
+            try:
+                from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO1
+                optimizer_cls = AdamWeightDecayZeRO1
+            except ImportError:
+                logger.warning("get optimizer cls, import `AdamWeightDecayZeRO1` error, replace to `nn.AdamWeightDecay`")
+                optimizer_cls = nn.AdamWeightDecay
+            optimizer_kwargs.update(adam_kwargs)
+            optimizer_kwargs.update({"shard_size": getattr(args, "adamw_zero_shard_size", None)})
+        elif args.optim == OptimizerNames.ADAMW_ZERO2_MINDSPORE:
+            try:
+                from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO2
+                optimizer_cls = AdamWeightDecayZeRO2
+            except ImportError:
+                logger.warning("get optimizer cls, import `AdamWeightDecayZeRO2` error, replace to `nn.AdamWeightDecay`")
+                optimizer_cls = nn.AdamWeightDecay
+            optimizer_kwargs.update(adam_kwargs)
+            optimizer_kwargs.update({"shard_size": getattr(args, "adamw_zero_shard_size", None)})
         elif args.optim == OptimizerNames.SGD:
             optimizer_cls = nn.SGD
         elif args.optim == OptimizerNames.ADAGRAD:

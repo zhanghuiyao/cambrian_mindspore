@@ -27,21 +27,15 @@
   "mm_vision_select_feature": "patch",
   "mm_vision_select_layer": -2,
   "mm_vision_tower_aux_list": [
-    "siglip/CLIP-ViT-SO400M-14-384",
-    "openai/clip-vit-large-patch14-336",
-    "facebook/dinov2-giant-res378",
-    "clip-convnext-XXL-multi-stage"
+    "siglip/CLIP-ViT-SO400M-14-384"
   ],
   "mm_vision_tower_aux_token_len_list": [
-    576,
-    576,
-    576,
-    9216
+    576
   ],
   "mm_vision_tower_lr": null,
   "model_type": "cambrian_llama",
   "num_attention_heads": 32,
-  "num_hidden_layers": 32,
+  "num_hidden_layers": 2,
   "num_key_value_heads": 8,
   "num_of_vision_sampler_layers": 10,
   "num_query_group": 1,
@@ -68,10 +62,7 @@
   "use_mm_proj": true,
   "vision_hidden_size": 1024,
   "vision_tower_aux_token_len_list": [
-    576,
-    576,
-    576,
-    9216
+    576
   ],
   "vocab_size": 128256
 }
