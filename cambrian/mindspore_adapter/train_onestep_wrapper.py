@@ -243,11 +243,11 @@ class TrainOneStepWrapper(nn.Cell):
         unscaled_grads = self.scaler.unscale(grads)
 
         # FIXME: zhy_test
-        # finite = self.all_finite(unscaled_grads)
-        # finite = ops.equal(self.all_finite_reducer(finite.to(ms.int32)),
-        #                    self.all_finite_reducer(ops.ones((), ms.int32)))
-        # finite = ops.depend(finite, self.scaler.adjust(finite))
-        finite = ops.ones((), ms.bool_)
+        finite = self.all_finite(unscaled_grads)
+        finite = ops.equal(self.all_finite_reducer(finite.to(ms.int32)),
+                           self.all_finite_reducer(ops.ones((), ms.int32))).to(ms.bool_)
+        finite = ops.depend(finite, self.scaler.adjust(finite))
+        # finite = ops.ones((), ms.bool_)
 
         if not self.drop_overflow_step:
             loss = self.do_optim(loss, unscaled_grads)
