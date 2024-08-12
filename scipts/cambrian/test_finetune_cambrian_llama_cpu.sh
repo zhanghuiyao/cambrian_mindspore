@@ -74,5 +74,5 @@ python cambrian/train/train.py \
     --device_target CPU \
     --dataloader_num_workers 1 \
 
-# --pretrain_mm_mlp_adapter $pretrain_mm_mlp_adapter \
-#--per_device_eval_batch_size 4 \
+    # --pretrain_mm_mlp_adapter $pretrain_mm_mlp_adapter \
+    #--per_device_eval_batch_size 4 \

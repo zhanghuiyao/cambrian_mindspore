@@ -2,6 +2,8 @@
 
 #export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export ASCEND_RT_VISIBLE_DEVICES=4,5,6,7
+device_num=4
+
 export MS_ENABLE_NUMA=0
 export MS_MEMORY_STATISTIC=1
 export GLOG_v=2
@@ -19,18 +21,17 @@ image_folder="/Users/zhanghuiyao/Desktop/cambrian_mindspore/demo/toy-dataset/ima
 enable_flash_attention="False"
 per_device_train_batch_size=1
 optim="adamw_zero2_mindspore"
-adamw_zero_shard_size=8
+adamw_zero_shard_size=$device_num
 output_dir=$task_name"_FA-"$enable_flash_attention"_bs-"$per_device_train_batch_size
 
 
 
-msrun --bind_core=True --worker_num=8 --local_worker_num=8 --master_port=9101 --log_dir=$output_dir \
+msrun --bind_core=True --worker_num=$device_num --local_worker_num=$device_num --master_port=9101 --log_dir=$output_dir \
 python cambrian/train/train.py \
     --model_name_or_path $model_name_or_path \
     --version llama_v3 \
     --data_path $data_path \
     --image_folder $image_folder \
-    --pretrain_mm_mlp_adapter $pretrain_mm_mlp_adapter \
     --vision_tower_aux_list '["siglip/CLIP-ViT-SO400M-14-384", "openai/clip-vit-large-patch14-336", "facebook/dinov2-giant-res378", "clip-convnext-XXL-multi-stage"]' \
     --vision_tower_aux_token_len_list '[576, 576, 576, 9216]' \
     --image_token_len 576 \
@@ -54,7 +55,6 @@ python cambrian/train/train.py \
     --output_dir $output_dir/$ckpt_dir \
     --num_train_epochs 1 \
     --per_device_train_batch_size $per_device_train_batch_size \
-    --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 1 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
@@ -80,3 +80,6 @@ python cambrian/train/train.py \
     --dataloader_num_workers 1 \
     \
     > .log_msrun.txt 2>&1 &
+
+    # --pretrain_mm_mlp_adapter $pretrain_mm_mlp_adapter \
+    # --per_device_eval_batch_size 4 \

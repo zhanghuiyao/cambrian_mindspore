@@ -29,7 +29,6 @@ python cambrian/train/train.py \
     --version llama_v3 \
     --data_path $data_path \
     --image_folder $image_folder \
-    --pretrain_mm_mlp_adapter $pretrain_mm_mlp_adapter \
     --vision_tower_aux_list '["siglip/CLIP-ViT-SO400M-14-384", "openai/clip-vit-large-patch14-336", "facebook/dinov2-giant-res378", "clip-convnext-XXL-multi-stage"]' \
     --vision_tower_aux_token_len_list '[576, 576, 576, 9216]' \
     --image_token_len 576 \
@@ -53,7 +52,6 @@ python cambrian/train/train.py \
     --output_dir $output_dir/$ckpt_dir \
     --num_train_epochs 1 \
     --per_device_train_batch_size $per_device_train_batch_size \
-    --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 1 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
@@ -79,3 +77,7 @@ python cambrian/train/train.py \
     --adamw_zero_shard_size $adamw_zero_shard_size \
     \
     > .log_msrun.txt 2>&1 &
+
+
+    # --pretrain_mm_mlp_adapter $pretrain_mm_mlp_adapter \
+    # --per_device_eval_batch_size 4 \
