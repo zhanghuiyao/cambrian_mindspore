@@ -73,6 +73,8 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
         if args.force_param_fp16:
             from cambrian.mindspore_adapter.amp import convert_module_param_to_fp16
             train_model = convert_module_param_to_fp16(train_model, keep_norm_fp32=True)
+            if hasattr(train_model, "scaler") and train_model.scaler is not None:
+                train_model.scaler.scale_value.set_dtype(ms.float16)
 
             # FIXME: zhy_test
             print(f"zhy_test: scaler.dtype is {train_model.scaler.scale_value.dtype}")
