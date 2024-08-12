@@ -10,7 +10,7 @@ export MS_DEV_RUNTIME_CONF="synchronize:True"
 
 
 # hyper-parameters
-task_name="test_cambrian_llama_8p"
+task_name="logs_test_cambrian_llama_8p"
 output_dir=$task_name
 
 master_port=9004
@@ -22,4 +22,4 @@ python test_modules/test_cambrian_llama.py \
     --is_distribute True \
     --max_device_memory 59GB \
     --optim zero2 \
-    --shard_size 8
+    --shard_size 4
