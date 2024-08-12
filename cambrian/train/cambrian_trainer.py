@@ -364,5 +364,5 @@ class CambrianTrainer(Trainer):
 
     """Override to add custom logs"""
 
-    def _maybe_log_save_evaluate(self, tr_loss, model, trial, epoch, ignore_keys_for_eval):
+    def _maybe_log_save_evaluate(self, tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval):
         raise NotImplementedError

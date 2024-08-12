@@ -935,6 +935,9 @@ class Trainer:
                 self.train_model.set_train(True)
                 tr_loss_step, overflow = self.training_step(self.train_model, inputs)
 
+                # FIXME: level 1, log by callback_fn
+                logger.info(f"Epoch: {epoch}, Step: {step}, tr_loss: {tr_loss_step}, overflow: {overflow}")
+
                 if (
                     args.logging_nan_inf_filter
                     and (ops.isnan(tr_loss_step) or ops.isinf(tr_loss_step))
