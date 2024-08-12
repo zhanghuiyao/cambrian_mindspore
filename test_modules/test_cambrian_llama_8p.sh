@@ -15,5 +15,7 @@ output_dir=$task_name
 msrun --bind_core=True --worker_num=8 --local_worker_num=8 --master_port=9001 --log_dir=$output_dir \
 python test_modules/test_cambrian_llama.py \
     --device_target Ascend \
+    --is_distribute True \
+    --max_device_memory 59GB \
     --optim zero2 \
     --shard_size 8
