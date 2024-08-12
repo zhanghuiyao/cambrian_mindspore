@@ -59,6 +59,8 @@ def convert_module_param_to_fp16(model, keep_norm_fp32=True):
             # filter bool/int parameters
             elif p.dtype in (ms.bool_, ms.int32, ms.int64, ms.uint8):
                 k_num += 1
+            elif p.dtype == ms.float16:
+                c_num += 1
             else:
                 c_num += 1
                 p.set_dtype(ms.float16)

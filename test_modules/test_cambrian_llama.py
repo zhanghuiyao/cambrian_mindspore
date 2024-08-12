@@ -53,10 +53,6 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
         if args.gradient_checkpointing:
             model.gradient_checkpointing_enable()
 
-        if args.force_param_fp16:
-            from cambrian.mindspore_adapter.amp import convert_module_param_to_fp16
-            model = convert_module_param_to_fp16(model, keep_norm_fp32=True)
-
         # create optimizer
         if optim.lower() == "zero1":
             from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO1
@@ -73,6 +69,10 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
         if args.amp_level == "O2":
             from cambrian.mindspore_adapter.amp import auto_mixed_precision
             train_model = auto_mixed_precision(train_model, amp_level=args.amp_level, dtype=ms.float16)
+
+        if args.force_param_fp16:
+            from cambrian.mindspore_adapter.amp import convert_module_param_to_fp16
+            train_model = convert_module_param_to_fp16(train_model, keep_norm_fp32=True)
 
         model.set_train()
         train_model.set_train()
