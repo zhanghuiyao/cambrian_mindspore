@@ -15,7 +15,7 @@ export MS_DEV_RUNTIME_CONF="synchronize:True"
 task_name="logs_test_cambrian_llama_8p"
 output_dir=$task_name
 
-master_port=9007
+master_port=9008
 
 
 msrun --bind_core=True --worker_num=$device_num --local_worker_num=$device_num --master_port=$master_port --log_dir=$output_dir \

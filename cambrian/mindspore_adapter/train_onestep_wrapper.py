@@ -246,7 +246,7 @@ class TrainOneStepWrapper(nn.Cell):
         finite = self.all_finite(unscaled_grads)
         finite = ops.equal(self.all_finite_reducer(finite.to(ms.int32)),
                            self.all_finite_reducer(ops.ones((), ms.int32))).to(ms.bool_)
-        finite = ops.depend(finite, self.scaler.adjust(finite))
+        finite = ops.depend(finite, self.scaler.adjust(finite)).to(ms.bool_)
         # finite = ops.ones((), ms.bool_)
 
         if not self.drop_overflow_step:
