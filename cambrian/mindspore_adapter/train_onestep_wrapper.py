@@ -20,13 +20,11 @@ def _is_pynative_parallel():
 
 def create_loss_scaler(ms_loss_scaler="static", scale_value=1024, scale_factor=2, scale_window=1000):
     if ms_loss_scaler == "dynamic":
-        # from mindspore.amp import DynamicLossScaler
-        from cambrian.mindspore_adapter.amp import DynamicLossScaler
+        from mindspore.amp import DynamicLossScaler
 
         loss_scaler = DynamicLossScaler(scale_value=scale_value, scale_factor=scale_factor, scale_window=scale_window)
     elif ms_loss_scaler == "static":
-        # from mindspore.amp import StaticLossScaler
-        from cambrian.mindspore_adapter.amp import StaticLossScaler
+        from mindspore.amp import StaticLossScaler
 
         loss_scaler = StaticLossScaler(scale_value=scale_value)
     elif ms_loss_scaler in ("none", "None"):
