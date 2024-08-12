@@ -35,7 +35,7 @@
   "mm_vision_tower_lr": null,
   "model_type": "cambrian_llama",
   "num_attention_heads": 32,
-  "num_hidden_layers": 32,
+  "num_hidden_layers": 2,
   "num_key_value_heads": 8,
   "num_of_vision_sampler_layers": 10,
   "num_query_group": 1,
