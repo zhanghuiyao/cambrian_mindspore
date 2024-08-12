@@ -96,6 +96,7 @@ def test_generate_wo_image(model_path: str):
 
 
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
