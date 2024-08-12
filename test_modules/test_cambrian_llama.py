@@ -47,7 +47,17 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
             print(f"step: {step}, forward output: {out[0]}, time cost: {time.time() - s_time:.2f}s")
             s_time = time.time()
 
+
     if run_backward:
+
+        if args.gradient_checkpointing:
+            model.gradient_checkpointing_enable()
+
+        if args.force_param_fp16:
+            from cambrian.mindspore_adapter.amp import convert_module_param_to_fp16
+            model = convert_module_param_to_fp16(model, keep_norm_fp32=True)
+
+        # create optimizer
         if optim.lower() == "zero1":
             from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO1
             optimizer = AdamWeightDecayZeRO1(model.trainable_params(), 1e-5, shard_size=shard_size)
@@ -57,9 +67,12 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
         else:
             optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
 
-        model.gradient_checkpointing_enable()
         model = TrainWrapperForCambrianLlamaForCausalLM(model)
         train_model = TrainOneStepWrapper(model, optimizer)
+
+        if args.amp_level == "O2":
+            from cambrian.mindspore_adapter.amp import auto_mixed_precision
+            train_model = auto_mixed_precision(train_model, amp_level=args.amp_level, dtype=ms.float16)
 
         model.set_train()
         train_model.set_train()
@@ -107,6 +120,11 @@ if __name__ == '__main__':
     parser.add_argument("--device_target", type=str, default="CPU")
     parser.add_argument("--max_device_memory", type=str, default="59GB")
     parser.add_argument("--is_distribute", type=ast.literal_eval, default=False)
+
+    parser.add_argument("--amp_level", type=str, default="O2")
+    parser.add_argument("--gradient_checkpointing", type=ast.literal_eval, default=True)
+    parser.add_argument("--force_param_fp16", type=ast.literal_eval, default=True)
+
     parser.add_argument("--optim", type=str, default="adamw")
     parser.add_argument("--shard_size", type=int, default=8)
     args, _ = parser.parse_known_args()

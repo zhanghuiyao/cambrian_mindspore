@@ -23,7 +23,8 @@ import mindspore as ms
 from mindspore import nn, ops, Tensor
 from mindspore.communication.management import get_group_size
 
-from cambrian.mindspore_adapter.utils import auto_mixed_precision, _is_parallel
+from cambrian.mindspore_adapter.utils import _is_parallel
+from cambrian.mindspore_adapter.amp import auto_mixed_precision
 
 from cambrian.transformers.modeling_utils import PreTrainedModel
 from cambrian.transformers.trainer_ms_utils import (

@@ -22,7 +22,7 @@ from cambrian.mindspore_adapter.utils import _is_parallel
 from cambrian.train.dataset import LengthGroupedSampler
 from cambrian.model.language_model.cambrian_llama import CambrianLlamaForCausalLM, TrainWrapperForCambrianLlamaForCausalLM
 from cambrian.mindspore_adapter.train_onestep_wrapper import TrainOneStepWrapper
-from cambrian.mindspore_adapter.utils import auto_mixed_precision
+from cambrian.mindspore_adapter.amp import auto_mixed_precision
 
 
 class CambrianTrainer(Trainer):

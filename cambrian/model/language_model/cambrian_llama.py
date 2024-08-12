@@ -13,7 +13,7 @@ from cambrian.transformers.modeling_attn_mask_utils import _prepare_4d_causal_at
 
 from cambrian.model.cambrian_arch import CambrianMetaModel, CambrianMetaForCausalLM
 from cambrian.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
-from cambrian.mindspore_adapter import auto_mixed_precision
+from cambrian.mindspore_adapter.amp import auto_mixed_precision
 
 
 logger = logging.get_logger(__name__)

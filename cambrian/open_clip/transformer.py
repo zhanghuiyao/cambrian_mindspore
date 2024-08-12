@@ -60,7 +60,6 @@ class LayerNormFp32(nn.LayerNorm):
 
     def __init__(self, *args, **kwargs):
         super(LayerNormFp32, self).__init__(*args, **kwargs)
-        ms.amp.auto_mixed_precision(self, amp_level="O0")  # fp32
 
     def construct(self, x: Tensor):
         orig_type = x.dtype
