@@ -54,7 +54,7 @@ class MindSporeArguments:
             )
         },
     )
-    adamw_zero_shard_size: Optional[str] = field(
+    adamw_zero_shard_size: Optional[int] = field(
         default=None,
         metadata={
             "help": (
@@ -75,6 +75,9 @@ class MindSporeArguments:
             "help": ("global precision_mode")
         }
     )
+
+    def __post_init__(self):
+        pass
 
 
 def init_environment(training_args: MindSporeArguments):
