@@ -57,6 +57,7 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
         else:
             optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
 
+        model.gradient_checkpointing_enable()
         model = TrainWrapperForCambrianLlamaForCausalLM(model)
         train_model = TrainOneStepWrapper(model, optimizer)
 

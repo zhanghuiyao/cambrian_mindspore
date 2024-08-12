@@ -282,6 +282,8 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         # cambrian head
         self.lm_head.recompute(**gradient_checkpointing_kwargs)
 
+        logger.info(f"{self.__class__.__name__}: enable recompute done.")
+
     def construct(
             self,
             input_ids: Tensor = None,

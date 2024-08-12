@@ -297,12 +297,6 @@ class VisionTransformer(nn.Cell):
             blocks=[(r'^blocks\.(\d+)', None), (r'^norm', (99999,))]
         )
 
-    def set_recompute(self, enable: bool = True) -> None:
-        self.enabel_recompute = enable
-
-    def recompute(self):
-        raise NotImplementedError
-
     def get_classifier(self) -> nn.Cell:
         return self.head
 
