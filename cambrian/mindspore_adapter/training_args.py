@@ -76,9 +76,6 @@ class MindSporeArguments:
         }
     )
 
-    def __post_init__(self):
-        pass
-
 
 def init_environment(training_args: MindSporeArguments):
     # set mindspore context
