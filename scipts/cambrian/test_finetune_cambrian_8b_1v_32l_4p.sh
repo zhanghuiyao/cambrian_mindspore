@@ -27,7 +27,7 @@ output_dir=$task_name"_FA-"$enable_flash_attention"_bs-"$per_device_train_batch_
 
 
 
-msrun --bind_core=True --worker_num=$device_num --local_worker_num=$device_num --master_port=9101 --log_dir=$output_dir \
+msrun --bind_core=True --worker_num=$device_num --local_worker_num=$device_num --master_port=9102 --log_dir=$output_dir \
 python cambrian/train/train.py \
     --model_name_or_path $model_name_or_path \
     --version llama_v3 \
