@@ -218,7 +218,8 @@ class TrainOneStepWrapper(nn.Cell):
         unscaled_grads = grads
 
         finite = self.all_finite(unscaled_grads)
-        finite = self.all_finite_reducer(finite)
+        finite = ops.equal(self.all_finite_reducer(finite.astype(ms.int32)),
+                           self.all_finite_reducer(ops.ones((), ms.int32)))
 
         if not self.drop_overflow_step:
             loss = self.do_optim(loss, unscaled_grads)
@@ -242,7 +243,8 @@ class TrainOneStepWrapper(nn.Cell):
         unscaled_grads = self.scaler.unscale(grads)
 
         finite = self.all_finite(unscaled_grads)
-        finite = self.all_finite_reducer(finite)
+        finite = ops.equal(self.all_finite_reducer(finite.astype(ms.int32)),
+                           self.all_finite_reducer(ops.ones((), ms.int32)))
         finite = ops.depend(finite, self.scaler.adjust(finite))
 
         if not self.drop_overflow_step:
