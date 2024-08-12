@@ -100,12 +100,13 @@ def test_generate_wo_image(model_path: str):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
+    parser.add_argument("--device_target", type=str, default="CPU")
     parser.add_argument("--optim", type=str, default="zero2")
     parser.add_argument("--shard_size", type=int, default=8)
     args, _ = parser.parse_known_args()
 
     # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
-    ms.set_context(mode=ms.GRAPH_MODE, device_target="CPU", jit_config = {"jit_level": "O0"})
+    ms.set_context(mode=ms.GRAPH_MODE, device_target=args.device_target, jit_config = {"jit_level": "O0"})
 
     # test_generate_wo_image(args.model_path)
     test_cambrian_llama_causal(
