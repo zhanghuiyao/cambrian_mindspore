@@ -63,7 +63,7 @@ def _adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay
     return op_cast(next_param, F.dtype(param))
 
 
-@allreduce_and_split_op.register("Tensor", "Bool", "Function", "Number", "Number", "Tensor")
+@allreduce_and_split_op.register("Number", "Bool", "Function", "Number", "Number", "Tensor")
 def _tensors_allreduce_and_split(degree, mean, all_reduce_op, shard_id, shard_size, grad):
     # allreduce
     grad = all_reduce_op(grad)
@@ -77,7 +77,7 @@ def _tensors_allreduce_and_split(degree, mean, all_reduce_op, shard_id, shard_si
     return grad
 
 
-@reducescatter_and_split_op.register("Tensor", "Bool", "Function", "Function", "Number", "Tensor")
+@reducescatter_and_split_op.register("Number", "Bool", "Function", "Function", "Number", "Tensor")
 def _tensors_reducescatter_and_split(degree, mean, reduce_scatter_op, all_reduce_op, shard_size, grad):
 
     if grad.shape[0] % shard_size == 0:
