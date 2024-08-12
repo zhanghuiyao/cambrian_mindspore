@@ -216,6 +216,12 @@ class MultiKVCrossAttention(nn.Cell):
         return attn_output
 
 
+class PosEmbedAttrCell(nn.Cell):
+    def __init__(self, parameter):
+        super(PosEmbedAttrCell, self).__init__(auto_prefix=False)
+        self.parameter_attr = parameter
+
+
 class VisionCrossAttentionLayer(nn.Cell):
     def __init__(self, q_dim, context_dim, kv_dim_list, kv_size_list, hidden_dim = 1024, layer_idx=0):
         super().__init__()
@@ -234,19 +240,39 @@ class VisionCrossAttentionLayer(nn.Cell):
         self.cross_attn = MultiKVCrossAttention(hidden_dim, kv_dim_list, hidden_dim, num_heads)
         self.kv_size_list = kv_size_list
 
+        # pos_embeds = []
+        # for i, kv_size in enumerate(kv_size_list):
+        #     if kv_size > 1:
+        #         # setattr(self, "pos_embed_{}".format(i),
+        #         #         Parameter(Tensor(np.random.randn(kv_size**2, hidden_dim), ms.float32)))
+        #         pos_embeds.append(
+        #             Parameter(Tensor(np.random.randn(kv_size ** 2, hidden_dim), ms.float32), name=f"pos_embed_{i}")
+        #         )
+        #     else:
+        #         pos_embeds.append(
+        #             Parameter(Tensor(np.zeros(1), ms.float32), name=f"pos_embed_{i}_buffer", requires_grad=False)
+        #         )
+        # self.pos_embeds = ParameterTuple(pos_embeds)
+
         pos_embeds = []
         for i, kv_size in enumerate(kv_size_list):
             if kv_size > 1:
                 # setattr(self, "pos_embed_{}".format(i),
                 #         Parameter(Tensor(np.random.randn(kv_size**2, hidden_dim), ms.float32)))
                 pos_embeds.append(
-                    Parameter(Tensor(np.random.randn(kv_size ** 2, hidden_dim), ms.float32), name=f"pos_embed_{i}")
+                    PosEmbedAttrCell(
+                        Parameter(Tensor(np.random.randn(kv_size ** 2, hidden_dim), ms.float32), name=f"pos_embed_{i}")
+                    )
                 )
             else:
                 pos_embeds.append(
-                    Parameter(Tensor(np.zeros(1), ms.float32), name=f"pos_embed_{i}_buffer", requires_grad=False)
+                    PosEmbedAttrCell(
+                        Parameter(Tensor(np.zeros(1), ms.float32), name=f"pos_embed_{i}_buffer", requires_grad=False)
+                    )
                 )
-        self.pos_embeds = ParameterTuple(pos_embeds)
+        self.pos_embeds = nn.CellList(pos_embeds)
+
+
 
     def construct(
         self,
@@ -287,7 +313,7 @@ class VisionCrossAttentionLayer(nn.Cell):
             if vision_latents.shape[1] > 1:
                 # vision_latents_pos_list.append(vision_latents + getattr(self, "pos_embed_{}".format(i))[None, :, :].to(vision_latents.dtype))
                 vision_latents_pos_list.append(
-                    vision_latents + self.pos_embeds[i][None, :, :].to(vision_latents.dtype)
+                    vision_latents + self.pos_embeds[i].parameter_attr[None, :, :].to(vision_latents.dtype)
                 )
             else:
                 vision_latents_pos_list.append(vision_latents)
@@ -327,18 +353,36 @@ class VisionAggregationLayer(nn.Cell):
         if self.num_of_kvs > 1:
             self.weight_mlp = MLP(q_dim+hidden_dim, hidden_dim, self.num_of_kvs)
 
+        # pos_embeds, aggregates = [], []
+        # for i, kv_size in enumerate(kv_size_list):
+        #     if kv_size > 1:
+        #         # setattr(self, "pos_embed_{}".format(i), Parameter(Tensor(np.random.randn(kv_size**2, hidden_dim), ms.float32)))
+        #         # setattr(self, "aggregate_{}".format(i), AggregationBlock(True, hidden_dim, kv_dim_list[i], hidden_dim, num_heads))
+        #         pos_embeds.append(Parameter(Tensor(np.random.randn(kv_size**2, hidden_dim), ms.float32), name=f"pos_embed_{i}"))
+        #         aggregates.append(AggregationBlock(True, hidden_dim, kv_dim_list[i], hidden_dim, num_heads))
+        #     else:
+        #         # setattr(self, "aggregate_{}".format(i), AggregationBlock(False, hidden_dim, kv_dim_list[i], hidden_dim, num_heads))
+        #         aggregates.append(AggregationBlock(False, hidden_dim, kv_dim_list[i], hidden_dim, num_heads))
+        # self.pos_embeds = ParameterTuple(pos_embeds)
+        # self.aggregates = nn.CellList(aggregates)
+
         pos_embeds, aggregates = [], []
         for i, kv_size in enumerate(kv_size_list):
             if kv_size > 1:
                 # setattr(self, "pos_embed_{}".format(i), Parameter(Tensor(np.random.randn(kv_size**2, hidden_dim), ms.float32)))
                 # setattr(self, "aggregate_{}".format(i), AggregationBlock(True, hidden_dim, kv_dim_list[i], hidden_dim, num_heads))
-                pos_embeds.append(Parameter(Tensor(np.random.randn(kv_size**2, hidden_dim), ms.float32), name=f"pos_embed_{i}"))
+                pos_embeds.append(
+                    PosEmbedAttrCell(
+                        Parameter(Tensor(np.random.randn(kv_size ** 2, hidden_dim), ms.float32), name=f"pos_embed_{i}")
+                    )
+                )
                 aggregates.append(AggregationBlock(True, hidden_dim, kv_dim_list[i], hidden_dim, num_heads))
             else:
                 # setattr(self, "aggregate_{}".format(i), AggregationBlock(False, hidden_dim, kv_dim_list[i], hidden_dim, num_heads))
                 aggregates.append(AggregationBlock(False, hidden_dim, kv_dim_list[i], hidden_dim, num_heads))
-        self.pos_embeds = ParameterTuple(pos_embeds)
+        self.pos_embeds = nn.CellList(pos_embeds)
         self.aggregates = nn.CellList(aggregates)
+
 
     def construct(
         self,
@@ -375,7 +419,7 @@ class VisionAggregationLayer(nn.Cell):
         for i, vision_latents in enumerate(vision_latents_list):
             if vision_latents.shape[1] > 1:
                 # vision_latents_pos_list.append(vision_latents + getattr(self, "pos_embed_{}".format(i))[None, :, :].to(vision_latents.dtype))
-                vision_latents_pos_list.append(vision_latents + self.pos_embeds[i][None, :, :].to(vision_latents.dtype))
+                vision_latents_pos_list.append(vision_latents + self.pos_embeds[i].parameter_attr[None, :, :].to(vision_latents.dtype))
             else:
                 vision_latents_pos_list.append(vision_latents)
 
