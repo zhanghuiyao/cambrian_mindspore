@@ -251,7 +251,7 @@ class TrainOneStepWrapper(nn.Cell):
         # else:
         #     finite = ops.zeros((), ms.bool_)
         #
-        finite = ops.zeros((), ms.bool_)
+        finite = ops.ones((), ms.bool_)
 
         if not self.drop_overflow_step:
             loss = self.do_optim(loss, unscaled_grads)
