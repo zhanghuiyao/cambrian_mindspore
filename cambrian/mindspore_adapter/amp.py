@@ -4,6 +4,8 @@ from mindspore.amp import StaticLossScaler as _StaticLossScaler
 from mindspore.amp import DynamicLossScaler as _DynamicLossScaler
 
 
+# FIXME: level 1, delete this file
+
 class StaticLossScaler(_StaticLossScaler):
     def scale(self, inputs):
         return _grad_scale_map(self.scale_value, inputs)

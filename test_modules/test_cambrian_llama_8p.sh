@@ -12,7 +12,10 @@ export MS_DEV_RUNTIME_CONF="synchronize:True"
 task_name="test_cambrian_llama_8p"
 output_dir=$task_name
 
-msrun --bind_core=True --worker_num=8 --local_worker_num=8 --master_port=9001 --log_dir=$output_dir \
+master_port=9002
+
+
+msrun --bind_core=True --worker_num=8 --local_worker_num=8 --master_port=$master_port --log_dir=$output_dir \
 python test_modules/test_cambrian_llama.py \
     --device_target Ascend \
     --is_distribute True \
