@@ -107,7 +107,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
             self.shard_id = self.rank
             self.shard_size = self.group_size
         else:
-            assert shard_size > 0
+            assert shard_size > 1
             assert (shard_size <= self.group_size) and (self.group_size % shard_size == 0)
             from mindspore.communication import create_group
 
