@@ -209,7 +209,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
-        model = super(CambrianLlamaForCausalLM, cls).from_pretrained(pretrained_model_name_or_path)
+        model = super(CambrianLlamaForCausalLM, cls).from_pretrained(pretrained_model_name_or_path, **kwargs)
 
         # FIXME: support cache
         if model.generation_config.use_cache:
@@ -266,7 +266,8 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         # visual layers
         if hasattr(self.model, "vision_tower_aux_list"):
             for cell in self.model.vision_tower_aux_list:
-                cell.recompute(**gradient_checkpointing_kwargs)
+                if getattr(cell, "unfreeze_mm_vision_tower", False):
+                    cell.recompute(**gradient_checkpointing_kwargs)
 
         # projector
         if hasattr(self.model, "mm_projector"):
