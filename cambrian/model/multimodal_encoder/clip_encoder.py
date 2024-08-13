@@ -101,7 +101,7 @@ class ClipVisionTower(BaseVisionTower):
         image_features = self.feature_select(image_forward_outs).to(images.dtype)
         interp_features = self.interpolate(image_features)
 
-        if self.unfreeze_mm_vision_tower:
+        if not self.unfreeze_mm_vision_tower:
             interp_features = ops.stop_gradient(interp_features)
 
         return interp_features

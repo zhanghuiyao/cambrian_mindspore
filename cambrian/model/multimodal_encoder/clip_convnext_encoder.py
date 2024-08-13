@@ -146,7 +146,7 @@ class CLIPConvNextTower(BaseVisionTower):
             image_features_stages_rescaled.append(image_features_single_stage_rescaled)
         image_features = ops.cat(image_features_stages_rescaled, -1)
 
-        if self.unfreeze_mm_vision_tower:
+        if not self.unfreeze_mm_vision_tower:
             image_features = ops.stop_gradient(image_features)
 
         return image_features

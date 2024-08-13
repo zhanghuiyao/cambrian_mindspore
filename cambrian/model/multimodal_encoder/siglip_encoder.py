@@ -102,6 +102,6 @@ class SiglipVisionTower(ClipVisionTower):
     def _forward(self, images, interpolate_token = 576):
         image_features = self.vision_tower.forward_features(images.to(dtype=self.dtype))
         interp_features = self.interpolate(image_features)
-        if self.unfreeze_mm_vision_tower:
+        if not self.unfreeze_mm_vision_tower:
             interp_features = ops.stop_gradient(interp_features)
         return interp_features
