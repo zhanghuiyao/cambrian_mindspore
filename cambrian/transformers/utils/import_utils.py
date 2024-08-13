@@ -14,6 +14,9 @@ from typing import Any, Tuple, Union
 
 from packaging import version
 
+import mindspore as ms
+from mindspore import context
+
 from transformers.utils import logging
 
 
@@ -56,6 +59,20 @@ ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 
 
 _datasets_available = _is_package_available("datasets")
+
+
+def is_flash_attn_2_available():
+
+    if not context.get_context("device_target") == "Ascend":
+        return False
+
+    try:
+        from mindspore.ops.operations.nn_ops import FlashAttentionScore as FlashAttention
+        _fa_available = True
+    except ImportError:
+        _fa_available = False
+
+    return _fa_available
 
 
 def is_datasets_available():

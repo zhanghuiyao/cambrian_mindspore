@@ -1,3 +1,4 @@
+import copy
 from typing import Optional, Dict, Union, Any
 import mindspore as ms
 from mindspore import nn, ops, Tensor, Parameter
@@ -6,7 +7,7 @@ from transformers import PretrainedConfig, GenerationConfig
 from transformers.utils import logging
 
 from cambrian.transformers.generation.utils import GenerationMixin
-
+from cambrian.transformers.utils.import_utils import is_flash_attn_2_available
 
 logger = logging.get_logger(__name__)
 
@@ -159,7 +160,9 @@ class PreTrainedModel(nn.Cell, ModuleUtilsMixin, GenerationMixin):
         self.generation_config = GenerationConfig.from_model_config(config) if self.can_generate() else None
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path):
+    def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
+        use_flash_attention_2 = kwargs.pop("use_flash_attention_2", False)
+
         config, _ = cls.config_class.from_pretrained(
             pretrained_model_name_or_path,
             cache_dir=None,
@@ -174,6 +177,12 @@ class PreTrainedModel(nn.Cell, ModuleUtilsMixin, GenerationMixin):
             _from_auto=False,
             _from_pipeline=None,
         )
+
+        config = copy.deepcopy(config)  # We do not want to modify the config inplace in from_pretrained.
+        config = cls._autoset_attn_implementation(
+            config, use_flash_attention_2=use_flash_attention_2
+        )
+
         model = cls(config)
 
         # If it is a model with generation capabilities, attempt to load the generation config
@@ -199,6 +208,57 @@ class PreTrainedModel(nn.Cell, ModuleUtilsMixin, GenerationMixin):
                 pass
 
         return model
+
+    @classmethod
+    def _autoset_attn_implementation(
+            cls,
+            config,
+            use_flash_attention_2: bool = False,
+    ):
+        """
+        Automatically checks and dispatches to a default attention implementation. In order of priority:
+            1. An implementation specified in `config._attn_implementation` (due for example to the argument attn_implementation="sdpa" in from_pretrained).
+            2. DEPRECATED: if use_flash_attention_2 is set to `True` and `flash_attn` is available, flash attention. (`LlamaFlashAttention` for example)
+            3. SDPA implementation, if available and supported by the model type. (`LlamaSdpaAttention` for example)
+            4. The default model's implementation otherwise (`LlamaAttention` for example) .
+        """
+        # Here we use config._attn_implementation_internal to check whether the attention implementation was explicitely set by the user.
+        # The property `PretrainedConfig._attn_implementation` is never `None`, for backward compatibility (always fall back on "eager").
+        # The `hasattr` here is used as some Transformers tests for some reason do not call PretrainedConfig __init__ (e.g. test_no_super_init_config_and_model)
+        requested_attn_implementation = None
+        if hasattr(config, "_attn_implementation_internal") and config._attn_implementation_internal is not None:
+            if config._attn_implementation != "flash_attention_2" and use_flash_attention_2:
+                raise ValueError(
+                    f'Both attn_implementation="{config._attn_implementation}" and `use_flash_attention_2=True` were used when loading the model, which are not compatible.'
+                    ' We recommend to just use `attn_implementation="flash_attention_2"` when loading the model.'
+                )
+
+            if config._attn_implementation not in ["eager", "sdpa", "flash_attention_2"]:
+                message = f'Specified `attn_implementation="{config._attn_implementation}"` is not supported. The only possible arguments are `attn_implementation="eager"` (manual attention implementation)'
+                if cls._supports_flash_attn_2:
+                    message += ', `"attn_implementation=flash_attention_2"` (implementation using flash attention 2)'
+                if cls._supports_sdpa:
+                    message += ', `"attn_implementation=sdpa"` (implementation using torch.nn.functional.scaled_dot_product_attention)'
+                raise ValueError(message + ".")
+
+            # If a config is passed with a preset attn_implementation, we skip the automatic dispatch and use the user-provided config, with hard checks that the requested attention implementation is available.
+            requested_attn_implementation = config._attn_implementation_internal
+
+        if use_flash_attention_2:
+            logger.warning_once(
+                'The model was loaded with use_flash_attention_2=True, which is deprecated and may be removed in a future release. Please use `attn_implementation="flash_attention_2"` instead.'
+            )
+            config._attn_implementation = "flash_attention_2"
+
+        if config._attn_implementation == "flash_attention_2":
+            cls._check_and_enable_flash_attn_2(
+                config,
+                hard_check_only=False,
+            )
+        else:
+            config._attn_implementation = "eager"
+
+        return config
 
     def _init_weights(self, module):
         """
@@ -420,6 +480,41 @@ class PreTrainedModel(nn.Cell, ModuleUtilsMixin, GenerationMixin):
             `nn.Cell`: A torch module mapping hidden states to vocabulary.
         """
         return None  # Overwrite for models with output embeddings
+
+    @classmethod
+    def _check_and_enable_flash_attn_2(
+            cls,
+            config,
+            hard_check_only: bool = False,
+    ) -> PretrainedConfig:
+        """
+        Checks the availability of Flash Attention 2 and compatibility with the current model.
+
+        If all checks pass and `hard_check_only` is False, the method will set the config attribute `attn_implementation` to "flash_attention_2" so that the model can initialize the correct attention module.
+        """
+        if not cls._supports_flash_attn_2:
+            raise ValueError(
+                f"{cls.__name__} does not support Flash Attention 2.0 yet. Please request to add support where"
+                f" the model is hosted, on its model hub page: https://huggingface.co/{config._name_or_path}/discussions/new"
+                " or in the Transformers GitHub repo: https://github.com/huggingface/transformers/issues/new"
+            )
+
+        if not is_flash_attn_2_available():
+            raise ImportError(
+                f"FlashAttention2 has been toggled on, but it cannot be used due to some error; "
+                f"Please refer to the README.md to install MindSpore and CANN on Ascend device."
+            )
+
+        _is_bettertransformer = getattr(cls, "use_bettertransformer", False)
+
+        if _is_bettertransformer:
+            raise ValueError(
+                "Flash Attention 2 and BetterTransformer API are not compatible. Please make sure to disable BetterTransformers by doing model.reverse_bettertransformer()"
+            )
+
+        if not hard_check_only:
+            config._attn_implementation = "flash_attention_2"
+        return config
 
     def _get_resized_lm_head(
         self, old_lm_head: nn.Dense, new_num_tokens: Optional[int] = None, transposed: Optional[bool] = False

@@ -34,6 +34,7 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
     model = CambrianLlamaForCausalLM.from_pretrained(
         model_path,
         mindspore_dtype=ms.float16,
+        attn_implementation="flash_attention_2",
     )
     model.set_train()
 
@@ -155,4 +156,4 @@ if __name__ == '__main__':
     # test_generate_wo_image(args.model_path)
     test_cambrian_llama_causal(
         args.model_path, optim=args.optim, shard_size=args.shard_size,
-        run_forward=False, run_backward=True)
+        run_forward=True, run_backward=True)

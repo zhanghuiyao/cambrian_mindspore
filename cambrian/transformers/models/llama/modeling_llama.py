@@ -10,11 +10,10 @@ from transformers import LlamaConfig, GenerationConfig, logging
 from cambrian.transformers.activations import ACT2FN
 from cambrian.transformers.cache_utils import Cache, StaticCache, DynamicCache
 from cambrian.transformers.modeling_utils import PreTrainedModel
+from cambrian.transformers.modeling_attn_mask_utils import DTYPE_FP16_MIN
 
+from cambrian.mindspore_adapter.attention import FlashAttention2
 from cambrian.constants import IGNORE_INDEX
-
-
-DTYPE_FP16_MIN = float(np.finfo(np.float16).min)
 
 
 logger = logging.get_logger(__name__)
@@ -336,9 +335,131 @@ class LlamaAttention(nn.Cell):
         return outputs
 
 
+
+class LlamaFlashAttention2(LlamaAttention):
+    """Multi-headed attention from 'Attention Is All You Need' paper"""
+
+    def __init__(self, config: LlamaConfig, layer_idx: Optional[int] = None):
+        super().__init__(config, layer_idx)
+
+        self.flash_attention = FlashAttention2(
+            self.head_dim,
+            self.num_heads,
+            self.attention_dropout,
+            input_layout="BNSD",
+            dtype=ms.float16
+        )
+
+    def convert_mask_to_fa_format(self, attention_mask):
+
+        if attention_mask is not None:
+            if attention_mask.dtype == ms.bool_:
+                # flip mask, since ms FA treats 1 as discard, 0 as retain.
+                attention_mask = 1 - attention_mask
+                attention_mask = attention_mask.to(ms.uint8)
+            else:
+                dtype_fp16_min = ops.full((), DTYPE_FP16_MIN, dtype=ms.float16)
+                attention_mask = attention_mask.to(ms.float16)
+                attention_mask = ops.select(
+                    ops.equal(attention_mask, dtype_fp16_min),
+                    ops.ones((), ms.uint8),
+                    ops.zeros((), ms.uint8),
+                )
+
+        return attention_mask
+
+    def construct(
+        self,
+        hidden_states: Tensor,
+        attention_mask: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        past_key_value: Optional[Tensor] = None,
+        output_attentions: bool = False,
+        use_cache: bool = False,
+        cache_position: Optional[Tensor] = None,
+        **kwargs,
+    ):
+        bsz, q_len, _ = hidden_states.shape
+
+        if self.pretraining_tp > 1:
+            key_value_slicing = (self.num_key_value_heads * self.head_dim) // self.pretraining_tp
+            query_slices = self.q_proj.weight.split(
+                (self.num_heads * self.head_dim) // self.pretraining_tp, axis=0
+            )
+            key_slices = self.k_proj.weight.split(key_value_slicing, axis=0)
+            value_slices = self.v_proj.weight.split(key_value_slicing, axis=0)
+
+            query_states = [ops.dense(hidden_states, query_slices[i]) for i in range(self.pretraining_tp)]
+            query_states = ops.cat(query_states, axis=-1)
+
+            key_states = [ops.dense(hidden_states, key_slices[i]) for i in range(self.pretraining_tp)]
+            key_states = ops.cat(key_states, axis=-1)
+
+            value_states = [ops.dense(hidden_states, value_slices[i]) for i in range(self.pretraining_tp)]
+            value_states = ops.cat(value_states, axis=-1)
+
+        else:
+            query_states = self.q_proj(hidden_states)
+            key_states = self.k_proj(hidden_states)
+            value_states = self.v_proj(hidden_states)
+
+        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).swapdims(1, 2)
+        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapdims(1, 2)
+        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapdims(1, 2)
+
+        cos, sin = self.rotary_emb(value_states, position_ids)
+        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+
+        # if past_key_value is not None:
+        #     # sin and cos are specific to RoPE models; cache_position needed for the static cache
+        #     cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+        #     key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+
+        key_states = repeat_kv(key_states, self.num_key_value_groups)
+        value_states = repeat_kv(value_states, self.num_key_value_groups)
+
+
+        # 1. flash attention
+        if attention_mask is not None:  # no matter the length, we just slice it
+            attention_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+        attention_mask = self.convert_mask_to_fa_format(attention_mask)
+        attn_output = self.flash_attention(query_states, key_states, value_states, attention_mask)
+        assert attn_output.shape == (bsz, self.num_heads, q_len, self.head_dim)
+
+        # 2. vanilla attention
+        # attn_weights = ops.matmul(query_states, key_states.swapdims(2, 3)) / (self.head_dim ** 0.5)
+        #
+        # if attention_mask is not None:  # no matter the length, we just slice it
+        #     causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+        #     attn_weights = attn_weights + causal_mask
+        #
+        # # upcast attention to fp32
+        # attn_weights = ops.softmax(attn_weights, axis=-1, dtype=ms.float32).to(query_states.dtype)
+        # attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+        # attn_output = ops.matmul(attn_weights, value_states)
+        # assert attn_output.shape == (bsz, self.num_heads, q_len, self.head_dim)
+
+        attn_output = attn_output.swapdims(1, 2)
+        attn_output = attn_output.reshape(bsz, q_len, -1)
+
+        if self.pretraining_tp > 1:
+            attn_output = attn_output.split(self.hidden_size // self.pretraining_tp, axis=2)
+            o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.pretraining_tp, axis=1)
+            attn_output = sum([ops.dense(attn_output[i], o_proj_slices[i]) for i in range(self.pretraining_tp)])
+        else:
+            attn_output = self.o_proj(attn_output)
+
+        outputs = (attn_output,)
+        if past_key_value is not None:
+            outputs += (past_key_value,)
+
+        # attn_output, past_key_value
+        return outputs
+
+
 LLAMA_ATTENTION_CLASSES = {
     "eager": LlamaAttention,
-    "flash_attention_2": None,
+    "flash_attention_2": LlamaFlashAttention2,
     "sdpa": None,
 }
 
@@ -348,7 +469,7 @@ class LlamaDecoderLayer(nn.Cell):
         super().__init__()
         self.hidden_size = config.hidden_size
 
-        if config._attn_implementation != "eager":
+        if config._attn_implementation not in ["eager", "flash_attention_2"]:
             raise NotImplementedError
         self.self_attn = LLAMA_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
 
@@ -424,6 +545,7 @@ class LlamaDecoderLayer(nn.Cell):
 class LlamaPreTrainedModel(PreTrainedModel):
     config_class = LlamaConfig
     base_model_prefix = "model"
+    _supports_flash_attn_2 = True
 
 
 class LlamaModel(LlamaPreTrainedModel):
@@ -552,9 +674,10 @@ class LlamaModel(LlamaPreTrainedModel):
         # `fullgraph=True`. See more context in https://github.com/huggingface/transformers/pull/29114
 
         if self._attn_implementation == "flash_attention_2":
-            if attention_mask is not None and 0.0 in attention_mask:
-                return attention_mask
-            return None
+            # if attention_mask is not None and 0.0 in attention_mask:
+            #     return attention_mask
+            # return None
+            return attention_mask
 
         # For SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
         # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
