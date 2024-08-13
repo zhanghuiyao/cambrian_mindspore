@@ -176,11 +176,13 @@ class PreTrainedModel(nn.Cell, ModuleUtilsMixin, GenerationMixin):
             subfolder="",
             _from_auto=False,
             _from_pipeline=None,
+            **kwargs
         )
 
         config = copy.deepcopy(config)  # We do not want to modify the config inplace in from_pretrained.
         config = cls._autoset_attn_implementation(
-            config, use_flash_attention_2=use_flash_attention_2
+            config,
+            use_flash_attention_2=use_flash_attention_2
         )
 
         model = cls(config)
