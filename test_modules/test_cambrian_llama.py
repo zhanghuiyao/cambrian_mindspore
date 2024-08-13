@@ -17,7 +17,8 @@ def test_cambrian_llama(model_path: str):
 
 
 def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_backward: bool = True,
-                               optim: Optional[str] = None, shard_size: Optional[int] = None):
+                               optim: Optional[str] = None, shard_size: Optional[int] = None,
+                               enable_fa: bool = True):
 
     activate_len = 120
     temp_data = dict(
@@ -31,10 +32,13 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
     temp_data["attention_mask"][0, activate_len:] = False
     temp_data["input_ids"][0, activate_len-1] = IMAGE_TOKEN_INDEX
 
+    kwargs = {}
+    if enable_fa:
+        kwargs.update({"attn_implementation": "flash_attention_2"})
     model = CambrianLlamaForCausalLM.from_pretrained(
         model_path,
         mindspore_dtype=ms.float16,
-        attn_implementation="flash_attention_2",
+        **kwargs
     )
     model.set_train()
 
@@ -54,6 +58,12 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
         if args.gradient_checkpointing:
             model.gradient_checkpointing_enable()
 
+        # FIXME: zhy_test
+        # 1. force_param_fp16
+        if args.force_param_fp16:
+            from cambrian.mindspore_adapter.amp import convert_module_param_to_fp16
+            model = convert_module_param_to_fp16(model, keep_norm_fp32=True)
+
         # create optimizer
         if optim.lower() == "zero1":
             from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO1
@@ -71,15 +81,16 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
             from cambrian.mindspore_adapter.amp import auto_mixed_precision
             train_model = auto_mixed_precision(train_model, amp_level=args.amp_level, dtype=ms.float16)
 
-        if args.force_param_fp16:
-            # FIXME: zhy_test
-            from cambrian.mindspore_adapter.amp import convert_module_param_to_fp16
-            train_model = convert_module_param_to_fp16(train_model, keep_norm_fp32=True)
-            if hasattr(train_model, "scaler") and train_model.scaler is not None:
-                train_model.scaler.scale_value.set_dtype(ms.float16)
-
-            # FIXME: zhy_test
-            print(f"zhy_test: scaler.dtype is {train_model.scaler.scale_value.dtype}")
+        # 2. force_param_fp16
+        # if args.force_param_fp16:
+        #     # FIXME: zhy_test
+        #     from cambrian.mindspore_adapter.amp import convert_module_param_to_fp16
+        #     train_model = convert_module_param_to_fp16(train_model, keep_norm_fp32=True)
+        #     if hasattr(train_model, "scaler") and train_model.scaler is not None:
+        #         train_model.scaler.scale_value.set_dtype(ms.float16)
+        #
+        #     # FIXME: zhy_test
+        #     print(f"zhy_test: scaler.dtype is {train_model.scaler.scale_value.dtype}")
 
         model.set_train()
         train_model.set_train()
@@ -129,6 +140,7 @@ if __name__ == '__main__':
     parser.add_argument("--is_distribute", type=ast.literal_eval, default=False)
 
     parser.add_argument("--amp_level", type=str, default="O2")
+    parser.add_argument("--enable_fa", type=ast.literal_eval, default=True)
     parser.add_argument("--gradient_checkpointing", type=ast.literal_eval, default=True)
     parser.add_argument("--force_param_fp16", type=ast.literal_eval, default=True)
 
@@ -155,5 +167,5 @@ if __name__ == '__main__':
 
     # test_generate_wo_image(args.model_path)
     test_cambrian_llama_causal(
-        args.model_path, optim=args.optim, shard_size=args.shard_size,
-        run_forward=True, run_backward=True)
+        args.model_path, optim=args.optim, shard_size=args.shard_size, enable_fa=args.enable_fa,
+        run_forward=False, run_backward=True)
