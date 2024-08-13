@@ -209,6 +209,9 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
+
+        dtype = kwargs.pop("mindspore_dtype", ms.float32)
+
         model = super(CambrianLlamaForCausalLM, cls).from_pretrained(pretrained_model_name_or_path, **kwargs)
 
         # FIXME: support cache
@@ -216,7 +219,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             model.generation_config.use_cache = False
             print(f"not support use_cache, `generation_config.use_cache` force to `False`")
 
-        dtype = kwargs.pop("mindspore_dtype", ms.float32)
         if dtype == ms.float16:
             model = auto_mixed_precision(model, "O2", ms.float16)
             print("WARNING: The network is converted to FP16 for computation, amp_level O2.")
