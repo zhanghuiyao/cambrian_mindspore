@@ -16,9 +16,7 @@ def test_cambrian_llama(model_path: str):
     pass
 
 
-def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_backward: bool = True,
-                               optim: Optional[str] = None, shard_size: Optional[int] = None,
-                               enable_fa: bool = True):
+def test_cambrian_llama_causal(model_path: str, args):
 
     activate_len = 120
     temp_data = dict(
@@ -33,7 +31,7 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
     temp_data["input_ids"][0, activate_len-1] = IMAGE_TOKEN_INDEX
 
     kwargs = {}
-    if enable_fa:
+    if args.enable_fa:
         kwargs.update({"attn_implementation": "flash_attention_2"})
     model = CambrianLlamaForCausalLM.from_pretrained(
         model_path,
@@ -42,7 +40,8 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
     )
     model.set_train()
 
-    if run_forward:
+
+    if args.run_forward:
         print("Test cambrian-8b casual model, build forward model done.")
         print("Strat inference...")
 
@@ -53,7 +52,7 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
             s_time = time.time()
 
 
-    if run_backward:
+    if args.run_backward:
 
         if args.gradient_checkpointing:
             model.gradient_checkpointing_enable()
@@ -65,16 +64,14 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
             model = convert_module_param_to_fp16(model, keep_norm_fp32=True)
 
         # create optimizer
-        if optim.lower() == "zero1":
+        if args.optim.lower() == "zero1":
             from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO1
-            optimizer = AdamWeightDecayZeRO1(model.trainable_params(), 1e-5, shard_size=shard_size)
-        elif optim.lower() == "zero2":
+            optimizer = AdamWeightDecayZeRO1(model.trainable_params(), 1e-5, shard_size=args.shard_size)
+        elif args.optim.lower() == "zero2":
             from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO2
-            optimizer = AdamWeightDecayZeRO2(model.trainable_params(), 1e-5, shard_size=shard_size)
+            optimizer = AdamWeightDecayZeRO2(model.trainable_params(), 1e-5, shard_size=args.shard_size)
         else:
             optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
-            if args.force_param_fp16:
-                raise ValueError("some bug when force param fp16...")
 
         model = TrainWrapperForCambrianLlamaForCausalLM(model)
         train_model = TrainOneStepWrapper(model, optimizer)
@@ -148,6 +145,9 @@ if __name__ == '__main__':
 
     parser.add_argument("--optim", type=str, default="adamw")
     parser.add_argument("--shard_size", type=int, default=8)
+
+    parser.add_argument("--run_forward", type=ast.literal_eval, default=False)
+    parser.add_argument("--run_backward", type=ast.literal_eval, default=True)
     args, _ = parser.parse_known_args()
 
     # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
@@ -168,6 +168,4 @@ if __name__ == '__main__':
         )
 
     # test_generate_wo_image(args.model_path)
-    test_cambrian_llama_causal(
-        args.model_path, optim=args.optim, shard_size=args.shard_size, enable_fa=args.enable_fa,
-        run_forward=False, run_backward=True)
+    test_cambrian_llama_causal(args.model_path, args)
