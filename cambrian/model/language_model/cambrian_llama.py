@@ -244,6 +244,9 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         # for inference
         self.vision_tower_aux_feature_list = None
 
+        # for train
+        self.loss_fct = nn.CrossEntropyLoss()
+
         # TODO: Initialize weights and apply final processing
         # self.post_init()
 
@@ -270,6 +273,13 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             for cell in self.model.vision_tower_aux_list:
                 if getattr(cell, "unfreeze_mm_vision_tower", False):
                     cell.recompute(**gradient_checkpointing_kwargs)
+                    logger.info(f"{self.__class__.__name__}.{cell.__class__.__name__}: "
+                                f"unfreeze_mm_vision_tower is {cell.unfreeze_mm_vision_tower}, "
+                                f"enable recompute")
+                else:
+                    logger.info(f"{self.__class__.__name__}.{cell.__class__.__name__}: "
+                                f"unfreeze_mm_vision_tower is {cell.unfreeze_mm_vision_tower}, "
+                                f"disable recompute")
 
         # projector
         if hasattr(self.model, "mm_projector"):
@@ -405,10 +415,9 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             shift_logits = logits[..., :-1, :].contiguous()
             shift_labels = labels[..., 1:].contiguous()
             # Flatten the tokens
-            loss_fct = nn.CrossEntropyLoss()
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
-            loss = loss_fct(shift_logits, shift_labels)
+            loss = self.loss_fct(shift_logits, shift_labels)
 
         outputs = (loss, logits)
         if past_key_values is not None:
