@@ -73,8 +73,8 @@ def test_cambrian_llama_causal(model_path: str, run_forward: bool = True, run_ba
             optimizer = AdamWeightDecayZeRO2(model.trainable_params(), 1e-5, shard_size=shard_size)
         else:
             optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
-            # FIXME: bug when force_param_fp16
-            optimizer.use_fused_opt = False
+            if args.force_param_fp16:
+                raise ValueError("some bug when force param fp16...")
 
         model = TrainWrapperForCambrianLlamaForCausalLM(model)
         train_model = TrainOneStepWrapper(model, optimizer)
