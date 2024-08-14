@@ -263,10 +263,18 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             gradient_checkpointing_kwargs = {}
 
         # llama layers
+        from cambrian.transformers.models.llama.modeling_llama import LlamaRMSNorm, LlamaDecoderLayer
+        for decoder_layer in self.model.layers:
+            assert isinstance(decoder_layer, LlamaDecoderLayer)
+            for name, cell in decoder_layer.name_cells().items():
+                if "input_layernorm" in name:
+                    assert isinstance(cell, LlamaRMSNorm)
+                    pass
+                else:
+                    cell._recompute()
+                    # recompute_except_output(cell, **gradient_checkpointing_kwargs)
         recompute_except_output(self.model.embed_tokens, **gradient_checkpointing_kwargs)
-        for cell in self.model.layers:
-            recompute_except_output(cell, **gradient_checkpointing_kwargs)
-        recompute_except_output(self.model.embed_tokens, **gradient_checkpointing_kwargs)
+        recompute_except_output(self.model.norm, **gradient_checkpointing_kwargs)
 
         # visual encoders
         if hasattr(self.model, "vision_tower_aux_list"):
