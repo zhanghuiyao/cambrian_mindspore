@@ -64,7 +64,7 @@ def _adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay
     return op_cast(next_param, F.dtype(param))
 
 
-@adamw_opt_split.register("Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool", "Number", "Number")
+@adamw_opt_split.register("Number", "Number", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool")
 def _adamw_opt_split(shard_id, shard_size, beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay_flag):
     op_mul = P.Mul()
     op_square = P.Square()
