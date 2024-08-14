@@ -271,11 +271,12 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         # visual layers
         if hasattr(self.model, "vision_tower_aux_list"):
             for cell in self.model.vision_tower_aux_list:
-                if getattr(cell, "unfreeze_mm_vision_tower", False):
-                    cell.recompute(**gradient_checkpointing_kwargs)
-                logger.info(f"{self.__class__.__name__}.{cell.__class__.__name__}: "
-                            f"unfreeze_mm_vision_tower is {cell.unfreeze_mm_vision_tower}, "
-                            f"enable recompute: {getattr(cell, 'unfreeze_mm_vision_tower', False)}")
+                cell.recompute(**gradient_checkpointing_kwargs)
+                # if getattr(cell, "unfreeze_mm_vision_tower", False):
+                #     cell.recompute(**gradient_checkpointing_kwargs)
+                # logger.info(f"{self.__class__.__name__}.{cell.__class__.__name__}: "
+                #             f"unfreeze_mm_vision_tower is {cell.unfreeze_mm_vision_tower}, "
+                #             f"enable recompute: {getattr(cell, 'unfreeze_mm_vision_tower', False)}")
 
         # projector
         if hasattr(self.model, "mm_projector"):
@@ -286,6 +287,9 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 cell.recompute(**gradient_checkpointing_kwargs)
         if hasattr(self.model, "vision_samplers"):
             for _, cell in self.model.vision_samplers.name_cells().items():
+                cell.recompute(**gradient_checkpointing_kwargs)
+        if hasattr(self.model, "vision_sampler_layers"):
+            for _, cell in self.model.vision_sampler_layers.name_cells().items():
                 cell.recompute(**gradient_checkpointing_kwargs)
 
         # cambrian head
