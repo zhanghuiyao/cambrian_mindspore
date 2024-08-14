@@ -262,26 +262,12 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             # gradient_checkpointing_kwargs = {"mp_comm_recompute": True, "parallel_optimizer_comm_recompute": True}
             gradient_checkpointing_kwargs = {}
 
-        # llama layers
-        from cambrian.transformers.models.llama.modeling_llama import LlamaRMSNorm, LlamaDecoderLayer
-        for decoder_layer in self.model.layers:
-            assert isinstance(decoder_layer, LlamaDecoderLayer)
-            for name, cell in decoder_layer.name_cells().items():
-                if "input_layernorm" in name:
-                    assert isinstance(cell, LlamaRMSNorm)
-                    pass
-                else:
-                    cell._recompute()
-                    # recompute_except_output(cell, **gradient_checkpointing_kwargs)
-        recompute_except_output(self.model.embed_tokens, **gradient_checkpointing_kwargs)
-        recompute_except_output(self.model.norm, **gradient_checkpointing_kwargs)
-
-        # visual encoders
+        # 1. visual encoders
         if hasattr(self.model, "vision_tower_aux_list"):
             for cell in self.model.vision_tower_aux_list:
                 recompute_except_output(cell, **gradient_checkpointing_kwargs)
 
-        # projector
+        # 2. mm projector and vision samplers
         if hasattr(self.model, "mm_projector"):
             recompute_except_output(self.model.mm_projector, **gradient_checkpointing_kwargs)
         if hasattr(self.model, "mm_projector_auxes"):
@@ -290,12 +276,28 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         if hasattr(self.model, "vision_samplers"):
             for cell in self.model.vision_samplers:
                 recompute_except_output(cell, **gradient_checkpointing_kwargs)
+
+        # 3. llama layers
+        from cambrian.transformers.models.llama.modeling_llama import LlamaRMSNorm, LlamaDecoderLayer
+        for decoder_layer in self.model.layers:
+            assert isinstance(decoder_layer, LlamaDecoderLayer)
+            for name, cell in decoder_layer.name_cells().items():
+                if "input_layernorm" in name:
+                    assert isinstance(cell, LlamaRMSNorm)
+                    pass
+                else:
+                    # cell._recompute()
+                    recompute_except_output(cell, **gradient_checkpointing_kwargs)
+        recompute_except_output(self.model.embed_tokens, **gradient_checkpointing_kwargs)
+        recompute_except_output(self.model.norm, **gradient_checkpointing_kwargs)
+
+        # 4. vision sampler layers
         if hasattr(self.model, "vision_sampler_layers"):
             for cell in self.model.vision_sampler_layers:
                 recompute_except_output(cell, **gradient_checkpointing_kwargs)
 
-        # cambrian head
-        recompute_except_output(self.lm_head, **gradient_checkpointing_kwargs)
+        # 5. cambrian head
+        # recompute_except_output(self.lm_head, **gradient_checkpointing_kwargs)
 
         logger.info(f"{self.__class__.__name__}: enable recompute done.")
 
