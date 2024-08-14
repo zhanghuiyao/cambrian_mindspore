@@ -466,8 +466,8 @@ LLAMA_ATTENTION_CLASSES = {
 
 class Identity(nn.Cell):
     def construct(self, x):
-        one = ops.ones((), x.dtype)
-        return x * one
+        zero = ops.zeros((), x.dtype)
+        return x + zero
 
 
 class LlamaDecoderLayer(nn.Cell):

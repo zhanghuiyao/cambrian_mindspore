@@ -220,7 +220,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         return gradients
 
     @ms.jit
-    def bak_construct(self, split_gradients):
+    def construct(self, split_gradients):
         gradients = split_gradients
         params = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), self._parameters)
         # gradients = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), gradients)
@@ -268,11 +268,10 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         return success
 
     @ms.jit
-    def construct(self, split_gradients):
+    def bak_split_construct(self, split_gradients):
         gradients = split_gradients
         # params = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), self._parameters)
         # gradients = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), gradients)
-        # params = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), self._parameters)
 
         gradients = self.flatten_gradients(gradients)
         weight_decay = self.get_weight_decay()
