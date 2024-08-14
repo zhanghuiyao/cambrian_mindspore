@@ -774,6 +774,31 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
     def get_decoder(self):
         return self.model
 
+    def gradient_checkpointing_enable(self, gradient_checkpointing_kwargs=None):
+        if gradient_checkpointing_kwargs is None:
+            # gradient_checkpointing_kwargs = {"mp_comm_recompute": True, "parallel_optimizer_comm_recompute": True}
+            gradient_checkpointing_kwargs = {}
+
+        from cambrian.mindspore_adapter import recompute_except_output
+
+        # llama layers
+        for decoder_layer in self.model.layers:
+            assert isinstance(decoder_layer, LlamaDecoderLayer)
+            for name, cell in decoder_layer.name_cells().items():
+                if "output_identity" in name:
+                    assert isinstance(cell, Identity)
+                    pass
+                else:
+                    # cell._recompute()
+                    recompute_except_output(cell, **gradient_checkpointing_kwargs)
+        recompute_except_output(self.model.embed_tokens, **gradient_checkpointing_kwargs)
+        recompute_except_output(self.model.norm, **gradient_checkpointing_kwargs)
+
+        # llama head
+        # recompute_except_output(self.lm_head, **gradient_checkpointing_kwargs)
+
+        logger.info(f"{self.__class__.__name__}: enable recompute done.")
+
     def construct(
         self,
         input_ids: Tensor = None,
