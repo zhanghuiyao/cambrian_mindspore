@@ -89,7 +89,12 @@ def test_llama3_causal(model_path: str, args):
             raise NotImplementedError
 
         model = NetWithLoss(model, out_feature_index=1)
-        train_model = TrainOneStepWrapper(model, optimizer)
+        train_model = TrainOneStepWrapper(
+            model,
+            optimizer,
+            clip_grad="global_norm",
+            clip_value=1.0
+        )
 
         if args.amp_level == "O2":
             from cambrian.mindspore_adapter.amp import auto_mixed_precision
