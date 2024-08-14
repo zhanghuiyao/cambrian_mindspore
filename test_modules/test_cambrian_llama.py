@@ -12,8 +12,17 @@ from cambrian.model.language_model.cambrian_llama import CambrianLlamaModel, Cam
 
 
 
-def test_cambrian_llama(model_path: str):
-    pass
+def test_generate_wo_image(model_path: str):
+    from transformers import AutoTokenizer
+
+    input_ids = np.random.randint(0, 10000, size=(1, 50))
+    tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
+    cambrian_llama_causal = CambrianLlamaForCausalLM.from_pretrained(model_path)
+
+    output_ids = cambrian_llama_causal.generate(input_ids)
+    outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
+
+    print(outputs)
 
 
 def test_cambrian_llama_causal(model_path: str, args):
@@ -35,7 +44,6 @@ def test_cambrian_llama_causal(model_path: str, args):
         kwargs.update({"attn_implementation": "flash_attention_2"})
     model = CambrianLlamaForCausalLM.from_pretrained(
         model_path,
-        mindspore_dtype=ms.float16,
         **kwargs
     )
     model.set_train()
@@ -70,8 +78,12 @@ def test_cambrian_llama_causal(model_path: str, args):
         elif args.optim.lower() == "zero2":
             from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO2
             optimizer = AdamWeightDecayZeRO2(model.trainable_params(), 1e-5, shard_size=args.shard_size)
-        else:
+        elif args.optim.lower() == "adamw":
             optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
+        elif args.optim.lower() == "sgd":
+            optimizer = nn.SGD(model.trainable_params(), 1e-5)
+        else:
+            raise NotImplementedError
 
         model = TrainWrapperForCambrianLlamaForCausalLM(model)
         train_model = TrainOneStepWrapper(model, optimizer)
@@ -98,7 +110,7 @@ def test_cambrian_llama_causal(model_path: str, args):
         print("Strat training...")
 
         s_time = time.time()
-        for step in range(10):
+        for step in range(1):
 
             temp_data_list = ()
             for k in model.input_keys:
@@ -111,20 +123,6 @@ def test_cambrian_llama_causal(model_path: str, args):
             loss, _, overflow = train_model(*temp_data_list)
             print(f"step: {step}, loss: {loss}, overflow: {overflow}, time cost: {time.time() - s_time:.2f}s")
             s_time = time.time()
-
-
-def test_generate_wo_image(model_path: str):
-    from transformers import AutoTokenizer
-
-    input_ids = np.random.randint(0, 10000, size=(1, 50))
-    tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
-    cambrian_llama_causal = CambrianLlamaForCausalLM.from_pretrained(model_path)
-
-    output_ids = cambrian_llama_causal.generate(input_ids)
-    outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
-
-    print(outputs)
-
 
 
 
@@ -153,6 +151,7 @@ if __name__ == '__main__':
     # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
     ms.set_context(mode=ms.GRAPH_MODE, device_target=args.device_target, jit_config = {"jit_level": "O0"})
     ms.set_context(max_device_memory=args.max_device_memory)
+    ms.set_context(memory_optimize_level="O0", pynative_synchronize=True)
 
     if args.is_distribute:
         from mindspore.communication.management import init, get_rank, get_group_size

@@ -27,7 +27,8 @@ def update_params(param, update, all_gather):
 @split_params.register("Number", "Number", "Tensor")
 def split_params(shard_id, shard_size, param):
     if param.shape[0] % shard_size == 0:
-        param = ops.Split(0, shard_size)(param)[shard_id]
+        # param = ops.Split(0, shard_size)(param)[shard_id]
+        param = ops.chunk(param, shard_size, axis=0)[shard_id]
     return param
 
 
