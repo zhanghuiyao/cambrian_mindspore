@@ -464,6 +464,12 @@ LLAMA_ATTENTION_CLASSES = {
 }
 
 
+class Identity(nn.Cell):
+    def construct(self, x):
+        one = ops.ones((), x.dtype)
+        return x * one
+
+
 class LlamaDecoderLayer(nn.Cell):
     def __init__(self, config: LlamaConfig, layer_idx: int):
         super().__init__()
@@ -477,8 +483,7 @@ class LlamaDecoderLayer(nn.Cell):
         self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-        self.residual_identity = nn.Identity()
-        self.output_identity = nn.Identity()
+        self.output_identity = Identity()
 
     def construct(
         self,
@@ -511,7 +516,7 @@ class LlamaDecoderLayer(nn.Cell):
                 into the model
         """
 
-        residual = self.residual_identity(hidden_states)
+        residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
 

@@ -9,6 +9,7 @@ from mindspore.ops import operations as P
 
 
 adamw_opt = ops.MultitypeFuncGraph("adamw_opt")
+adamw_opt_split = ops.MultitypeFuncGraph("adamw_opt_split")
 split_params = ops.MultitypeFuncGraph("split_params")
 update_params = ops.MultitypeFuncGraph("update_params")
 allreduce_and_split_op = ops.MultitypeFuncGraph("reduce_and_split_op")
@@ -38,6 +39,43 @@ def _adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay
     op_cast = P.Cast()
     op_reshape = P.Reshape()
     op_shape = P.Shape()
+    param_fp32 = op_cast(param, ms.float32)
+    m_fp32 = op_cast(m, ms.float32)
+    v_fp32 = op_cast(v, ms.float32)
+    gradient_fp32 = op_cast(gradient, ms.float32)
+
+    next_m = op_mul(beta1, m_fp32) + op_mul(op_cast(F.tuple_to_array((1.0,)), ms.float32) - beta1, gradient_fp32)
+
+    next_v = op_mul(beta2, v_fp32) + op_mul(
+        op_cast(F.tuple_to_array((1.0,)), ms.float32) - beta2, op_square(gradient_fp32)
+    )
+
+    update = next_m / (eps + op_sqrt(next_v))
+    if decay_flag:
+        update = op_mul(weight_decay, param_fp32) + update
+
+    update_with_lr = op_mul(lr, update)
+    next_param = param_fp32 - op_reshape(update_with_lr, op_shape(param_fp32))
+
+    # next_param = F.depend(next_param, F.assign(param, op_cast(next_param, F.dtype(param))))
+    next_param = F.depend(next_param, F.assign(m, op_cast(next_m, F.dtype(m))))
+    next_param = F.depend(next_param, F.assign(v, op_cast(next_v, F.dtype(v))))
+
+    return op_cast(next_param, F.dtype(param))
+
+
+@adamw_opt_split.register("Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool", "Number", "Number")
+def _adamw_opt_split(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay_flag, shard_id, shard_size):
+    op_mul = P.Mul()
+    op_square = P.Square()
+    op_sqrt = P.Sqrt()
+    op_cast = P.Cast()
+    op_reshape = P.Reshape()
+    op_shape = P.Shape()
+
+    if param.shape[0] % shard_size == 0:
+        param = ops.Split(0, shard_size)(param)[shard_id]
+
     param_fp32 = op_cast(param, ms.float32)
     m_fp32 = op_cast(m, ms.float32)
     v_fp32 = op_cast(v, ms.float32)
@@ -182,7 +220,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         return gradients
 
     @ms.jit
-    def construct(self, split_gradients):
+    def bak_construct(self, split_gradients):
         gradients = split_gradients
         params = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), self._parameters)
         # gradients = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), gradients)
@@ -223,6 +261,60 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
                 self.moments2,
                 gradients,
                 self.decay_flags,
+            )
+
+        success = self.hyper_map(update_params, self._parameters, optim_result, self.all_gather_ops)
+
+        return success
+
+    @ms.jit
+    def construct(self, split_gradients):
+        gradients = split_gradients
+        # params = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), self._parameters)
+        # gradients = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), gradients)
+        # params = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), self._parameters)
+
+        gradients = self.flatten_gradients(gradients)
+        weight_decay = self.get_weight_decay()
+        lr = self.get_lr()
+        self.assignadd(self.global_step, self.global_step_increase_tensor)
+
+        if self.is_group:
+            if self.is_group_lr:
+                optim_result = self.hyper_map(
+                    F.partial(adamw_opt_split, self.beta1, self.beta2, self.eps),
+                    lr,
+                    weight_decay,
+                    self._parameters,
+                    self.moments1,
+                    self.moments2,
+                    gradients,
+                    self.decay_flags,
+                    self.shard_id,
+                    self.shard_size
+                )
+            else:
+                optim_result = self.hyper_map(
+                    F.partial(adamw_opt_split, self.beta1, self.beta2, self.eps, lr),
+                    weight_decay,
+                    self._parameters,
+                    self.moments1,
+                    self.moments2,
+                    gradients,
+                    self.decay_flags,
+                    self.shard_id,
+                    self.shard_size
+                )
+        else:
+            optim_result = self.hyper_map(
+                F.partial(adamw_opt_split, self.beta1, self.beta2, self.eps, lr, weight_decay),
+                self._parameters,
+                self.moments1,
+                self.moments2,
+                gradients,
+                self.decay_flags,
+                self.shard_id,
+                self.shard_size
             )
 
         success = self.hyper_map(update_params, self._parameters, optim_result, self.all_gather_ops)
