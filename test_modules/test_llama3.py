@@ -63,7 +63,7 @@ def test_llama3_causal(model_path: str, args):
 
 
     if args.run_backward:
-        input_ids = Tensor(np.random.randint(0, 12000, size=(1, 2048)), dtype=ms.int32),
+        input_ids = Tensor(np.random.randint(0, 12000, size=(1, 2048)), dtype=ms.int32)
 
         if args.gradient_checkpointing:
             model.gradient_checkpointing_enable()
