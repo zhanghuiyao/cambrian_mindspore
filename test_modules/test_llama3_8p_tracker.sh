@@ -18,7 +18,7 @@ export MS_ALLOC_CONF="memory_tracker:True"  # enable_vmm:True
 
 
 # hyper-parameters
-task_name="logs_test_cambrian_llama_8p"
+task_name="logs_test_llama3_8p"
 output_dir=$task_name
 optim="zero2"
 
