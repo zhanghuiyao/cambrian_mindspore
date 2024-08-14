@@ -477,6 +477,9 @@ class LlamaDecoderLayer(nn.Cell):
         self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
+        self.residual_identity = nn.Identity()
+        self.output_identity = nn.Identity()
+
     def construct(
         self,
         hidden_states: Tensor,
@@ -508,7 +511,7 @@ class LlamaDecoderLayer(nn.Cell):
                 into the model
         """
 
-        residual = hidden_states
+        residual = self.residual_identity(hidden_states)
 
         hidden_states = self.input_layernorm(hidden_states)
 
@@ -532,10 +535,10 @@ class LlamaDecoderLayer(nn.Cell):
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 
+        hidden_states = self.output_identity(hidden_states)
+
         past_key_value = None if len(attn_output) == 1 else attn_output[1]
-
         outputs = (hidden_states,)
-
         if use_cache and past_key_value is not None:
             outputs += (past_key_value,)
 

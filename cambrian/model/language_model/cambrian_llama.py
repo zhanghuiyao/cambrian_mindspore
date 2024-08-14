@@ -282,9 +282,12 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         for decoder_layer in self.model.layers:
             assert isinstance(decoder_layer, LlamaDecoderLayer)
             for name, cell in decoder_layer.name_cells().items():
-                if "input_layernorm" in name:
-                    assert isinstance(cell, LlamaRMSNorm)
+                if isinstance(cell, nn.Identity):
+                    assert "_identity" in name
                     pass
+                # elif "input_layernorm" in name:
+                #     assert isinstance(cell, LlamaRMSNorm)
+                #     pass
                 else:
                     # cell._recompute()
                     recompute_except_output(cell, **gradient_checkpointing_kwargs)
