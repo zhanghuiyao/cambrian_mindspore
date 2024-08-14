@@ -86,7 +86,12 @@ def test_cambrian_llama_causal(model_path: str, args):
             raise NotImplementedError
 
         model = TrainWrapperForCambrianLlamaForCausalLM(model)
-        train_model = TrainOneStepWrapper(model, optimizer)
+        train_model = TrainOneStepWrapper(
+            model,
+            optimizer,
+            clip_grad="global_norm",
+            clip_value=1.0
+        )
 
         if args.amp_level == "O2":
             from cambrian.mindspore_adapter.amp import auto_mixed_precision
