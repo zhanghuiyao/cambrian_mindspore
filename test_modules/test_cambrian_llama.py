@@ -146,12 +146,14 @@ if __name__ == '__main__':
 
     parser.add_argument("--run_forward", type=ast.literal_eval, default=False)
     parser.add_argument("--run_backward", type=ast.literal_eval, default=True)
+    parser.add_argument("--enable_tracker", type=ast.literal_eval, default=False)
     args, _ = parser.parse_known_args()
 
     # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
     ms.set_context(mode=ms.GRAPH_MODE, device_target=args.device_target, jit_config = {"jit_level": "O0"})
     ms.set_context(max_device_memory=args.max_device_memory)
-    ms.set_context(memory_optimize_level="O0", pynative_synchronize=True)
+    if args.enable_tracker:
+        ms.set_context(memory_optimize_level="O0", pynative_synchronize=True)
 
     if args.is_distribute:
         from mindspore.communication.management import init, get_rank, get_group_size

@@ -1,13 +1,15 @@
 import argparse
 import time
+import numpy as np
 
 import mindspore as ms
-from mindspore import Tensor
+from mindspore import nn, ops, Tensor
+from cambrian.mindspore_adapter import TrainOneStepWrapper
 from cambrian.transformers.models.llama import LlamaModel, LlamaForCausalLM
+
 from transformers import AutoTokenizer
 
-
-from test_modules.build_train_network import build_train_net
+from test_modules.build_train_network import build_train_net, NetWithLoss
 
 
 def test_llama3(model_path: str):
@@ -34,13 +36,6 @@ def test_llama3(model_path: str):
 
 def test_llama3_causal(model_path: str, args):
 
-    print(f"=====> test_llama3_causal:")
-    print(f"=====> Building model...")
-
-    s_time = time.time()
-
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-
     kwargs = {}
     if args.enable_fa:
         kwargs.update({"attn_implementation": "flash_attention_2"})
@@ -48,18 +43,69 @@ def test_llama3_causal(model_path: str, args):
         model_path,
         **kwargs
     )
-    model.set_train()
 
-    print(f"=====> Building model done.")
+    if args.run_forward:
+        print("Test llama3-8b casual model, build forward model done.")
+        print("Strat inference...")
 
-    prompt = ["hello world.",]
-    input_ids = Tensor(tokenizer(prompt).input_ids, ms.int32)
+        model.set_train(False)
 
-    result = model(input_ids)
+        prompt = ["hello world.", ]
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        input_ids = Tensor(tokenizer(prompt).input_ids, ms.int32)
 
-    print(f"=====> input prompt: {prompt}")
-    print(f"=====> output result: {result}, time cost: {time.time() - s_time:.2f}s")
-    print(f"=====> Done.")
+        s_time = time.time()
+        for step in range(1):
+            result = model(input_ids)
+
+            print(f"step: {step}, forward output: {result}, time cost: {time.time() - s_time:.2f}s")
+            s_time = time.time()
+
+
+    if args.run_backward:
+        input_ids = Tensor(np.random.randint(0, 12000, size=(1, 2048)), dtype=ms.int32),
+
+        if args.gradient_checkpointing:
+            model.gradient_checkpointing_enable()
+
+        # FIXME: zhy_test
+        # 1. force_param_fp16
+        if args.force_param_fp16:
+            from cambrian.mindspore_adapter.amp import convert_module_param_to_fp16
+            model = convert_module_param_to_fp16(model, keep_norm_fp32=True)
+
+        # create optimizer
+        if args.optim.lower() == "zero1":
+            from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO1
+            optimizer = AdamWeightDecayZeRO1(model.trainable_params(), 1e-5, shard_size=args.shard_size)
+        elif args.optim.lower() == "zero2":
+            from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO2
+            optimizer = AdamWeightDecayZeRO2(model.trainable_params(), 1e-5, shard_size=args.shard_size)
+        elif args.optim.lower() == "adamw":
+            optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
+        elif args.optim.lower() == "sgd":
+            optimizer = nn.SGD(model.trainable_params(), 1e-5)
+        else:
+            raise NotImplementedError
+
+        model = NetWithLoss(model, out_feature_index=1)
+        train_model = TrainOneStepWrapper(model, optimizer)
+
+        if args.amp_level == "O2":
+            from cambrian.mindspore_adapter.amp import auto_mixed_precision
+            train_model = auto_mixed_precision(train_model, amp_level=args.amp_level, dtype=ms.float16)
+
+        model.set_train()
+        train_model.set_train()
+
+        print("Test llama3-8b casual model, build train model done.")
+        print("Strat training...")
+
+        s_time = time.time()
+        for step in range(1):
+            loss, _, overflow = train_model(input_ids)
+            print(f"step: {step}, loss: {loss}, overflow: {overflow}, time cost: {time.time() - s_time:.2f}s")
+            s_time = time.time()
 
 
 def test_llama3_generate(model_path: str):
@@ -131,13 +177,15 @@ if __name__ == '__main__':
 
     parser.add_argument("--run_forward", type=ast.literal_eval, default=False)
     parser.add_argument("--run_backward", type=ast.literal_eval, default=True)
+    parser.add_argument("--enable_tracker", type=ast.literal_eval, default=False)
     args, _ = parser.parse_known_args()
 
 
     # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
     ms.set_context(mode=ms.GRAPH_MODE, device_target=args.device_target, jit_config={"jit_level": "O0"})
     ms.set_context(max_device_memory=args.max_device_memory)
-
+    if args.enable_tracker:
+        ms.set_context(memory_optimize_level="O0", pynative_synchronize=True)
 
     if args.is_distribute:
         from mindspore.communication.management import init, get_rank, get_group_size
@@ -154,6 +202,6 @@ if __name__ == '__main__':
 
 
     # test_llama3(args.model_path)
-    test_llama3_causal(args.model_path, args)
     # test_llama3_generate(args.model_path)
     # test_llama3_causal_bp(args.model_path)
+    test_llama3_causal(args.model_path, args)
