@@ -65,7 +65,7 @@ def _adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay
 
 
 @adamw_opt_split.register("Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool", "Number", "Number")
-def _adamw_opt_split(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay_flag, shard_id, shard_size):
+def _adamw_opt_split(shard_id, shard_size, beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay_flag):
     op_mul = P.Mul()
     op_square = P.Square()
     op_sqrt = P.Sqrt()
@@ -282,7 +282,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         if self.is_group:
             if self.is_group_lr:
                 optim_result = self.hyper_map(
-                    F.partial(adamw_opt_split, self.beta1, self.beta2, self.eps),
+                    F.partial(adamw_opt_split, self.shard_id, self.shard_size, self.beta1, self.beta2, self.eps),
                     lr,
                     weight_decay,
                     self._parameters,
@@ -290,31 +290,25 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
                     self.moments2,
                     gradients,
                     self.decay_flags,
-                    self.shard_id,
-                    self.shard_size
                 )
             else:
                 optim_result = self.hyper_map(
-                    F.partial(adamw_opt_split, self.beta1, self.beta2, self.eps, lr),
+                    F.partial(adamw_opt_split, self.shard_id, self.shard_size, self.beta1, self.beta2, self.eps, lr),
                     weight_decay,
                     self._parameters,
                     self.moments1,
                     self.moments2,
                     gradients,
                     self.decay_flags,
-                    self.shard_id,
-                    self.shard_size
                 )
         else:
             optim_result = self.hyper_map(
-                F.partial(adamw_opt_split, self.beta1, self.beta2, self.eps, lr, weight_decay),
+                F.partial(adamw_opt_split, self.shard_id, self.shard_size, self.beta1, self.beta2, self.eps, lr, weight_decay),
                 self._parameters,
                 self.moments1,
                 self.moments2,
                 gradients,
                 self.decay_flags,
-                self.shard_id,
-                self.shard_size
             )
 
         success = self.hyper_map(update_params, self._parameters, optim_result, self.all_gather_ops)
