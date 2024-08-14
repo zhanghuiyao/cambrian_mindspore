@@ -98,7 +98,7 @@ class CLIPConvNextTower(BaseVisionTower):
             self._hidden_size = sum([stage['num_chs'] for stage in feature_info])
         else:
             self._hidden_size = feature_info[-1]['num_chs']
-        self.vision_tower.requires_grad = self.unfreeze_mm_vision_tower
+        self.requires_grad = self.unfreeze_mm_vision_tower
         self.is_loaded = True
 
     def interpolate(self, image_forward_outs):

@@ -116,7 +116,7 @@ class DinoVisionTower(BaseVisionTower):
 
         #print(self._hidden_size, self._patch_size)
 
-        self.vision_tower.requires_grad = self.unfreeze_mm_vision_tower
+        self.requires_grad = self.unfreeze_mm_vision_tower
         self.is_loaded = True
 
     @property

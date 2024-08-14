@@ -68,7 +68,7 @@ class SiglipVisionTower(ClipVisionTower):
         self._patch_size = self.vision_tower.patch_embed.patch_size[0]
         self.image_processor = ProcessorWrapper(processor, height=self._image_size, width=self._image_size)
 
-        self.vision_tower.requires_grad = self.unfreeze_mm_vision_tower
+        self.requires_grad = self.unfreeze_mm_vision_tower
         self.is_loaded = True
 
     def interpolate(self, image_features):
