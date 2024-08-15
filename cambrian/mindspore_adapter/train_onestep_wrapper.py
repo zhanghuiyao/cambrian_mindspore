@@ -197,8 +197,6 @@ class TrainOneStepWrapper(nn.Cell):
         finite = ops.equal(self.all_finite_reducer(finite.to(ms.int32)),
                            self.all_finite_reducer(ops.ones((), ms.int32))).to(ms.bool_)
         finite = ops.depend(finite, self.scaler.adjust(finite)).to(ms.bool_)
-        #
-        # finite = ops.ones((), ms.bool_)
 
         if not self.drop_overflow_step:
             loss = self.do_optim(loss, unscaled_grads)
@@ -207,8 +205,9 @@ class TrainOneStepWrapper(nn.Cell):
             if finite:
                 loss = self.do_optim(loss, unscaled_grads)
                 loss = loss.to(ms.float32)
-            # else:
-            #     loss = loss.to(ms.float32)
+            else:
+                # FIXME: has bug when run amp fp16 on MindSpore 2.3
+                loss = loss.to(ms.float32)
 
         overflow_tag = not finite
 

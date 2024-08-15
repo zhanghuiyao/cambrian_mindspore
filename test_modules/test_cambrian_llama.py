@@ -78,7 +78,7 @@ def test_cambrian_llama_causal(model_path: str, args):
         print("Strat inference...")
 
         s_time = time.time()
-        for step in range(1):
+        for step in range(args.run_steps):
             out = model(**temp_data)
             print(f"step: {step}, forward output: {out[0]}, time cost: {time.time() - s_time:.2f}s")
             s_time = time.time()
@@ -138,7 +138,7 @@ def test_cambrian_llama_causal(model_path: str, args):
         print("Strat training...")
 
         s_time = time.time()
-        for step in range(1):
+        for step in range(args.run_steps):
 
             temp_data_list = ()
             for k in model.input_keys:
@@ -175,6 +175,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--run_forward", type=ast.literal_eval, default=False)
     parser.add_argument("--run_backward", type=ast.literal_eval, default=True)
+    parser.add_argument("--run_steps", type=int, default=1)
 
     parser.add_argument("--save_graphs", type=ast.literal_eval, default=False)
     parser.add_argument("--enable_tracker", type=ast.literal_eval, default=False)
