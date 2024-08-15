@@ -69,7 +69,7 @@ def test_llama3_causal(model_path: str, args):
             model.gradient_checkpointing_enable()
 
         # FIXME: zhy_test
-        # 1. force_param_fp16
+        # 1. force param fp16
         if args.force_param_fp16:
             from cambrian.mindspore_adapter.amp import convert_module_param_to_fp16
             model = convert_module_param_to_fp16(model, keep_norm_fp32=True)
@@ -82,7 +82,9 @@ def test_llama3_causal(model_path: str, args):
             from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO2
             optimizer = AdamWeightDecayZeRO2(model.trainable_params(), 1e-5, shard_size=args.shard_size)
         elif args.optim.lower() == "adamw":
-            optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
+            from cambrian.mindspore_adapter.adamw import AdamWeightDecay
+            # optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
+            optimizer = AdamWeightDecay(model.trainable_params(), 1e-5)
         elif args.optim.lower() == "sgd":
             optimizer = nn.SGD(model.trainable_params(), 1e-5)
         else:
