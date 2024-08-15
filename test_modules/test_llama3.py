@@ -55,7 +55,7 @@ def test_llama3_causal(model_path: str, args):
         input_ids = Tensor(tokenizer(prompt).input_ids, ms.int32)
 
         s_time = time.time()
-        for step in range(1):
+        for step in range(args.run_steps):
             result = model(input_ids)
 
             print(f"step: {step}, forward output: {result}, time cost: {time.time() - s_time:.2f}s")
@@ -109,7 +109,7 @@ def test_llama3_causal(model_path: str, args):
         print("Strat training...")
 
         s_time = time.time()
-        for step in range(1):
+        for step in range(args.run_steps):
             loss, _, overflow = train_model(input_ids)
             print(f"step: {step}, loss: {loss}, overflow: {overflow}, time cost: {time.time() - s_time:.2f}s")
             s_time = time.time()
@@ -184,6 +184,8 @@ if __name__ == '__main__':
 
     parser.add_argument("--run_forward", type=ast.literal_eval, default=False)
     parser.add_argument("--run_backward", type=ast.literal_eval, default=True)
+    parser.add_argument("--run_steps", type=int, default=1)
+
     parser.add_argument("--enable_tracker", type=ast.literal_eval, default=False)
     args, _ = parser.parse_known_args()
 

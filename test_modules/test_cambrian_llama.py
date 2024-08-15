@@ -137,16 +137,16 @@ def test_cambrian_llama_causal(model_path: str, args):
         print("Test cambrian-8b casual model, build train model done.")
         print("Strat training...")
 
+        temp_data_list = ()
+        for k in model.input_keys:
+            v = temp_data[k]
+            if isinstance(v, (list, tuple)):
+                temp_data_list += (*v,)
+            else:
+                temp_data_list += (v,)
+
         s_time = time.time()
         for step in range(args.run_steps):
-
-            temp_data_list = ()
-            for k in model.input_keys:
-                v = temp_data[k]
-                if isinstance(v, (list, tuple)):
-                    temp_data_list += (*v,)
-                else:
-                    temp_data_list += (v,)
 
             loss, _, overflow = train_model(*temp_data_list)
             print(f"step: {step}, loss: {loss}, overflow: {overflow}, time cost: {time.time() - s_time:.2f}s")
