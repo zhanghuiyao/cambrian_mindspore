@@ -84,7 +84,7 @@ class TrainOneStepWrapper(nn.Cell):
         scaler: str = "default",
         scaler_config: Dict = {},
         gradient_accumulation_steps: int = 1,
-        clip_grad: str = "norm",
+        clip_grad: str = "none",
         clip_value: float = 1.0,
     ):
         super().__init__(auto_prefix=False)
@@ -135,6 +135,7 @@ class TrainOneStepWrapper(nn.Cell):
             from cambrian.mindspore_adapter.clip_grad import clip_grad_global as clip_grad_global_
             clip_grad_fn = clip_grad_global_
         elif clip_grad.lower() in ("local", "local_norm", "norm"):
+            # FIXME, level 1, high memory usage, resolve it by llama3-8b
             from cambrian.mindspore_adapter.clip_grad import clip_grad as clip_grad_
             clip_grad_fn = clip_grad_
         elif clip_grad.lower() == "none":
