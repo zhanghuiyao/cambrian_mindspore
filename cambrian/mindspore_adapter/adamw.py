@@ -64,8 +64,6 @@ class AdamWeightDecay(nn.Optimizer):
         for p in params:
             new = p.clone(init)
             new.name = prefix + "." + p.name
-            setattr(p, "split_op", False)
-            print(f"[WARNING] Split {new.name} fail, keep ori shape.")
             news.append(new)
         return ParameterTuple(news)
 
