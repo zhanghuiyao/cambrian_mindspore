@@ -181,55 +181,6 @@ class TrainOneStepWrapper(nn.Cell):
 
         return loss
 
-    def bak_construct(
-            self,
-            input_ids: Tensor = None,
-            attention_mask: Optional[Tensor] = None,
-            position_ids: Optional[Tensor] = None,
-            labels: Optional[Tensor] = None,
-            images: Optional[Tensor] = None,
-            image_aux_attention_masks_list: Optional[List[Tensor]] = None,
-    ):
-        # zhy_test
-        loss = self.network(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            position_ids=position_ids,
-            labels=labels,
-            images=images,
-            image_aux_attention_masks_list=image_aux_attention_masks_list,
-        )
-        grads = self.grad_fn(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            position_ids=position_ids,
-            labels=labels,
-            images=images,
-            image_aux_attention_masks_list=image_aux_attention_masks_list,
-        )
-        if self.run_optimizer_reduce:
-            grads = self.optimizer.grad_reduce(grads)
-        else:
-            grads = self.reducer(grads)
-
-        # zhy_test
-        # unscaled_grads = self.scaler.unscale(grads)
-        unscaled_grads = grads
-
-        finite = self.all_finite(unscaled_grads)
-        finite = ops.equal(self.all_finite_reducer(finite.astype(ms.int32)),
-                           self.all_finite_reducer(ops.ones((), ms.int32)))
-
-        if not self.drop_overflow_step:
-            loss = self.do_optim(loss, unscaled_grads)
-        else:
-            if finite:
-                loss = self.do_optim(loss, unscaled_grads)
-
-        overflow_tag = not finite
-        return self.scaler.unscale(loss), unscaled_grads, overflow_tag
-
-
     def construct(self, *inputs):
         loss = self.network(*inputs)
 

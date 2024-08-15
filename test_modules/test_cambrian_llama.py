@@ -113,7 +113,7 @@ def test_cambrian_llama_causal(model_path: str, args):
         train_model = TrainOneStepWrapper(
             model,
             optimizer,
-            clip_grad="none",
+            clip_grad="global_norm",
             clip_value=1.0
         )
 

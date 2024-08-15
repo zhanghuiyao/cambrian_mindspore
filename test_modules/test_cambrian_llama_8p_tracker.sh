@@ -38,5 +38,6 @@ python test_modules/test_cambrian_llama.py \
     --shard_size $device_num \
     \
     --enable_tracker True \
+    --num_vision_tower 4 \
     \
     > .log_msrun.txt 2>&1 &

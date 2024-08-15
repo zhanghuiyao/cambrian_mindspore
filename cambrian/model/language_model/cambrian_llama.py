@@ -357,19 +357,11 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             )
             input_ids = None
 
-
-            # # FIXME: level 0, zhy_test
-            # inputs_embeds = ops.stop_gradient(inputs_embeds)
-            # vision_tower_aux_feature_list = ops.stop_gradient(vision_tower_aux_feature_list)
-            # global_context_feature = ops.stop_gradient(global_context_feature)
-            #
             position_ids = ops.stop_gradient(position_ids)
             attention_mask = ops.stop_gradient(attention_mask)
             labels = ops.stop_gradient(labels)
             vision_tower_aux_attention_masks_list = ops.stop_gradient(vision_tower_aux_attention_masks_list)
             final_vision_feature_size = ops.stop_gradient(final_vision_feature_size)
-
-
 
         # training
         if self.training:
