@@ -8,9 +8,9 @@ export GLOG_v=2
 
 
 # hyper-parameters
-data_path="/Users/zhanghuiyao/Desktop/cambrian_mindspore/demo/toy-dataset/alignment_2.5m.jsonl"  #  e.g. Cambrian7M_withsystemprompt.jsonl
-model_name_or_path="/Users/zhanghuiyao/Desktop/cambrian_mindspore/cambrian/hf-configs/nyu-visionx-cambrian-8b"
-image_folder="/Users/zhanghuiyao/Desktop/cambrian_mindspore/demo/toy-dataset/images_from_coco"
+data_path="./demo/toy-dataset/alignment_2.5m.jsonl"  #  e.g. Cambrian7M_withsystemprompt.jsonl
+model_name_or_path="./cambrian/hf-configs/nyu-visionx-cambrian-8b"
+image_folder="./demo/toy-dataset/images_from_coco"
 enable_flash_attention="False"
 per_device_train_batch_size=1
 
