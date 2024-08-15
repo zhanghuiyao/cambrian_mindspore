@@ -28,7 +28,7 @@ python cambrian/train/train.py \
     --data_path $data_path \
     --image_folder $image_folder \
     --vision_tower_aux_list '["siglip/CLIP-ViT-SO400M-14-384", "openai/clip-vit-large-patch14-336", "facebook/dinov2-giant-res378", "clip-convnext-XXL-multi-stage"]' \
-    --vision_tower_aux_token_len_list '[576]' \
+    --vision_tower_aux_token_len_list '[576, 576, 576, 9216]' \
     --image_token_len 576 \
     --num_query_group 1 \
     --query_num_list '[576]' \
@@ -72,7 +72,7 @@ python cambrian/train/train.py \
     --adamw_zero_shard_size $adamw_zero_shard_size \
     \
     --save_safetensors False \
-    --device_target CPU \
+    --device_target Ascend \
     --dataloader_num_workers 1 \
 
     # --pretrain_mm_mlp_adapter $pretrain_mm_mlp_adapter \
