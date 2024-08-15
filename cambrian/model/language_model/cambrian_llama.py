@@ -285,7 +285,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                     recompute_except_output(sub_cell, **gradient_checkpointing_kwargs)
         if hasattr(self.model, "vision_samplers"):
             for vision_sampler in self.model.vision_samplers:
-                for cell in vision_sampler.name_cells().items():
+                for _, cell in vision_sampler.name_cells().items():
                     recompute_except_output(cell, **gradient_checkpointing_kwargs)
 
         # 3. llama layers
