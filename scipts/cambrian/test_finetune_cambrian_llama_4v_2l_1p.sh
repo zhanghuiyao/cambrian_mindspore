@@ -14,7 +14,8 @@ image_folder="./demo/toy-dataset/images_from_coco"
 enable_flash_attention="False"
 per_device_train_batch_size=1
 
-optim="adamw_zero2_mindspore"
+#optim="adamw_zero2_mindspore"
+optim="adamw_mindspore"
 adamw_zero_shard_size=8
 
 task_name="cambrian-8b-finetune"
