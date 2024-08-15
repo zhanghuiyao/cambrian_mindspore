@@ -205,6 +205,8 @@ class TrainOneStepWrapper(nn.Cell):
         else:
             if finite:
                 loss = self.do_optim(loss, unscaled_grads)
+            else:
+                loss = ops.depend(loss, finite)
 
         overflow_tag = not finite
 
