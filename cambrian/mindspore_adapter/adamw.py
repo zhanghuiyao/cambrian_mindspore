@@ -1,8 +1,7 @@
 import numpy as np
 
 import mindspore as ms
-from mindspore import ParameterTuple, Tensor, nn, ops, context
-from mindspore.communication.management import get_group_size, get_rank
+from mindspore import ParameterTuple, Tensor, nn, ops
 from mindspore.ops import functional as F
 from mindspore.ops import operations as P
 
@@ -54,28 +53,11 @@ def update_params(param, update):
 class AdamWeightDecay(nn.Optimizer):
     def __init__(self, params, learning_rate=1e-3, beta1=0.9, beta2=0.999, eps=1e-6, weight_decay=0.0):
         super(AdamWeightDecay, self).__init__(learning_rate, params, weight_decay)
-        self.map = ops.Map()
-        self.rank = get_rank()
-        self.group_size = get_group_size()
-
         self.beta1 = Tensor(np.array([beta1]).astype(np.float32))
         self.beta2 = Tensor(np.array([beta2]).astype(np.float32))
         self.eps = Tensor(np.array([eps]).astype(np.float32))
         self.moments1 = self._param_init_op(self._parameters, prefix="adam_m", init="zeros")
         self.moments2 = self._param_init_op(self._parameters, prefix="adam_v", init="zeros")
-
-        self.all_reduce_op = ops.AllReduce()
-        self.mean = context.get_auto_parallel_context("gradients_mean")
-        self.degree = context.get_auto_parallel_context("device_num")
-        self.degree = 1. / self.degree
-
-        total_num = len(self.all_gather_ops)
-        split_num = sum([1 for _op in self.all_gather_ops if isinstance(_op, ops.AllGather)])
-        unsplit_num = total_num - split_num
-        print(
-            f"WARNING: {self.__class__.__name__}, total param num: {total_num}, "
-            f"split num: {split_num}, unsplit num: {unsplit_num}"
-        )
 
     def _param_init_op(self, params, prefix, init="zeros"):
         news = []
