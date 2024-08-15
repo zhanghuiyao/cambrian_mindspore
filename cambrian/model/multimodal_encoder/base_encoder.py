@@ -41,6 +41,8 @@ class BaseVisionTower(nn.Cell):
         logger.warning(f"Unfreezing MM Vision Tower: {self.unfreeze_mm_vision_tower}")
         self.delay_load = delay_load
 
+        self.output_identity = nn.Identity()
+
     @abstractmethod
     def load_model(self):
         raise NotImplementedError("Subclasses must implement load_model")
@@ -57,6 +59,8 @@ class BaseVisionTower(nn.Cell):
             ]
         else:
             image_features = self._forward(images)
+
+        image_features = self.output_identity(image_features)
 
         return image_features
 

@@ -182,7 +182,6 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         )
         return gradients
 
-    @ms.jit
     def construct(self, split_gradients):
         gradients = split_gradients
         params = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), self._parameters)

@@ -361,7 +361,6 @@ class CambrianMetaForCausalLM:
         return self.prepare_inputs_labels_for_multimodal(input_ids, position_ids, attention_mask, labels,
                                                          images, image_aux_attention_masks_list, image_sizes)
 
-    @ms.jit
     def prepare_inputs_labels_for_multimodal(
         self, input_ids, position_ids, attention_mask, labels,
         images, image_aux_attention_masks_list=None, image_sizes=None
@@ -512,17 +511,21 @@ class CambrianMetaForCausalLM:
             new_input_embeds = []
             cur_image_idx = 0
 
-            assert len(image_features) == len(input_ids)
-
             # insert the image embeddings
-            for batch_idx, (cur_input_embeds, cur_input_ids) in enumerate(zip(input_embeds, input_ids)):
-                num_images = (cur_input_ids == IMAGE_TOKEN_INDEX).sum()
-                if num_images == 0:
-                    cur_image_idx += 1
-                    new_input_embeds.append(cur_input_embeds)
-                    continue
+            for batch_idx in range(input_embeds.shape[0]):
+                cur_input_embeds = input_embeds[batch_idx]
+                cur_input_ids = input_ids[batch_idx]
+                ori_input_embeds = cur_input_embeds[:]
+
+                num_images = ops.equal(cur_input_ids, IMAGE_TOKEN_INDEX).to(ms.int32).sum()
+                has_images = ops.greater(num_images, 0)
+                # if num_images == 0:
+                #     cur_image_idx += 1
+                #     new_input_embeds.append(cur_input_embeds)
+                #     continue
 
                 # 1 image
+                cur_image_idx = batch_idx
                 cur_image_features = image_features[cur_image_idx]
                 _index_table = ops.range(0, len(cur_input_ids), 1)
                 _index_table = ops.masked_fill(_index_table,
@@ -531,12 +534,10 @@ class CambrianMetaForCausalLM:
                 _img_indexes_topk = ops.topk(_index_table, 1)[0]
                 _img_indexes = ops.range(0, len(cur_image_features), 1) + _img_indexes_topk[0]
 
-                # 1.
-                # _img_indexes = ops.broadcast_to(_img_indexes[None, :], (-1, cur_input_embeds.shape[-1]))
-                # new_input_embed = ops.scatter(cur_input_embeds, 0, _img_indexes, cur_image_features)
-                # 2.
                 cur_input_embeds[_img_indexes, :] = cur_image_features
                 new_input_embed = cur_input_embeds
+
+                new_input_embed = ops.select(has_images, new_input_embed, ori_input_embeds)
 
                 new_input_embeds.append(new_input_embed)
 

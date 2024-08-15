@@ -264,18 +264,29 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
         # 1. visual encoders
         if hasattr(self.model, "vision_tower_aux_list"):
-            for cell in self.model.vision_tower_aux_list:
-                recompute_except_output(cell, **gradient_checkpointing_kwargs)
+            for vision_tower in self.model.vision_tower_aux_list:
+                for name, cell in vision_tower.name_cells().items():
+                    if "output_identity" in name:
+                        assert isinstance(cell, nn.Identity)
+                        continue
+                    else:
+                        recompute_except_output(cell, **gradient_checkpointing_kwargs)
 
         # 2. mm projector and vision samplers
         if hasattr(self.model, "mm_projector"):
-            recompute_except_output(self.model.mm_projector, **gradient_checkpointing_kwargs)
+            if isinstance(self.model.mm_projector, nn.SequentialCell):
+                for cell in self.model.mm_projector.cell_list[:-1]:
+                    recompute_except_output(cell)
+            else:
+                recompute_except_output(self.model.mm_projector, **gradient_checkpointing_kwargs)
         if hasattr(self.model, "mm_projector_auxes"):
             for cell in self.model.mm_projector_auxes:
-                recompute_except_output(cell, **gradient_checkpointing_kwargs)
+                for sub_cell in cell.cell_list[:-1]:
+                    recompute_except_output(sub_cell, **gradient_checkpointing_kwargs)
         if hasattr(self.model, "vision_samplers"):
-            for cell in self.model.vision_samplers:
-                recompute_except_output(cell, **gradient_checkpointing_kwargs)
+            for vision_sampler in self.model.vision_samplers:
+                for cell in vision_sampler.name_cells().items():
+                    recompute_except_output(cell, **gradient_checkpointing_kwargs)
 
         # 3. llama layers
         from cambrian.transformers.models.llama.modeling_llama import Identity, LlamaDecoderLayer
@@ -284,10 +295,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             for name, cell in decoder_layer.name_cells().items():
                 if "output_identity" in name:
                     assert isinstance(cell, Identity)
-                    pass
-                # elif "input_layernorm" in name:
-                #     assert isinstance(cell, LlamaRMSNorm)
-                #     pass
+                    continue
                 else:
                     # cell._recompute()
                     recompute_except_output(cell, **gradient_checkpointing_kwargs)
