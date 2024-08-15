@@ -1,8 +1,9 @@
 #!/bin/bash
 
 export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
-#export ASCEND_RT_VISIBLE_DEVICES=4,5,6,7
 device_num=8
+# export ASCEND_RT_VISIBLE_DEVICES=4,5,6,7
+# device_num=4
 
 export MS_ENABLE_NUMA=0
 export GLOG_v=2
@@ -21,6 +22,7 @@ export MS_ALLOC_CONF="memory_tracker:True"  # enable_vmm:True
 task_name="logs_test_cambrian_llama_8p"
 output_dir=$task_name
 optim="zero2"
+num_vision_tower=4
 
 master_port=9001
 
@@ -38,6 +40,6 @@ python test_modules/test_cambrian_llama.py \
     --shard_size $device_num \
     \
     --enable_tracker True \
-    --num_vision_tower 4 \
+    --num_vision_tower $num_vision_tower \
     \
     > .log_msrun.txt 2>&1 &
