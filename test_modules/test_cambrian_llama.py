@@ -150,9 +150,8 @@ def test_cambrian_llama_causal(model_path: str, args):
 
             # loss, _, overflow = train_model(*temp_data_list)
             loss, _, overflow = train_model(
-                temp_data["input_ids"], temp_data["attention_mask"], temp_data["position_ids"],
-                temp_data["labels"], temp_data["images"],
-                temp_data["image_aux_attention_masks_list"],
+                temp_data["input_ids"], temp_data["attention_mask"], temp_data["position_ids"], temp_data["labels"],
+                temp_data["images"][0], temp_data["image_aux_attention_masks_list"][0],
             )
 
             print(f"step: {step}, loss: {loss}, overflow: {overflow}, time cost: {time.time() - s_time:.2f}s")
