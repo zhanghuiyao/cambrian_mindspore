@@ -7,11 +7,11 @@ from mindspore.ops import operations as P
 
 
 update_params = ops.MultitypeFuncGraph("update_params")
-adamw_opt = ops.MultitypeFuncGraph("adamw_opt")
+# adamw_opt = ops.MultitypeFuncGraph("adamw_opt")
 fused_adam_weight_decay = ops.MultitypeFuncGraph("fused_adam_weight_decay")
 
 
-@adamw_opt.register("Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool")
+# @adamw_opt.register("Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool")
 def _adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay_flag):
     op_mul = P.Mul()
     op_square = P.Square()
@@ -162,7 +162,7 @@ class AdamWeightDecay(nn.Optimizer):
                 if self.is_group_lr:
 
                     for i in range(len(gradients)):
-                        result = adamw_opt(
+                        result = _adamw_opt(
                             self.beta1, self.beta2, self.eps,
                             lr[i],
                             weight_decay[i],
@@ -177,7 +177,7 @@ class AdamWeightDecay(nn.Optimizer):
                         success += (_success,)
                 else:
                     for i in range(len(gradients)):
-                        result = adamw_opt(
+                        result = _adamw_opt(
                             self.beta1, self.beta2, self.eps, lr,
                             weight_decay[i],
                             self._parameters[i],
@@ -191,7 +191,7 @@ class AdamWeightDecay(nn.Optimizer):
                         success += (_success,)
             else:
                 for i in range(len(gradients)):
-                    result = adamw_opt(
+                    result = _adamw_opt(
                         self.beta1, self.beta2, self.eps, lr, weight_decay,
                         self._parameters[i],
                         self.moments1[i],
