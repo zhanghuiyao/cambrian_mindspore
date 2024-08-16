@@ -73,7 +73,7 @@ def update_params(param, update):
 
 
 class AdamWeightDecay(nn.Optimizer):
-    def __init__(self, params, learning_rate=1e-3, beta1=0.9, beta2=0.999, eps=1e-6, weight_decay=0.0, enable_fuse=True):
+    def __init__(self, params, learning_rate=1e-3, beta1=0.9, beta2=0.999, eps=1e-6, weight_decay=0.0, enable_fuse=False):
         super(AdamWeightDecay, self).__init__(learning_rate, params, weight_decay)
         self.beta1 = Tensor(np.array([beta1]).astype(np.float32))
         self.beta2 = Tensor(np.array([beta2]).astype(np.float32))
@@ -86,7 +86,8 @@ class AdamWeightDecay(nn.Optimizer):
             self.fused_opt = ops.AdamWeightDecay()
         else:
             # FIXME: level 3
-            raise ValueError("BUG: Can't run second step on MindSpore 2.3")
+            # raise ValueError("BUG: Can't run second step on MindSpore 2.3")
+            pass
 
     def _param_init_op(self, params, prefix, init="zeros"):
         news = []
@@ -124,38 +125,82 @@ class AdamWeightDecay(nn.Optimizer):
 
         else:
 
+            # if self.is_group:
+            #     if self.is_group_lr:
+            #         optim_result = self.hyper_map_reverse(
+            #             F.partial(adamw_opt, self.beta1, self.beta2, self.eps),
+            #             lr,
+            #             weight_decay,
+            #             self._parameters,
+            #             self.moments1,
+            #             self.moments2,
+            #             gradients,
+            #             self.decay_flags,
+            #         )
+            #     else:
+            #         optim_result = self.hyper_map_reverse(
+            #             F.partial(adamw_opt, self.beta1, self.beta2, self.eps, lr),
+            #             weight_decay,
+            #             self._parameters,
+            #             self.moments1,
+            #             self.moments2,
+            #             gradients,
+            #             self.decay_flags,
+            #         )
+            # else:
+            #     optim_result = self.hyper_map_reverse(
+            #         F.partial(adamw_opt, self.beta1, self.beta2, self.eps, lr, weight_decay),
+            #         self._parameters,
+            #         self.moments1,
+            #         self.moments2,
+            #         gradients,
+            #         self.decay_flags,
+            #     )
+
+            success = ()
             if self.is_group:
                 if self.is_group_lr:
-                    optim_result = self.hyper_map_reverse(
-                        F.partial(adamw_opt, self.beta1, self.beta2, self.eps),
-                        lr,
-                        weight_decay,
-                        self._parameters,
-                        self.moments1,
-                        self.moments2,
-                        gradients,
-                        self.decay_flags,
-                    )
-                else:
-                    optim_result = self.hyper_map_reverse(
-                        F.partial(adamw_opt, self.beta1, self.beta2, self.eps, lr),
-                        weight_decay,
-                        self._parameters,
-                        self.moments1,
-                        self.moments2,
-                        gradients,
-                        self.decay_flags,
-                    )
-            else:
-                optim_result = self.hyper_map_reverse(
-                    F.partial(adamw_opt, self.beta1, self.beta2, self.eps, lr, weight_decay),
-                    self._parameters,
-                    self.moments1,
-                    self.moments2,
-                    gradients,
-                    self.decay_flags,
-                )
 
-            success = self.hyper_map(update_params, self._parameters, optim_result)
+                    for i in range(len(gradients)):
+                        result = adamw_opt(
+                            self.beta1, self.beta2, self.eps,
+                            lr[i],
+                            weight_decay[i],
+                            self._parameters[i],
+                            self.moments1[i],
+                            self.moments2[i],
+                            gradients[i],
+                            self.decay_flags[i],
+                        )
+                        _success = ops.logical_not(ops.isnan(result))
+                        _success = ops.depend(_success, ops.assign(self._parameters, result))
+                        success += (_success,)
+                else:
+                    for i in range(len(gradients)):
+                        result = adamw_opt(
+                            self.beta1, self.beta2, self.eps, lr,
+                            weight_decay[i],
+                            self._parameters[i],
+                            self.moments1[i],
+                            self.moments2[i],
+                            gradients[i],
+                            self.decay_flags[i],
+                        )
+                        _success = ops.logical_not(ops.isnan(result))
+                        _success = ops.depend(_success, ops.assign(self._parameters, result))
+                        success += (_success,)
+            else:
+                for i in range(len(gradients)):
+                    result = adamw_opt(
+                        self.beta1, self.beta2, self.eps, lr, weight_decay,
+                        self._parameters[i],
+                        self.moments1[i],
+                        self.moments2[i],
+                        gradients[i],
+                        self.decay_flags[i],
+                    )
+                    _success = ops.logical_not(ops.isnan(result))
+                    _success = ops.depend(_success, ops.assign(self._parameters, result))
+                    success += (_success,)
 
         return success
