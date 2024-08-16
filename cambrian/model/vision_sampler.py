@@ -57,9 +57,9 @@ class CrossAttention(nn.Cell):
         # SDPA with memory-efficient backend is currently (torch==2.1.2) bugged with non-contiguous inputs with custom attn_mask,
         # Reference: https://github.com/pytorch/pytorch/issues/112577.
         if attention_mask is not None:
-            query_states = query_states.contiguous()
-            key_states = key_states.contiguous()
-            value_states = value_states.contiguous()
+            query_states = query_states
+            key_states = key_states
+            value_states = value_states
 
         attn_output = scaled_dot_product_attention(
             query_states,
@@ -68,7 +68,7 @@ class CrossAttention(nn.Cell):
             attn_mask=attention_mask,
         )
 
-        attn_output = attn_output.swapdims(1, 2).contiguous()
+        attn_output = attn_output.swapdims(1, 2)
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_dim)
 
         attn_output = self.o_proj(attn_output)
@@ -197,9 +197,9 @@ class MultiKVCrossAttention(nn.Cell):
             assert attention_mask.shape == (bsz, 1, q_len, v_len)
 
         if attention_mask is not None:
-            query_states = query_states.contiguous()
-            key_states = key_states.contiguous()
-            value_states = value_states.contiguous()
+            query_states = query_states
+            key_states = key_states
+            value_states = value_states
 
         attn_output = scaled_dot_product_attention(
             query_states,
@@ -208,7 +208,7 @@ class MultiKVCrossAttention(nn.Cell):
             attn_mask=attention_mask,
         )
 
-        attn_output = attn_output.swapdims(1, 2).contiguous()
+        attn_output = attn_output.swapdims(1, 2)
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_dim)
 
         attn_output = self.o_proj(attn_output)

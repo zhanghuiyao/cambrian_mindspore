@@ -176,7 +176,7 @@ class Dinov2SelfAttention(nn.Cell):
 
         context_layer = ops.matmul(attention_probs, value_layer)
 
-        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
+        context_layer = context_layer.permute(0, 2, 1, 3)
         new_context_layer_shape = tuple(context_layer.shape[:-2]) + (self.all_head_size,)
         context_layer = context_layer.view(new_context_layer_shape)
 

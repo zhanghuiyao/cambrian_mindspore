@@ -385,7 +385,7 @@ class VisionTransformer(nn.Cell):
         if reshape:
             grid_size = self.patch_embed.grid_size
             outputs = [
-                out.reshape(x.shape[0], grid_size[0], grid_size[1], -1).permute(0, 3, 1, 2).contiguous()
+                out.reshape(x.shape[0], grid_size[0], grid_size[1], -1).permute(0, 3, 1, 2)
                 for out in outputs
             ]
 

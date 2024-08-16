@@ -148,7 +148,7 @@ class DinoVisionTower(BaseVisionTower):
             h = w = int(num_tokens ** 0.5)
 
             image_features = image_features.view(b, h, w, dim)
-            image_features = image_features.permute(0, 3, 1, 2).contiguous()
+            image_features = image_features.permute(0, 3, 1, 2)
 
             image_features = ops.interpolate(
                 image_features.to(ms.float32),
@@ -158,7 +158,7 @@ class DinoVisionTower(BaseVisionTower):
             ).to(image_features.dtype)
 
             # Permute the dimensions back to (b, target_h, target_w, dim)
-            image_features = image_features.permute(0, 2, 3, 1).contiguous()
+            image_features = image_features.permute(0, 2, 3, 1)
 
             # Flatten the spatial dimensions (target_h, target_w) into a single dimension
             image_features = image_features.flatten(start_dim=1, end_dim=2)

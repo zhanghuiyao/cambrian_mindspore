@@ -26,8 +26,8 @@ class LabelSmoother:
     def __call__(self, model_output: Dict, labels: Tensor, shift_labels: bool = False):
         logits = model_output["logits"] if isinstance(model_output, dict) else model_output[0]
         if shift_labels:
-            logits = logits[..., :-1, :].contiguous()
-            labels = labels[..., 1:].contiguous()
+            logits = logits[..., :-1, :]
+            labels = labels[..., 1:]
 
         log_probs = -ops.log_softmax(logits, axis=-1)
         if labels.ndim == log_probs.ndim - 1:

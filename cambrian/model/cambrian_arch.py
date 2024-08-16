@@ -285,7 +285,7 @@ class CambrianMetaForCausalLM:
 
             reduce_factor = (aux_height//query_side_len)
             vision_tower_aux_feature_rearranged = vision_tower_aux_feature.view(bs, query_side_len, reduce_factor, query_side_len, reduce_factor, -1)
-            vision_tower_aux_feature_rearranged = vision_tower_aux_feature_rearranged.permute(0, 1, 3, 2, 4, 5).contiguous().flatten(start_dim=0, end_dim=2).flatten(start_dim=1, end_dim=2)
+            vision_tower_aux_feature_rearranged = vision_tower_aux_feature_rearranged.permute(0, 1, 3, 2, 4, 5).flatten(start_dim=0, end_dim=2).flatten(start_dim=1, end_dim=2)
 
             vision_tower_aux_attention_masks_rearranged = vision_tower_aux_attention_masks.view(bs * query_side_len * query_side_len, reduce_factor * reduce_factor)
 
@@ -311,13 +311,13 @@ class CambrianMetaForCausalLM:
 
                 cur_vision_tower_aux_attention_masks_rearranged = ops.ones((1, aux_height, aux_width), dtype=ms.bool_)
                 cur_vision_tower_aux_feature_rearranged = cur_vision_tower_aux_feature.view(1, query_side_len, reduce_factor, query_side_len, reduce_factor, -1)
-                cur_vision_tower_aux_feature_rearranged = cur_vision_tower_aux_feature_rearranged.permute(0, 1, 3, 2, 4, 5).contiguous()
+                cur_vision_tower_aux_feature_rearranged = cur_vision_tower_aux_feature_rearranged.permute(0, 1, 3, 2, 4, 5)
                 if unpad:
                     cur_vision_tower_aux_feature_rearranged = unpad_image(cur_vision_tower_aux_feature_rearranged, image_size)
                 cur_vision_tower_aux_feature_rearranged = cur_vision_tower_aux_feature_rearranged.flatten(start_dim=0, end_dim=2).flatten(start_dim=1, end_dim=2) # query_side_len*query_side_len X reduce_factor*reduce_factor X C
 
                 cur_vision_tower_aux_attention_masks_rearranged = unmask_attention_mask(cur_vision_tower_aux_attention_masks_rearranged, image_size)
-                cur_vision_tower_aux_attention_masks_rearranged = cur_vision_tower_aux_attention_masks_rearranged.view(1, query_side_len, reduce_factor, query_side_len, reduce_factor).permute(0, 1, 3, 2, 4).contiguous()
+                cur_vision_tower_aux_attention_masks_rearranged = cur_vision_tower_aux_attention_masks_rearranged.view(1, query_side_len, reduce_factor, query_side_len, reduce_factor).permute(0, 1, 3, 2, 4)
                 if unpad:
                     cur_vision_tower_aux_attention_masks_rearranged = unpad_image(cur_vision_tower_aux_attention_masks_rearranged, image_size)
                 cur_vision_tower_aux_attention_masks_rearranged = cur_vision_tower_aux_attention_masks_rearranged.flatten(start_dim=0, end_dim=2).flatten(start_dim=1, end_dim=2)
@@ -433,14 +433,14 @@ class CambrianMetaForCausalLM:
                 query_features_i = query_features_i.view(bs, query_num, -1)
                 # interpolate to the final target size
                 if query_side_len != final_height:
-                    query_features_i = query_features_i.permute(0, 2, 1).contiguous().view(bs, -1, query_side_len, query_side_len)
+                    query_features_i = query_features_i.permute(0, 2, 1).view(bs, -1, query_side_len, query_side_len)
                     query_features_i = ops.interpolate(
                         query_features_i.to(ms.float32),
                         size=(final_height, final_width),
                         mode='bilinear',
                         align_corners=False
                     ).to(dtype=query_features_i.dtype)
-                    query_features_i = query_features_i.permute(0, 2, 3, 1).contiguous().flatten(start_dim=1, end_dim=2)
+                    query_features_i = query_features_i.permute(0, 2, 3, 1).flatten(start_dim=1, end_dim=2)
                 final_image_features_list.append(query_features_i)
 
             if self.training:

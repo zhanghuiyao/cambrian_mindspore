@@ -167,7 +167,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                             cur_newline_embd = cur_latent_query_with_newline[:, :, -1:, :]
 
                             latent_query_num_list.append(cur_latent_query_num)
-                            latent_query_list.append(cur_latent_query.contiguous().view(cur_latent_query_num, 1, -1))
+                            latent_query_list.append(cur_latent_query.view(cur_latent_query_num, 1, -1))
                             newline_embd_list.append(cur_newline_embd)
 
                         latent_query = ops.cat(latent_query_list, 0)
@@ -433,8 +433,8 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         loss = ops.zeros((), dtype=logits.dtype)
         if labels is not None:
             # Shift so that tokens < n predict n
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
+            shift_logits = logits[..., :-1, :]
+            shift_labels = labels[..., 1:]
             # Flatten the tokens
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)

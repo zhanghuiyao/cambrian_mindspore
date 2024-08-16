@@ -120,7 +120,7 @@ class CLIPConvNextTower(BaseVisionTower):
             mode='bilinear',
             align_corners=False
         ).to(dtype=image_forward_outs.dtype)
-        image_features = image_features.flatten(start_dim=2, end_dim=3).permute(0, 2, 1).contiguous()
+        image_features = image_features.flatten(start_dim=2, end_dim=3).permute(0, 2, 1)
         return image_features
 
     def _forward(self, images):

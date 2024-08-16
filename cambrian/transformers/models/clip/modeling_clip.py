@@ -34,7 +34,7 @@ class CLIPAttention(nn.Cell):
         self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapdims(1, 2).contiguous()
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapdims(1, 2)
 
     def construct(
         self,
