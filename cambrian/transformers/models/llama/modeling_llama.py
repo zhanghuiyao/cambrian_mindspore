@@ -464,12 +464,6 @@ LLAMA_ATTENTION_CLASSES = {
 }
 
 
-# class Identity(nn.Cell):
-#     def construct(self, x):
-#         zero = ops.zeros((), x.dtype)
-#         return x + zero
-
-
 class LlamaDecoderLayer(nn.Cell):
     def __init__(self, config: LlamaConfig, layer_idx: int):
         super().__init__()
@@ -786,7 +780,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             assert isinstance(decoder_layer, LlamaDecoderLayer)
             for name, cell in decoder_layer.name_cells().items():
                 if "output_identity" in name:
-                    # assert isinstance(cell, Identity)
                     assert isinstance(cell, nn.Identity)
                     pass
                 else:

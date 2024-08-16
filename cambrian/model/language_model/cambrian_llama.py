@@ -289,12 +289,12 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                     recompute_except_output(cell, **gradient_checkpointing_kwargs)
 
         # 3. llama layers
-        from cambrian.transformers.models.llama.modeling_llama import Identity, LlamaDecoderLayer
+        from cambrian.transformers.models.llama.modeling_llama import LlamaDecoderLayer
         for decoder_layer in self.model.layers:
             assert isinstance(decoder_layer, LlamaDecoderLayer)
             for name, cell in decoder_layer.name_cells().items():
                 if "output_identity" in name:
-                    assert isinstance(cell, Identity)
+                    assert isinstance(cell, nn.Identity)
                     continue
                 else:
                     # cell._recompute()
