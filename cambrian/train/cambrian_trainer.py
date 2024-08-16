@@ -104,8 +104,6 @@ class CambrianTrainer(Trainer):
         train_model = model
         train_model.set_train(True)
 
-        import pdb;pdb.set_trace()
-
         # inputs to tensor
         inputs = self._prepare_inputs(inputs)
 

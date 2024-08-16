@@ -17,6 +17,7 @@ task_name="logs_test_cambrian_llama_8p"
 output_dir=$task_name
 optim="zero2"
 num_vision_tower=4
+force_param_fp16=True
 
 master_port=9001
 
@@ -28,7 +29,7 @@ python test_modules/test_cambrian_llama.py \
     --max_device_memory 59GB \
     --enable_fa True \
     --amp_level O2 \
-    --force_param_fp16 True \
+    --force_param_fp16 $force_param_fp16 \
     --gradient_checkpointing True \
     --optim $optim \
     --shard_size $device_num \
