@@ -104,7 +104,7 @@ def test_cambrian_llama_causal(model_path: str, args):
         elif args.optim.lower() == "adamw":
             from cambrian.mindspore_adapter.adamw import AdamWeightDecay
             # optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
-            optimizer = AdamWeightDecay(model.trainable_params(), 1e-5)
+            optimizer = AdamWeightDecay(model.trainable_params(), 1e-5, enable_fuse=args.enable_fuse)
         elif args.optim.lower() == "sgd":
             optimizer = nn.SGD(model.trainable_params(), 1e-5)
         else:
@@ -173,6 +173,7 @@ if __name__ == '__main__':
     parser.add_argument("--optim", type=str, default="adamw")
     parser.add_argument("--shard_size", type=int, default=8)
     parser.add_argument("--drop_overflow_step", type=ast.literal_eval, default=True)
+    parser.add_argument("--enable_fuse", type=ast.literal_eval, default=False)
 
     parser.add_argument("--run_forward", type=ast.literal_eval, default=False)
     parser.add_argument("--run_backward", type=ast.literal_eval, default=True)
