@@ -160,7 +160,6 @@ class AdamWeightDecay(nn.Optimizer):
             success = ()
             if self.is_group:
                 if self.is_group_lr:
-
                     for i in range(len(gradients)):
                         result = _adamw_opt(
                             self.beta1, self.beta2, self.eps,
@@ -173,7 +172,7 @@ class AdamWeightDecay(nn.Optimizer):
                             self.decay_flags[i],
                         )
                         _success = ops.logical_not(ops.isnan(result))
-                        _success = ops.depend(_success, ops.assign(self._parameters, result))
+                        _success = ops.depend(_success, ops.assign(self._parameters[i], result))
                         success += (_success,)
                 else:
                     for i in range(len(gradients)):
@@ -187,7 +186,7 @@ class AdamWeightDecay(nn.Optimizer):
                             self.decay_flags[i],
                         )
                         _success = ops.logical_not(ops.isnan(result))
-                        _success = ops.depend(_success, ops.assign(self._parameters, result))
+                        _success = ops.depend(_success, ops.assign(self._parameters[i], result))
                         success += (_success,)
             else:
                 for i in range(len(gradients)):
@@ -200,7 +199,7 @@ class AdamWeightDecay(nn.Optimizer):
                         self.decay_flags[i],
                     )
                     _success = ops.logical_not(ops.isnan(result))
-                    _success = ops.depend(_success, ops.assign(self._parameters, result))
+                    _success = ops.depend(_success, ops.assign(self._parameters[i], result))
                     success += (_success,)
 
         return success
