@@ -43,6 +43,7 @@ def _bak_adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, d
     return op_cast(next_param, F.dtype(param))
 
 
+@ms.jit
 @adamw_opt.register("Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool")
 def _adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay_flag):
     # op_mul = P.Mul()
@@ -109,7 +110,7 @@ class AdamWeightDecay(nn.Optimizer):
 
         if self.is_group:
             if self.is_group_lr:
-                optim_result = self.hyper_map(
+                optim_result = self.hyper_map_reverse(
                     F.partial(adamw_opt, self.beta1, self.beta2, self.eps),
                     lr,
                     weight_decay,
@@ -120,7 +121,7 @@ class AdamWeightDecay(nn.Optimizer):
                     self.decay_flags,
                 )
             else:
-                optim_result = self.hyper_map(
+                optim_result = self.hyper_map_reverse(
                     F.partial(adamw_opt, self.beta1, self.beta2, self.eps, lr),
                     weight_decay,
                     self._parameters,
@@ -130,7 +131,7 @@ class AdamWeightDecay(nn.Optimizer):
                     self.decay_flags,
                 )
         else:
-            optim_result = self.hyper_map(
+            optim_result = self.hyper_map_reverse(
                 F.partial(adamw_opt, self.beta1, self.beta2, self.eps, lr, weight_decay),
                 self._parameters,
                 self.moments1,
