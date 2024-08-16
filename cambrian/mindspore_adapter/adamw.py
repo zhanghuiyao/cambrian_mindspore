@@ -10,8 +10,8 @@ update_params = ops.MultitypeFuncGraph("update_params")
 adamw_opt = ops.MultitypeFuncGraph("adamw_opt")
 
 
-@adamw_opt.register("Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool")
-def _adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay_flag):
+# @adamw_opt.register("Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool")
+def _bak_adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay_flag):
     op_mul = P.Mul()
     op_square = P.Square()
     op_sqrt = P.Sqrt()
@@ -41,6 +41,39 @@ def _adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay
     next_param = F.depend(next_param, F.assign(v, op_cast(next_v, F.dtype(v))))
 
     return op_cast(next_param, F.dtype(param))
+
+
+@adamw_opt.register("Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool")
+def _adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay_flag):
+    # op_mul = P.Mul()
+    # op_square = P.Square()
+    # op_sqrt = P.Sqrt()
+    # op_cast = P.Cast()
+    # op_reshape = P.Reshape()
+    # op_shape = P.Shape()
+    param_fp32 = ops.cast(param, ms.float32)
+    m_fp32 = ops.cast(m, ms.float32)
+    v_fp32 = ops.cast(v, ms.float32)
+    gradient_fp32 = ops.cast(gradient, ms.float32)
+
+    next_m = ops.mul(beta1, m_fp32) + ops.mul(ops.cast(F.tuple_to_array((1.0,)), ms.float32) - beta1, gradient_fp32)
+
+    next_v = ops.mul(beta2, v_fp32) + ops.mul(
+        ops.cast(F.tuple_to_array((1.0,)), ms.float32) - beta2, ops.square(gradient_fp32)
+    )
+
+    update = next_m / (eps + ops.sqrt(next_v))
+    if decay_flag:
+        update = ops.mul(weight_decay, param_fp32) + update
+
+    update_with_lr = ops.mul(lr, update)
+    next_param = param_fp32 - ops.reshape(update_with_lr, param_fp32.shape)
+
+    # next_param = F.depend(next_param, F.assign(param, ops.cast(next_param, F.dtype(param))))
+    next_param = F.depend(next_param, F.assign(m, ops.cast(next_m, F.dtype(m))))
+    next_param = F.depend(next_param, F.assign(v, ops.cast(next_v, F.dtype(v))))
+
+    return ops.cast(next_param, F.dtype(param))
 
 
 @update_params.register("Tensor", "Tensor")
