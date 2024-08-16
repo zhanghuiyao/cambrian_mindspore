@@ -139,10 +139,12 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
             news.append(new)
         return ParameterTuple(news)
 
+    @ms.jit
     def grad_reduce(self, grads):
         mean, degree, shard_id, shard_size = self.mean, self.degree, self.shard_id, self.shard_size
         return self.grad_allreduce_and_split(mean, degree, shard_id, shard_size, grads)
 
+    @ms.jit
     def grad_allreduce_and_split(self, mean, degree, shard_id, shard_size, gradients):
         gradients = ops.HyperMap()(
             F.partial(allreduce_and_split_op, degree, mean, self.all_reduce_op, shard_id, shard_size),
@@ -150,6 +152,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         )
         return gradients
 
+    @ms.jit
     def construct(self, split_gradients):
         gradients = split_gradients
         params = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), self._parameters)

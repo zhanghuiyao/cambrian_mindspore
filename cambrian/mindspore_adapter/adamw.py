@@ -67,6 +67,7 @@ class AdamWeightDecay(nn.Optimizer):
             news.append(new)
         return ParameterTuple(news)
 
+    @ms.jit
     def construct(self, gradients):
         gradients = self.flatten_gradients(gradients)
         weight_decay = self.get_weight_decay()
