@@ -8,10 +8,11 @@ from mindspore.ops import operations as P
 
 update_params = ops.MultitypeFuncGraph("update_params")
 adamw_opt = ops.MultitypeFuncGraph("adamw_opt")
+fused_adam_weight_decay = ops.MultitypeFuncGraph("fused_adam_weight_decay")
 
 
-# @adamw_opt.register("Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool")
-def _bak_adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay_flag):
+@adamw_opt.register("Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool")
+def _adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay_flag):
     op_mul = P.Mul()
     op_square = P.Square()
     op_sqrt = P.Sqrt()
@@ -43,38 +44,25 @@ def _bak_adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, d
     return op_cast(next_param, F.dtype(param))
 
 
-@ms.jit
-@adamw_opt.register("Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Bool")
-def _adamw_opt(beta1, beta2, eps, lr, weight_decay, param, m, v, gradient, decay_flag):
-    # op_mul = P.Mul()
-    # op_square = P.Square()
-    # op_sqrt = P.Sqrt()
-    # op_cast = P.Cast()
-    # op_reshape = P.Reshape()
-    # op_shape = P.Shape()
-    param_fp32 = ops.cast(param, ms.float32)
-    m_fp32 = ops.cast(m, ms.float32)
-    v_fp32 = ops.cast(v, ms.float32)
-    gradient_fp32 = ops.cast(gradient, ms.float32)
+@fused_adam_weight_decay.register("Function", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor", "Tensor",
+                                   "Tensor", "Tensor", "Bool", "Bool")
+def _run_fused_adam_weight_decay_opt(opt, beta1, beta2, eps, lr, weight_decay, param, moment1, moment2, gradient,
+                                     decay_flags, optim_filter):
+    """Apply FusedAdamWeightDecay optimizer to the weight parameter using Tensor."""
 
-    next_m = ops.mul(beta1, m_fp32) + ops.mul(ops.cast(F.tuple_to_array((1.0,)), ms.float32) - beta1, gradient_fp32)
+    beta1 = ops.cast(beta1, ms.float32)
+    beta2 = ops.cast(beta2, ms.float32)
+    eps = ops.cast(eps, ms.float32)
+    lr = ops.cast(lr, ms.float32)
+    weight_decay = ops.cast(weight_decay, ms.float32)
 
-    next_v = ops.mul(beta2, v_fp32) + ops.mul(
-        ops.cast(F.tuple_to_array((1.0,)), ms.float32) - beta2, ops.square(gradient_fp32)
-    )
+    if optim_filter:
+        if decay_flags:
+            opt(param, moment1, moment2, lr, beta1, beta2, eps, weight_decay, P.Cast()(gradient, F.dtype(param)))
+        else:
+            opt(param, moment1, moment2, lr, beta1, beta2, eps, 0.0, P.Cast()(gradient, F.dtype(param)))
 
-    update = next_m / (eps + ops.sqrt(next_v))
-    if decay_flag:
-        update = ops.mul(weight_decay, param_fp32) + update
-
-    update_with_lr = ops.mul(lr, update)
-    next_param = param_fp32 - ops.reshape(update_with_lr, param_fp32.shape)
-
-    # next_param = F.depend(next_param, F.assign(param, ops.cast(next_param, F.dtype(param))))
-    next_param = F.depend(next_param, F.assign(m, ops.cast(next_m, F.dtype(m))))
-    next_param = F.depend(next_param, F.assign(v, ops.cast(next_v, F.dtype(v))))
-
-    return ops.cast(next_param, F.dtype(param))
+    return True
 
 
 @update_params.register("Tensor", "Tensor")
@@ -85,13 +73,20 @@ def update_params(param, update):
 
 
 class AdamWeightDecay(nn.Optimizer):
-    def __init__(self, params, learning_rate=1e-3, beta1=0.9, beta2=0.999, eps=1e-6, weight_decay=0.0):
+    def __init__(self, params, learning_rate=1e-3, beta1=0.9, beta2=0.999, eps=1e-6, weight_decay=0.0, enable_fuse=True):
         super(AdamWeightDecay, self).__init__(learning_rate, params, weight_decay)
         self.beta1 = Tensor(np.array([beta1]).astype(np.float32))
         self.beta2 = Tensor(np.array([beta2]).astype(np.float32))
         self.eps = Tensor(np.array([eps]).astype(np.float32))
         self.moments1 = self._param_init_op(self._parameters, prefix="adam_m", init="zeros")
         self.moments2 = self._param_init_op(self._parameters, prefix="adam_v", init="zeros")
+
+        self.enable_fuse = enable_fuse
+        if self.enable_fuse:
+            self.fused_opt = ops.AdamWeightDecay()
+        else:
+            # FIXME: level 3
+            raise ValueError("BUG: Can't run second step on MindSpore 2.3")
 
     def _param_init_op(self, params, prefix, init="zeros"):
         news = []
@@ -108,38 +103,59 @@ class AdamWeightDecay(nn.Optimizer):
         lr = self.get_lr()
         self.assignadd(self.global_step, self.global_step_increase_tensor)
 
-        if self.is_group:
-            if self.is_group_lr:
-                optim_result = self.hyper_map_reverse(
-                    F.partial(adamw_opt, self.beta1, self.beta2, self.eps),
-                    lr,
-                    weight_decay,
-                    self._parameters,
-                    self.moments1,
-                    self.moments2,
-                    gradients,
-                    self.decay_flags,
-                )
+        if self.enable_fuse:
+            if self.is_group:
+                if self.is_group_lr:
+                    success = self.hyper_map(
+                        F.partial(fused_adam_weight_decay, self.fused_opt, self.beta1, self.beta2, self.eps),
+                        lr, weight_decay, self._parameters, self.moments1,
+                        self.moments2, gradients, self.decay_flags, self.optim_filter)
+                else:
+                    success = self.hyper_map(
+                        F.partial(fused_adam_weight_decay, self.fused_opt, self.beta1, self.beta2, self.eps, lr),
+                        weight_decay, self._parameters, self.moments1, self.moments2,
+                        gradients, self.decay_flags, self.optim_filter)
+            else:
+                success = self.hyper_map(
+                    F.partial(fused_adam_weight_decay, self.fused_opt, self.beta1, self.beta2, self.eps, lr,
+                              weight_decay),
+                    self._parameters, self.moments1, self.moments2,
+                    gradients, self.decay_flags, self.optim_filter)
+
+        else:
+
+            if self.is_group:
+                if self.is_group_lr:
+                    optim_result = self.hyper_map_reverse(
+                        F.partial(adamw_opt, self.beta1, self.beta2, self.eps),
+                        lr,
+                        weight_decay,
+                        self._parameters,
+                        self.moments1,
+                        self.moments2,
+                        gradients,
+                        self.decay_flags,
+                    )
+                else:
+                    optim_result = self.hyper_map_reverse(
+                        F.partial(adamw_opt, self.beta1, self.beta2, self.eps, lr),
+                        weight_decay,
+                        self._parameters,
+                        self.moments1,
+                        self.moments2,
+                        gradients,
+                        self.decay_flags,
+                    )
             else:
                 optim_result = self.hyper_map_reverse(
-                    F.partial(adamw_opt, self.beta1, self.beta2, self.eps, lr),
-                    weight_decay,
+                    F.partial(adamw_opt, self.beta1, self.beta2, self.eps, lr, weight_decay),
                     self._parameters,
                     self.moments1,
                     self.moments2,
                     gradients,
                     self.decay_flags,
                 )
-        else:
-            optim_result = self.hyper_map_reverse(
-                F.partial(adamw_opt, self.beta1, self.beta2, self.eps, lr, weight_decay),
-                self._parameters,
-                self.moments1,
-                self.moments2,
-                gradients,
-                self.decay_flags,
-            )
 
-        success = self.hyper_map(update_params, self._parameters, optim_result)
+            success = self.hyper_map(update_params, self._parameters, optim_result)
 
         return success
