@@ -114,6 +114,7 @@ def test_cambrian_llama_causal(model_path: str, args):
         train_model = TrainOneStepWrapper(
             model,
             optimizer,
+            drop_overflow_step=args.drop_overflow_step,
             clip_grad="global_norm",
             clip_value=1.0
         )
@@ -171,6 +172,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--optim", type=str, default="adamw")
     parser.add_argument("--shard_size", type=int, default=8)
+    parser.add_argument("--drop_overflow_step", type=ast.literal_eval, default=True)
 
     parser.add_argument("--run_forward", type=ast.literal_eval, default=False)
     parser.add_argument("--run_backward", type=ast.literal_eval, default=True)
