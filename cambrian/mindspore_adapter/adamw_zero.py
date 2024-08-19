@@ -99,6 +99,10 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         self.beta1 = Tensor(np.array([beta1]).astype(np.float32))
         self.beta2 = Tensor(np.array([beta2]).astype(np.float32))
         self.eps = Tensor(np.array([eps]).astype(np.float32))
+
+        for _p in self._parameters:
+            print(f"p.name: {_p.name}, type(p): {type(_p)}")
+
         self.moments1 = self._param_init_op(self._parameters, prefix="adam_m", init="zeros", dtype=momentum_dtype)
         self.moments2 = self._param_init_op(self._parameters, prefix="adam_v", init="zeros", dtype=momentum_dtype)
         self.all_gather_ops = self._init_all_gather_ops(self._parameters, group=comm_group)
