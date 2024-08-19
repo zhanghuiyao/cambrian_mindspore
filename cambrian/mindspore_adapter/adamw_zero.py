@@ -101,8 +101,8 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         self.beta2 = Tensor(np.array([beta2]).astype(np.float32))
         self.eps = Tensor(np.array([eps]).astype(np.float32))
 
-        self.moments1 = self._param_init_op(self._parameters, prefix="adam_m", init="zeros", dtype=momentum_dtype)
-        self.moments2 = self._param_init_op(self._parameters, prefix="adam_v", init="zeros", dtype=momentum_dtype)
+        self.moments1 = self._param_init_op(self._parameters, prefix="adam_m", init="zeros")
+        self.moments2 = self._param_init_op(self._parameters, prefix="adam_v", init="zeros")
         self.all_gather_ops = self._init_all_gather_ops(self._parameters, group=comm_group)
 
         self.all_reduce_op = ops.AllReduce()
@@ -123,6 +123,12 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
             self.fused_opt = ops.AdamWeightDecay()
             self._split_parameters = self._param_init_op(self._parameters, prefix="adam_split_p", init="same", dtype=momentum_dtype)
 
+        if momentum_dtype is not None:
+            self.convert_momentum_dtype(self.moments1, momentum_dtype)
+            self.convert_momentum_dtype(self.moments2, momentum_dtype)
+            if self.enable_fuse:
+                self.convert_momentum_dtype(self._split_parameters, momentum_dtype)
+
     def _init_all_gather_ops(self, params, group):
         op_list = []
         for x in params:
@@ -132,7 +138,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
                 op_list.append(ops.identity)
         return tuple(op_list)
 
-    def _param_init_op(self, params, prefix, init="zeros", dtype=None):
+    def _param_init_op(self, params, prefix, init="zeros"):
         news = []
         for p in params:
             s = p.shape
@@ -153,15 +159,16 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
                 setattr(p, "split_op", False)
                 print(f"[WARNING] Split {new.name} fail, keep ori shape.")
 
-            if dtype is not None and new.dtype != dtype:
-                new.set_dtype(dtype)
-
             if not isinstance(new, ms.Parameter):
                 print(f"p.name: {p.name}, type(p): {type(p)}, p.shape: {p.shape}, type(new): {type(new)}")
 
             news.append(new)
 
         return ParameterTuple(news)
+
+    def convert_momentum_dtype(self, momentum_list, dtype=ms.float32):
+        for p in momentum_list:
+            p.set_dtype(dtype)
 
     @ms.jit
     def grad_reduce(self, grads):
