@@ -139,12 +139,13 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
                 s = list(s)
                 s[0] = s[0] // self.shard_size
                 s = tuple(s)
-                if init == "same":
-                    _new = p.clone(init)
-                    new = ops.chunk(_new, self.shard_size, axis=0)[self.shard_id]
-                    new.name = prefix + "." + p.name
-                else:
-                    new = ms.Parameter(initializer(init, shape=s, dtype=p.dtype), name=prefix + "." + p.name)
+                # if init == "same":
+                #     _new = p.clone(init)
+                #     new = ops.chunk(_new, self.shard_size, axis=0)[self.shard_id]
+                #     new.name = prefix + "." + p.name
+                # else:
+                #     new = ms.Parameter(initializer(init, shape=s, dtype=p.dtype), name=prefix + "." + p.name)
+                new = ms.Parameter(initializer(init, shape=s, dtype=p.dtype), name=prefix + "." + p.name)
                 setattr(p, "split_op", True)
             else:
                 new = p.clone(init)
