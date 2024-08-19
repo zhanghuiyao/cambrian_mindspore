@@ -121,7 +121,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         self.enable_fuse = enable_fuse
         if self.enable_fuse:
             self.fused_opt = ops.AdamWeightDecay()
-            self._split_parameters = self._param_init_op(self._parameters, prefix="adam_split_p", init="same", dtype=momentum_dtype)
+            self._split_parameters = self._param_init_op(self._parameters, prefix="adam_split_p", init="same")
 
         if momentum_dtype is not None:
             self.convert_momentum_dtype(self.moments1, momentum_dtype)
