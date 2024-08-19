@@ -123,6 +123,11 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
             self.fused_opt = ops.AdamWeightDecay()
             self._split_parameters = self._param_init_op(self._parameters, prefix="adam_split_p", init="same", dtype=momentum_dtype)
 
+            if momentum_dtype == ms.float16:
+                print(f"[ERROR] {self.__class__.__name__}, momentum dtype fp16, may cause `sdma error` on MindSpore 2.3.0")
+        else:
+            print(f"[ERROR] {self.__class__.__name__}, custom optimizer, may cause `memory leakage` on MindSpore 2.3.0")
+
     def _init_all_gather_ops(self, params, group):
         op_list = []
         for x in params:

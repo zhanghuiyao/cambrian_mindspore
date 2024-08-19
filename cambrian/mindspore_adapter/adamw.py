@@ -84,12 +84,11 @@ class AdamWeightDecay(nn.Optimizer):
 
         self.enable_fuse = enable_fuse
         if self.enable_fuse:
-            # FIXME: level 3, b
             self.fused_opt = ops.AdamWeightDecay()
+            if params[0].dtype == ms.float16:
+                print(f"[ERROR] {self.__class__.__name__}, param dtype fp16, may cause `sdma error` on MindSpore 2.3.0")
         else:
-            # FIXME: level 3
-            # raise ValueError("BUG: Can't run second step on MindSpore 2.3")
-            pass
+            print(f"[ERROR] {self.__class__.__name__}, custom optimizer, may cause `memory leakage` on MindSpore 2.3.0")
 
     def _param_init_op(self, params, prefix, init="zeros"):
         news = []
