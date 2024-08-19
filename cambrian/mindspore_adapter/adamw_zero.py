@@ -63,7 +63,11 @@ def _tensors_reducescatter_and_split(degree, mean, reduce_scatter_op, all_reduce
 
 
 class AdamWeightDecayZeRO1(nn.Optimizer):
-    def __init__(self, params, learning_rate=1e-3, beta1=0.9, beta2=0.999, eps=1e-6, weight_decay=0.0, shard_size=None, enable_fuse=False):
+    def __init__(
+            self,
+            params, learning_rate=1e-3, beta1=0.9, beta2=0.999, eps=1e-6, weight_decay=0.0, shard_size=None,
+            enable_fuse=False, momentum_dtype=ms.float32
+    ):
         super(AdamWeightDecayZeRO1, self).__init__(learning_rate, params, weight_decay)
         self.map = ops.Map()
         self.rank = get_rank()
@@ -95,8 +99,8 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         self.beta1 = Tensor(np.array([beta1]).astype(np.float32))
         self.beta2 = Tensor(np.array([beta2]).astype(np.float32))
         self.eps = Tensor(np.array([eps]).astype(np.float32))
-        self.moments1 = self._param_init_op(self._parameters, prefix="adam_m", init="zeros")
-        self.moments2 = self._param_init_op(self._parameters, prefix="adam_v", init="zeros")
+        self.moments1 = self._param_init_op(self._parameters, prefix="adam_m", init="zeros", dtype=momentum_dtype)
+        self.moments2 = self._param_init_op(self._parameters, prefix="adam_v", init="zeros", dtype=momentum_dtype)
         self.all_gather_ops = self._init_all_gather_ops(self._parameters, group=comm_group)
 
         self.all_reduce_op = ops.AllReduce()
@@ -115,7 +119,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         self.enable_fuse = enable_fuse
         if self.enable_fuse:
             self.fused_opt = ops.AdamWeightDecay()
-            self._split_parameters = self._param_init_op(self._parameters, prefix="adam_split_p", init="same")
+            self._split_parameters = self._param_init_op(self._parameters, prefix="adam_split_p", init="same", dtype=momentum_dtype)
 
     def _init_all_gather_ops(self, params, group):
         op_list = []
@@ -126,7 +130,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
                 op_list.append(ops.identity)
         return tuple(op_list)
 
-    def _param_init_op(self, params, prefix, init="zeros"):
+    def _param_init_op(self, params, prefix, init="zeros", dtype=None):
         news = []
         for p in params:
             s = p.shape
@@ -146,7 +150,11 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
                 new.name = prefix + "." + p.name
                 setattr(p, "split_op", False)
                 print(f"[WARNING] Split {new.name} fail, keep ori shape.")
+
+            if dtype is not None and new.dtype != dtype:
+                new = new.set_dtype(dtype)
             news.append(new)
+
         return ParameterTuple(news)
 
     @ms.jit
