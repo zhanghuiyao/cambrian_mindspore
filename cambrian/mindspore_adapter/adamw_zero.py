@@ -1,7 +1,7 @@
 import numpy as np
 
 import mindspore as ms
-from mindspore import ParameterTuple, Tensor, nn, ops, context
+from mindspore import ParameterTuple, Parameter, Tensor, nn, ops, context
 from mindspore.common.initializer import initializer
 from mindspore.communication.management import GlobalComm, get_group_size, get_rank
 from mindspore.ops import functional as F
@@ -101,8 +101,8 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         self.beta2 = Tensor(np.array([beta2]).astype(np.float32))
         self.eps = Tensor(np.array([eps]).astype(np.float32))
 
-        self.moments1 = self._param_init_op(self._parameters, prefix="adam_m", init="zeros")
-        self.moments2 = self._param_init_op(self._parameters, prefix="adam_v", init="zeros")
+        self.moments1 = self._param_init_op(self._parameters, prefix="adam_m", init="zeros", dtype=momentum_dtype)
+        self.moments2 = self._param_init_op(self._parameters, prefix="adam_v", init="zeros", dtype=momentum_dtype)
         self.all_gather_ops = self._init_all_gather_ops(self._parameters, group=comm_group)
 
         self.all_reduce_op = ops.AllReduce()
@@ -121,13 +121,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         self.enable_fuse = enable_fuse
         if self.enable_fuse:
             self.fused_opt = ops.AdamWeightDecay()
-            self._split_parameters = self._param_init_op(self._parameters, prefix="adam_split_p", init="same")
-
-        if momentum_dtype is not None:
-            self.convert_momentum_dtype(self.moments1, momentum_dtype)
-            self.convert_momentum_dtype(self.moments2, momentum_dtype)
-            if self.enable_fuse:
-                self.convert_momentum_dtype(self._split_parameters, momentum_dtype)
+            self._split_parameters = self._param_init_op(self._parameters, prefix="adam_split_p", init="same", dtype=momentum_dtype)
 
     def _init_all_gather_ops(self, params, group):
         op_list = []
@@ -138,24 +132,29 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
                 op_list.append(ops.identity)
         return tuple(op_list)
 
-    def _param_init_op(self, params, prefix, init="zeros"):
+    def _param_init_op(self, params, prefix, init="zeros", dtype=None):
         news = []
         for p in params:
             s = p.shape
+            dtype = dtype if dtype is not None else p.dtype
             if s[0] % self.shard_size == 0:
                 s = list(s)
                 s[0] = s[0] // self.shard_size
                 s = tuple(s)
                 if init == "same":
-                    _new = p.clone(init)
-                    new = ops.chunk(_new, self.shard_size, axis=0)[self.shard_id]
-                    new.name = prefix + "." + p.name
+                    new_np = p.asnumpy() # (6, 1000) -> (2, 3, 1000) -> (3, 1000)
+                    split_shape = (self.shard_size, -1, *new_np.shape[1:])
+                    new_np = np.reshape(new_np, split_shape)[self.shard_id]
+                    new = Parameter(Tensor(new_np, dtype=dtype), name=prefix + "." + p.name)
                 else:
-                    new = ms.Parameter(initializer(init, shape=s, dtype=p.dtype), name=prefix + "." + p.name)
+                    new = Parameter(initializer(init, shape=s, dtype=dtype), name=prefix + "." + p.name)
                 setattr(p, "split_op", True)
             else:
-                new = p.clone(init)
-                new.name = prefix + "." + p.name
+                if init == "same":
+                    new_np = p.asnumpy()
+                    new = Parameter(Tensor(new_np, dtype=dtype), name=prefix + "." + p.name)
+                else:
+                    new = Parameter(initializer(init, shape=p.shape, dtype=dtype), name=prefix + "." + p.name)
                 setattr(p, "split_op", False)
                 print(f"[WARNING] Split {new.name} fail, keep ori shape.")
 
