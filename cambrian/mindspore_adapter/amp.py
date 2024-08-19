@@ -51,7 +51,8 @@ def convert_module_param_to_fp16(model, keep_norm_fp32=True):
         assert isinstance(model, nn.Cell)
 
         k_num, c_num = 0, 0
-        for _, p in model.parameters_and_names():
+        # for _, p in model.parameters_and_names():
+        for p in model.trainable_params():
             # filter norm parameters
             if keep_norm_fp32 and ("norm" in p.name):
                 # print(f"param {p.name} keep {p.dtype}") # disable print
