@@ -100,10 +100,6 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         self.beta2 = Tensor(np.array([beta2]).astype(np.float32))
         self.eps = Tensor(np.array([eps]).astype(np.float32))
 
-        for _p in self._parameters:
-            if not isinstance(_p, ms.Parameter):
-                print(f"p.name: {_p.name}, type(p): {type(_p)}")
-
         self.moments1 = self._param_init_op(self._parameters, prefix="adam_m", init="zeros", dtype=momentum_dtype)
         self.moments2 = self._param_init_op(self._parameters, prefix="adam_v", init="zeros", dtype=momentum_dtype)
         self.all_gather_ops = self._init_all_gather_ops(self._parameters, group=comm_group)
@@ -158,6 +154,10 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
 
             if dtype is not None and new.dtype != dtype:
                 new = new.set_dtype(dtype)
+
+            if not isinstance(new, ms.Parameter):
+                print(f"p.name: {p.name}, type(p): {type(p)}, p.shape: {p.shape}, type(new): {type(new)}")
+
             news.append(new)
 
         return ParameterTuple(news)
