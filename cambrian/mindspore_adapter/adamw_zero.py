@@ -153,8 +153,8 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
                 setattr(p, "split_op", False)
                 print(f"[WARNING] Split {new.name} fail, keep ori shape.")
 
-            if dtype is not None and new.dtype != dtype:
-                new = new.set_dtype(dtype)
+            # if dtype is not None and new.dtype != dtype:
+            #     new = new.set_dtype(dtype)
 
             if not isinstance(new, ms.Parameter):
                 print(f"p.name: {p.name}, type(p): {type(p)}, p.shape: {p.shape}, type(new): {type(new)}")
