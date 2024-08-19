@@ -19,6 +19,7 @@ reducescatter_and_split_op = ops.MultitypeFuncGraph("reducescatter_and_split_op"
 @update_params_with_all_gather.register("Tensor", "Tensor", "Function")
 def _update_params_with_all_gather(param, update, all_gather):
     update = all_gather(update)
+    update = update.to(param.dtype)
     success = ops.logical_not(ops.isnan(update))
     success = ops.depend(success, ops.assign(param, update))
     return success
