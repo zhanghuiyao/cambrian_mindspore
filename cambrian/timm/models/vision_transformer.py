@@ -49,6 +49,8 @@ class Attention(nn.Cell):
         self.proj = nn.Dense(dim, dim)
         self.proj_drop = nn.Dropout(p=proj_drop)
 
+        self.softmax = nn.Softmax(axis=-1)
+
     def construct(self, x: Tensor) -> Tensor:
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4)
@@ -58,7 +60,9 @@ class Attention(nn.Cell):
         # attention
         q = q * self.scale
         attn = ops.BatchMatMul()(q, k.swapdims(-2, -1))
-        attn = attn.softmax(axis=-1)
+
+        attn = self.softmax(attn)
+
         attn = self.attn_drop(attn)
         x = ops.BatchMatMul()(attn, v)
 

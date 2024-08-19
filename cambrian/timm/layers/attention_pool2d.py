@@ -37,6 +37,8 @@ class RotAttentionPool2d(nn.Cell):
         self.scale = self.head_dim ** -0.5
         self.pos_embed = RotaryEmbedding(self.head_dim)
 
+        self.softmax = nn.Softmax(axis=-1)
+
         # TODO: weight init
         # trunc_normal_(self.qkv.weight, std=in_features ** -0.5)
         # nn.init.zeros_(self.qkv.bias)
@@ -61,7 +63,8 @@ class RotAttentionPool2d(nn.Cell):
         k = ops.cat([kc, k], axis=2)
 
         attn = ops.BatchMatMul()(q, k.swapdims(-2, -1)) * self.scale
-        attn = attn.softmax(axis=-1)
+
+        attn = self.softmax(attn)
 
         x = ops.BatchMatMul()(attn, v)
         x = x.swapdims(1, 2).reshape(B, N + 1, -1)
@@ -102,6 +105,8 @@ class AttentionPool2d(nn.Cell):
         spatial_dim = self.feat_size[0] * self.feat_size[1]
         self.pos_embed = Parameter(Tensor(np.zeros((spatial_dim + 1, in_features)), ms.float32), name="pos_embed")
 
+        self.softmax = nn.Softmax(axis=-1)
+
         # TODO: weight init
         # trunc_normal_(self.pos_embed, std=in_features ** -0.5)
         # trunc_normal_(self.qkv.weight, std=in_features ** -0.5)
@@ -120,7 +125,8 @@ class AttentionPool2d(nn.Cell):
         q, k, v = x[0], x[1], x[2]
 
         attn = ops.BatchMatMul()(q, k.swapdims(-2, -1)) * self.scale
-        attn = attn.softmax(axis=-1)
+
+        attn = self.softmax(attn)
 
         x = ops.BatchMatMul()(attn, v)
         x = x.swapdims(1, 2).reshape(B, N + 1, -1)

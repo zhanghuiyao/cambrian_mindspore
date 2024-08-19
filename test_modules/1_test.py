@@ -44,9 +44,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-    ops.log()
-    ops.ones()
-    isinstance()
-
-

@@ -246,7 +246,7 @@ class LogitNormalization(LogitsProcessor, LogitsWarper):
     def __call__(self, input_ids: Union[Tensor, np.ndarray], scores: Union[Tensor, np.ndarray]) -> Union[Tensor, np.ndarray]:
 
         if isinstance(scores, Tensor):
-            scores_processed = ops.log_softmax(scores, axis=-1)
+            scores_processed = ops.log_softmax(scores.to(ms.float32), axis=-1).to(scores.dtype)
         elif isinstance(scores, np.ndarray):
             exp_scores = np.exp(scores)
             scores_processed = np.log(exp_scores / exp_scores.sum(-1))

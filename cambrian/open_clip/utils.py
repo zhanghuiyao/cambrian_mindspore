@@ -3,7 +3,7 @@ import numpy as np
 from itertools import repeat
 
 import mindspore as ms
-from mindspore import nn, Tensor, Parameter
+from mindspore import nn, ops, Tensor, Parameter
 
 
 # From PyTorch internals
@@ -47,13 +47,20 @@ class FrozenBatchNorm2d(nn.Cell):
     def construct(self, x: Tensor) -> Tensor:
         # move reshapes to the beginning
         # to make it fuser-friendly
-        w = self.weight.reshape(1, -1, 1, 1)
-        b = self.bias.reshape(1, -1, 1, 1)
-        rv = self.running_var.reshape(1, -1, 1, 1)
-        rm = self.running_mean.reshape(1, -1, 1, 1)
+        ori_dtype = x.dtype
+        x = x.to(ms.float32)
+
+        w = self.weight.reshape(1, -1, 1, 1).to(ms.float32)
+        b = self.bias.reshape(1, -1, 1, 1).to(ms.float32)
+        rv = self.running_var.reshape(1, -1, 1, 1).to(ms.float32)
+        rm = self.running_mean.reshape(1, -1, 1, 1).to(ms.float32)
         scale = w * (rv + self.eps).rsqrt()
         bias = b - rm * scale
-        return x * scale + bias
+        out = x * scale + bias
+
+        out = out.to(ori_dtype)
+
+        return out
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.weight.shape[0]}, eps={self.eps})"

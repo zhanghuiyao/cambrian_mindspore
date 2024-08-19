@@ -56,6 +56,8 @@ class AttentionPoolLatent(nn.Cell):
         self.norm = norm_layer(out_features) if norm_layer is not None else nn.Identity()
         self.mlp = Mlp(embed_dim, int(embed_dim * mlp_ratio))
 
+        self.softmax = nn.Softmax(axis=-1)
+
         # TODO: init weight
         # self.init_weights()
 
@@ -77,7 +79,9 @@ class AttentionPoolLatent(nn.Cell):
         # attention
         q = q * self.scale
         attn = ops.BatchMatMul()(q, k.swapdims(-2, -1))
-        attn = attn.softmax(axis=-1)
+
+        attn = self.softmax(attn)
+
         x = ops.BatchMatMul()(attn, v)
 
         x = x.swapdims(1, 2).reshape(B, self.latent_len, C)

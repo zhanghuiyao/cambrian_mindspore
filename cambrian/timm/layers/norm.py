@@ -26,9 +26,15 @@ class LayerNorm(nn.LayerNorm):
 class LayerNorm2d(LayerNorm):
     """ LayerNorm for channels of '2D' spatial NCHW tensors """
     def construct(self, x: Tensor) -> Tensor:
+        ori_dtype = x.dtype
+        x = x.to(ms.float32)
+
         x = x.permute(0, 2, 3, 1)
         x, _, _ = self.layer_norm(x, self.gamma.astype(x.dtype), self.beta.astype(x.dtype))
         x = x.permute(0, 3, 1, 2)
+
+        x = x.to(ori_dtype)
+
         return x
 
 

@@ -144,6 +144,8 @@ class Dinov2SelfAttention(nn.Cell):
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
+        self.softmax = nn.Softmax(axis=-1)
+
     def transpose_for_scores(self, x: Tensor) -> Tensor:
         new_x_shape = tuple(x.shape[:-1]) + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
@@ -164,7 +166,7 @@ class Dinov2SelfAttention(nn.Cell):
         attention_scores = attention_scores / (self.attention_head_size ** 0.5)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = self.softmax(attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.

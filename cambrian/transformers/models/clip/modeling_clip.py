@@ -33,6 +33,8 @@ class CLIPAttention(nn.Cell):
         self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
         self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
 
+        self.softmax = nn.Softmax(axis=-1)
+
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapdims(1, 2)
 
@@ -84,7 +86,7 @@ class CLIPAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = self.softmax(attn_weights)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to

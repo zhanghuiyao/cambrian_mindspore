@@ -170,6 +170,8 @@ class Attention(nn.Cell):
         self.out_proj = nn.Dense(dim, dim)
         self.out_drop = nn.Dropout(p=proj_drop)
 
+        self.softmax = nn.Softmax(axis=-1)
+
     def construct(self, x, attn_mask: Optional[Tensor] = None):
         L, N, C = x.shape
         q, k, v = linear(x, self.in_proj_weight, self.in_proj_bias).chunk(3, axis=-1)
@@ -179,7 +181,8 @@ class Attention(nn.Cell):
 
         if self.logit_scale is not None:
             attn = ops.BatchMatMul()(normalize(q, dim=-1), normalize(k, dim=-1).swapaxes(-1, -2))
-            logit_scale = ops.clip(self.logit_scale, max=self.logit_scale_max).exp()
+            logit_scale = ops.clip(self.logit_scale, max=self.logit_scale_max)
+            logit_scale = ops.exp(logit_scale.to(ms.float32)).to(logit_scale.dtype)
             attn = attn.view(N, self.num_heads, L, L) * logit_scale
             attn = attn.view(-1, L, L)
         else:
@@ -193,7 +196,8 @@ class Attention(nn.Cell):
                 attn_mask = new_attn_mask
             attn += attn_mask
 
-        attn = ops.softmax(attn, axis=-1)
+        attn = self.softmax(attn)
+
         attn = self.attn_drop(attn)
 
         x = ops.BatchMatMul()(attn, v)

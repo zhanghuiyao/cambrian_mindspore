@@ -29,7 +29,7 @@ class LabelSmoother:
             logits = logits[..., :-1, :]
             labels = labels[..., 1:]
 
-        log_probs = -ops.log_softmax(logits, axis=-1)
+        log_probs = -ops.log_softmax(logits.to(ms.float32), axis=-1).to(logits.dtype)
         if labels.ndim == log_probs.ndim - 1:
             labels = labels.unsqueeze(-1)
 

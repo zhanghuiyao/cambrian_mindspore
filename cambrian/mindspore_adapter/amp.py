@@ -36,7 +36,19 @@ def auto_mixed_precision(network, amp_level="O0", dtype=ms.float16):
     elif amp_level == "O2":
         _auto_black_list(
             network,
-            AMP_BLACK_LIST + [nn.GroupNorm, nn.SiLU, nn.Softmax],
+            AMP_BLACK_LIST + [
+                nn.GroupNorm,
+                nn.SiLU,
+                nn.GELU,
+                nn.Softmax,
+                nn.MaxPool1d,
+                nn.MaxPool2d,
+                nn.MaxPool3d,
+                nn.AvgPool1d,
+                nn.AvgPool2d,
+                nn.AvgPool3d,
+                nn.CrossEntropyLoss
+            ],
             dtype,
         )
     elif amp_level == "O3":

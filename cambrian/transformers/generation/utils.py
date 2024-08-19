@@ -1505,7 +1505,7 @@ class GenerationMixin:
 
             # token selection
             if do_sample:
-                probs = ops.softmax(next_token_scores, axis=-1)
+                probs = ops.softmax(next_token_scores, axis=-1, dtype=ms.float32).to(next_token_scores.dtype)
                 next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1)
             else:
                 next_tokens = ops.argmax(next_token_scores, dim=-1)

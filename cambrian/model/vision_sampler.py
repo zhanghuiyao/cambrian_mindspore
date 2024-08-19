@@ -234,8 +234,8 @@ class VisionCrossAttentionLayer(nn.Cell):
         #     self.weight_mlp = MLP(q_dim+hidden_dim, hidden_dim, self.num_of_kvs)
         #     self.tower_weight = Parameter(ops.zeros((self.num_of_kvs)), name='tower_weight')
         self.proj_out = MLP(hidden_dim, hidden_dim, q_dim)
-
         self.norm = nn.LayerNorm([hidden_dim])
+        self.softmax = nn.Softmax(axis=-1)
 
         self.cross_attn = MultiKVCrossAttention(hidden_dim, kv_dim_list, hidden_dim, num_heads)
         self.kv_size_list = kv_size_list
@@ -290,7 +290,7 @@ class VisionCrossAttentionLayer(nn.Cell):
         # if self.num_of_kvs > 1:
         #     kv_weight = self.weight_mlp(queries) # B * 1 * num_tower
         #     kv_weight = kv_weight + self.tower_weight.view(1, 1, -1)
-        #     kv_weight = kv_weight.softmax(-1)
+        #     kv_weight = self.softmax(kv_weight)
         #     kv_number_list = [size**2 for size in self.kv_size_list]
         #     kv_weight = ops.repeat_interleave(kv_weight, torch.tensor(kv_number_list).to(kv_weight.device), axis=-1)
         # else:
@@ -345,10 +345,9 @@ class VisionAggregationLayer(nn.Cell):
 
         self.proj_context = nn.Dense(context_dim, hidden_dim, has_bias=False)
         self.proj_in = nn.Dense(q_dim+hidden_dim, hidden_dim, has_bias=False)
-
         self.proj_out = MLP(hidden_dim, hidden_dim, q_dim)
-
         self.norm = nn.LayerNorm([hidden_dim])
+        self.softmax = nn.Softmax(axis=-1)
 
         if self.num_of_kvs > 1:
             self.weight_mlp = MLP(q_dim+hidden_dim, hidden_dim, self.num_of_kvs)
@@ -398,7 +397,7 @@ class VisionAggregationLayer(nn.Cell):
         queries = ops.cat([queries, context_feature], -1)
 
         if self.num_of_kvs > 1:
-            combination_weight = self.weight_mlp(queries).softmax(-1) # B * 1 * num_tower
+            combination_weight = self.softmax(self.weight_mlp(queries)) # B * 1 * num_tower
             combination_weight = combination_weight.unsqueeze(-1)
         else:
             combination_weight = 1

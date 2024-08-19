@@ -22,12 +22,11 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dtype=None):
         attn_mask = attn_mask.to(query.dtype)
 
         attn_weight = ops.softmax(
-            ops.cast(ops.matmul(query, key.swapaxes(-2, -1)) / (query.shape[-1] ** 0.5) + attn_mask, ms.float32),
-            axis=-1,
+            ops.matmul(query, key.swapaxes(-2, -1)) / (query.shape[-1] ** 0.5) + attn_mask, axis=-1, dtype=ms.float32
         ).astype(query.dtype)
     else:
         attn_weight = ops.softmax(
-            ops.cast(ops.matmul(query, key.swapaxes(-2, -1)) / (query.shape[-1] ** 0.5), ms.float32), axis=-1
+            ops.matmul(query, key.swapaxes(-2, -1)) / (query.shape[-1] ** 0.5), axis=-1, dtype=ms.float32
         ).astype(query.dtype)
 
     out = ops.matmul(attn_weight, value)
