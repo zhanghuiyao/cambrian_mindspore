@@ -7,7 +7,7 @@ from mindspore.communication.management import GlobalComm, get_group_size, get_r
 from mindspore.ops import functional as F
 from mindspore.ops import operations as P
 
-from .adamw import adamw_opt
+from .adamw import adamw_opt, fused_adam_weight_decay
 
 
 split_params = ops.MultitypeFuncGraph("split_params")
@@ -63,7 +63,7 @@ def _tensors_reducescatter_and_split(degree, mean, reduce_scatter_op, all_reduce
 
 
 class AdamWeightDecayZeRO1(nn.Optimizer):
-    def __init__(self, params, learning_rate=1e-3, beta1=0.9, beta2=0.999, eps=1e-6, weight_decay=0.0, shard_size=None):
+    def __init__(self, params, learning_rate=1e-3, beta1=0.9, beta2=0.999, eps=1e-6, weight_decay=0.0, shard_size=None, enable_fuse=False):
         super(AdamWeightDecayZeRO1, self).__init__(learning_rate, params, weight_decay)
         self.map = ops.Map()
         self.rank = get_rank()
@@ -112,6 +112,11 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
             f"split num: {split_num}, unsplit num: {unsplit_num}"
         )
 
+        self.enable_fuse = enable_fuse
+        if self.enable_fuse:
+            self.fused_opt = ops.AdamWeightDecay()
+            self._split_parameters = self._param_init_op(self._parameters, prefix="adam_split_p", init="same")
+
     def _init_all_gather_ops(self, params, group):
         op_list = []
         for x in params:
@@ -129,7 +134,12 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
                 s = list(s)
                 s[0] = s[0] // self.shard_size
                 s = tuple(s)
-                new = ms.Parameter(initializer(init, shape=s, dtype=p.dtype), name=prefix + "." + p.name)
+                if init == "same":
+                    _new = p.clone(init)
+                    new = ops.chunk(_new, self.shard_size, axis=0)[self.shard_id]
+                    new.name = prefix + "." + p.name
+                else:
+                    new = ms.Parameter(initializer(init, shape=s, dtype=p.dtype), name=prefix + "." + p.name)
                 setattr(p, "split_op", True)
             else:
                 new = p.clone(init)
@@ -154,6 +164,12 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
 
     @ms.jit
     def construct(self, split_gradients):
+        if self.enable_fuse:
+            self._optim_fuse(split_gradients)
+        else:
+            self._optim_custom(split_gradients)
+
+    def _optim_custom(self, split_gradients):
         gradients = split_gradients
         params = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), self._parameters)
         # gradients = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), gradients)
@@ -197,6 +213,40 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
             )
 
         success = self.hyper_map(update_params_with_all_gather, self._parameters, optim_result, self.all_gather_ops)
+
+        return success
+
+    def _optim_fuse(self, split_gradients):
+        gradients = split_gradients
+
+        gradients = self.flatten_gradients(gradients)
+        weight_decay = self.get_weight_decay()
+        lr = self.get_lr()
+        self.assignadd(self.global_step, self.global_step_increase_tensor)
+
+        if self.is_group:
+            if self.is_group_lr:
+                success = self.hyper_map(
+                    F.partial(fused_adam_weight_decay, self.fused_opt, self.beta1, self.beta2, self.eps),
+                    lr, weight_decay, self._split_parameters, self.moments1,
+                    self.moments2, gradients, self.decay_flags, self.optim_filter)
+            else:
+                success = self.hyper_map(
+                    F.partial(fused_adam_weight_decay, self.fused_opt, self.beta1, self.beta2, self.eps, lr),
+                    weight_decay, self._split_parameters, self.moments1, self.moments2,
+                    gradients, self.decay_flags, self.optim_filter)
+        else:
+            success = self.hyper_map(
+                F.partial(fused_adam_weight_decay, self.fused_opt, self.beta1, self.beta2, self.eps, lr,
+                          weight_decay),
+                self._split_parameters, self.moments1, self.moments2,
+                gradients, self.decay_flags, self.optim_filter)
+
+
+        success = ops.depend(
+            self.hyper_map(update_params_with_all_gather, self._parameters, self._split_parameters, self.all_gather_ops),
+            success
+        )
 
         return success
 

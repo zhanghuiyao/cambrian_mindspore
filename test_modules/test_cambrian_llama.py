@@ -97,10 +97,10 @@ def test_cambrian_llama_causal(model_path: str, args):
         # create optimizer
         if args.optim.lower() == "zero1":
             from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO1
-            optimizer = AdamWeightDecayZeRO1(model.trainable_params(), 1e-5, shard_size=args.shard_size)
+            optimizer = AdamWeightDecayZeRO1(model.trainable_params(), 1e-5, shard_size=args.shard_size, enable_fuse=args.enable_fuse)
         elif args.optim.lower() == "zero2":
             from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO2
-            optimizer = AdamWeightDecayZeRO2(model.trainable_params(), 1e-5, shard_size=args.shard_size)
+            optimizer = AdamWeightDecayZeRO2(model.trainable_params(), 1e-5, shard_size=args.shard_size, enable_fuse=args.enable_fuse)
         elif args.optim.lower() == "adamw":
             from cambrian.mindspore_adapter.adamw import AdamWeightDecay
             # optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
