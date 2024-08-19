@@ -53,10 +53,6 @@ def convert_module_param_to_fp16(model, keep_norm_fp32=True):
         k_num, c_num = 0, 0
         for _, p in model.parameters_and_names():
 
-            # FIXME: zhy_test, visual 16 + others 32
-            if not "vision_tower" in p.name:
-                continue
-
             # filter norm parameters
             if keep_norm_fp32 and ("norm" in p.name):
                 # print(f"param {p.name} keep {p.dtype}") # disable print
