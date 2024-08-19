@@ -15,9 +15,12 @@ export MS_DEV_RUNTIME_CONF="synchronize:True"
 # hyper-parameters
 task_name="logs_test_cambrian_llama_8p"
 output_dir=$task_name
-optim="zero2"
 num_vision_tower=4
+
+optim="zero2"
+enable_fuse=True
 force_param_fp16=True
+run_steps=100000
 
 master_port=9001
 
@@ -33,6 +36,8 @@ python test_modules/test_cambrian_llama.py \
     --gradient_checkpointing True \
     --optim $optim \
     --shard_size $device_num \
+    --enable_fuse $enable_fuse \
     --num_vision_tower $num_vision_tower \
+    --run_steps $run_steps \
     \
     > .log_msrun.txt 2>&1 &
