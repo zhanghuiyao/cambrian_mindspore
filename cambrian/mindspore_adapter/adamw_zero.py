@@ -139,13 +139,12 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
                 s = list(s)
                 s[0] = s[0] // self.shard_size
                 s = tuple(s)
-                # if init == "same":
-                #     _new = p.clone(init)
-                #     new = ops.chunk(_new, self.shard_size, axis=0)[self.shard_id]
-                #     new.name = prefix + "." + p.name
-                # else:
-                #     new = ms.Parameter(initializer(init, shape=s, dtype=p.dtype), name=prefix + "." + p.name)
-                new = ms.Parameter(initializer(init, shape=s, dtype=p.dtype), name=prefix + "." + p.name)
+                if init == "same":
+                    _new = p.clone(init)
+                    new = ops.chunk(_new, self.shard_size, axis=0)[self.shard_id]
+                    new.name = prefix + "." + p.name
+                else:
+                    new = ms.Parameter(initializer(init, shape=s, dtype=p.dtype), name=prefix + "." + p.name)
                 setattr(p, "split_op", True)
             else:
                 new = p.clone(init)
@@ -153,8 +152,8 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
                 setattr(p, "split_op", False)
                 print(f"[WARNING] Split {new.name} fail, keep ori shape.")
 
-            # if dtype is not None and new.dtype != dtype:
-            #     new = new.set_dtype(dtype)
+            if dtype is not None and new.dtype != dtype:
+                new.set_dtype(dtype)
 
             if not isinstance(new, ms.Parameter):
                 print(f"p.name: {p.name}, type(p): {type(p)}, p.shape: {p.shape}, type(new): {type(new)}")
