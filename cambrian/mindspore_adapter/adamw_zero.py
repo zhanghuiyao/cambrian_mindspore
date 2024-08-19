@@ -101,7 +101,8 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
         self.eps = Tensor(np.array([eps]).astype(np.float32))
 
         for _p in self._parameters:
-            print(f"p.name: {_p.name}, type(p): {type(_p)}")
+            if not isinstance(_p, ms.Parameter):
+                print(f"p.name: {_p.name}, type(p): {type(_p)}")
 
         self.moments1 = self._param_init_op(self._parameters, prefix="adam_m", init="zeros", dtype=momentum_dtype)
         self.moments2 = self._param_init_op(self._parameters, prefix="adam_v", init="zeros", dtype=momentum_dtype)
