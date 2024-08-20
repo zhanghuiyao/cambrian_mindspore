@@ -79,6 +79,7 @@ DEFAULT_PROGRESS_CALLBACK = ProgressCallback
 
 
 logger = logging.get_logger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def _is_peft_model(model):
@@ -930,8 +931,6 @@ class Trainer:
                 self.model.set_train(True)
                 self.train_model.set_train(True)
                 tr_loss_step, overflow = self.training_step(self.train_model, inputs)
-
-                import pdb;pdb.set_trace()
 
                 # FIXME: level 1, log by callback_fn
                 logger.info(f"Epoch: {epoch}, Step: {step}, tr_loss: {tr_loss_step}, overflow: {overflow}")
