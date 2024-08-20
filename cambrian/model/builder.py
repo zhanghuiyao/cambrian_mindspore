@@ -62,7 +62,7 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
                 model = CambrianLlamaForCausalLM.from_pretrained(model_path, **kwargs)
                 if kwargs.get("mindspore_dtype", None) in (ms.float16, ms.bfloat16):
                     _dtype = kwargs["mindspore_dtype"]
-                    model = auto_mixed_precision(model, _dtype)
+                    model = auto_mixed_precision(model, amp_level="O2", dtype=_dtype)
     else:
         raise NotImplementedError
 
