@@ -18,12 +18,13 @@ data_path="./demo/toy-dataset/alignment_2.5m.jsonl"  #  e.g. Cambrian7M_withsyst
 per_device_train_batch_size=1
 enable_flash_attention="True"
 #optim="adamw_zero2_mindspore"
-#adamw_zero_shard_size=8
 optim="adamw_mindspore"
+adamw_zero_shard_size=8
+adamw_enable_fuse="False"
 
 
 
-output_dir=$task_name"_optim-adamw_bs-"$per_device_train_batch_size"_1cards"
+output_dir=$task_name"_bs"$per_device_train_batch_size"_adamw_1cards"
 
 python -u cambrian/train/train.py \
     --model_name_or_path $model_name_or_path \
