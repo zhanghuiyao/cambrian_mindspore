@@ -16,12 +16,12 @@ master_port=9001
 
 # hyper-parameters
 task_name="cambrian-8b-finetune"
-model_name_or_path="your_path_to_llama3"
-image_folder="your_path_to_image_folder"
-pretrain_mm_mlp_adapter="./checkpoints/cambrian-8b-pretrain/mm_projector.bin"
-ckpt_dir="checkpoints"
-data_path="your_path_to_pretrain_jsonl e.g. Cambrian7M_withsystemprompt.jsonl"
-per_device_train_batch_size=8
+model_name_or_path="./cambrian/hf-configs/nyu-visionx-cambrian-8b"              # your_path_to_llama3
+image_folder="./demo/toy-dataset/images_from_coco"                              # your_path_to_image_folder
+pretrain_mm_mlp_adapter="./checkpoints/cambrian-8b-pretrain/mm_projector.bin"   #
+ckpt_dir="checkpoints"                                                          #
+data_path="./demo/toy-dataset/alignment_2.5m.jsonl"                             # your_path_to_pretrain_jsonl e.g. Cambrian7M_withsystemprompt.jsonl
+per_device_train_batch_size=8                                                   # batch size per device
 enable_flash_attention="True"
 optim="adamw_zero2_mindspore"
 adamw_enable_fuse="True"
