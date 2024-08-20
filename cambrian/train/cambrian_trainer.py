@@ -18,6 +18,8 @@ from cambrian.transformers.trainer import (
     has_length,
     ALL_LAYERNORM_LAYERS,
 )
+from cambrian.transformers.trainer_ms_utils import _get_learning_rate
+
 from cambrian.mindspore_adapter.utils import _is_parallel
 from cambrian.train.dataset import LengthGroupedSampler
 from cambrian.model.language_model.cambrian_llama import CambrianLlamaForCausalLM, TrainWrapperForCambrianLlamaForCausalLM
@@ -365,4 +367,38 @@ class CambrianTrainer(Trainer):
     """Override to add custom logs"""
 
     def _maybe_log_save_evaluate(self, tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval):
-        raise NotImplementedError
+        if self.control.should_log and self.state.global_step > self._globalstep_last_logged:
+
+            logs: Dict[str, float] = {}
+
+            # get average loss over all processes
+            # tr_loss_scalar = self._nested_gather(tr_loss).mean().item()
+            if _is_parallel():
+                tr_loss_scalar = self._nested_reduce_sum(tr_loss).item() / get_group_size()
+            else:
+                tr_loss_scalar = tr_loss.item()
+
+            # reset tr_loss to zero
+            tr_loss -= tr_loss
+            logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
+            if grad_norm is not None:
+                logs["grad_norm"] = grad_norm.item() if isinstance(grad_norm, (Tensor, np.ndarray)) else grad_norm
+            logs["learning_rate"] = _get_learning_rate(self.optimizer, self.state.global_step)
+
+            # Add custom logs
+            if self.args.unfreeze_mm_vision_tower:
+                logs["mm_vision_tower_lr"] = self.optimizer.param_groups[2]['lr']
+
+            self._total_loss_scalar += tr_loss_scalar
+            self._globalstep_last_logged = self.state.global_step
+            self.store_flos()
+
+            self.log(logs)
+
+        metrics = None
+        if self.control.should_evaluate:
+            raise NotImplementedError
+
+        if self.control.should_save:
+            self._save_checkpoint(model, trial, metrics=metrics)
+            self.control = self.callback_handler.on_save(self.args, self.state, self.control)
