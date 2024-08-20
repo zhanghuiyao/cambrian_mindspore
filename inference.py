@@ -1,3 +1,4 @@
+import ast
 import argparse
 import os
 import json
@@ -56,7 +57,8 @@ def inference(args):
     model_path = args.model_path
     model_name = get_model_name_from_path(model_path)
     tokenizer, model, image_processor, context_len = \
-        load_pretrained_model(model_path, None, model_name, checkpoint_path=args.checkpoint_path)
+        load_pretrained_model(
+            model_path, None, model_name, use_flash_attn=args.use_fa, checkpoint_path=args.checkpoint_path)
 
     temperature = 0
 
@@ -90,6 +92,7 @@ if __name__ == '__main__':
     parser.add_argument("--ms_mode", type=int, default=1, help="0 is Graph, 1 is Pynative")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
     parser.add_argument("--checkpoint_path", type=str, default="./cambrian-8b.ckpt")
+    parser.add_argument("--use_fa", type=ast.literal_eval, default=True)
     args, _ = parser.parse_known_args()
 
     if args.ms_mode == 0:

@@ -38,6 +38,16 @@ class MindSporeArguments:
             ),
         },
     )
+
+    enable_flash_attention: Optional[bool] = field(
+        default=False,
+        metadata={
+            "help": (
+                "if enable_flash_attention is True, model attention implementation will be set to `flash_attention_2`"
+            )
+        },
+    )
+
     mix_precision: Optional[str] = field(
         default="O2",
         metadata={
@@ -54,11 +64,19 @@ class MindSporeArguments:
             )
         },
     )
+    adamw_enable_fuse: Optional[bool] = field(
+        default=True,
+        metadata={
+            "help": (
+                "enable fuse op"
+            )
+        },
+    )
     adamw_zero_shard_size: Optional[int] = field(
         default=None,
         metadata={
             "help": (
-                "Enable zero parallelism, select from [stage1, stage2, stage3]"
+                "setting zero parallelism shard size"
             )
         },
     )

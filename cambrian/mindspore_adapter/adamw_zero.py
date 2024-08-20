@@ -67,7 +67,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
     def __init__(
             self,
             params, learning_rate=1e-3, beta1=0.9, beta2=0.999, eps=1e-6, weight_decay=0.0, shard_size=None,
-            enable_fuse=False, momentum_dtype=ms.float32
+            enable_fuse=True, momentum_dtype=ms.float32
     ):
         super(AdamWeightDecayZeRO1, self).__init__(learning_rate, params, weight_decay)
         self.map = ops.Map()
@@ -93,8 +93,14 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
             self.shard_size = shard_size
 
         print(
-            f"WARNING: {self.__class__.__name__} shard size setting to {self.shard_size}, "
-            f"shard_id {self.shard_id}, group: {comm_group}"
+            f"WARNING: {self.__class__.__name__}, "
+            f"      beta1/beta2/eps     : {self.beta1}/{self.beta2}/{self.eps}, \n"
+            f"      weight_decay        : {weight_decay}, \n"
+            f"      shard size          : {self.shard_size}, \n"
+            f"      shard_id            : {self.shard_id}, \n"
+            f"      comm group          : {comm_group}, \n"
+            f"      enable_fuse         : {enable_fuse}, \n"
+            f"      momentum_dtype      : {momentum_dtype}, \n"
         )
 
         self.beta1 = Tensor(np.array([beta1]).astype(np.float32))

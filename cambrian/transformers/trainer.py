@@ -433,26 +433,20 @@ class Trainer:
             optimizer_cls = nn.AdaFactor
             optimizer_kwargs.update({"scale_parameter": False, "relative_step": False})
         elif args.optim == OptimizerNames.ADAMW_MINDSPORE:
-            optimizer_cls = nn.AdamWeightDecay
+            from cambrian.mindspore_adapter.adamw import AdamWeightDecay
+            optimizer_cls = AdamWeightDecay
             optimizer_kwargs.update(adam_kwargs)
-        elif args.optim == OptimizerNames.ADAMW_ZERO1_MINDSPORE:
-            try:
-                from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO1
-                optimizer_cls = AdamWeightDecayZeRO1
-            except ImportError:
-                logger.warning("get optimizer cls, import `AdamWeightDecayZeRO1` error, replace to `nn.AdamWeightDecay`")
-                optimizer_cls = nn.AdamWeightDecay
+            optimizer_kwargs.update({"enable_fuse": getattr(args, "adamw_enable_fuse", True)})
+        elif args.optim in (OptimizerNames.ADAMW_ZERO1_MINDSPORE, OptimizerNames.ADAMW_ZERO2_MINDSPORE):
+            from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO1, AdamWeightDecayZeRO2
+            optimizer_cls = \
+                AdamWeightDecayZeRO1 \
+                if args.optim == OptimizerNames.ADAMW_ZERO1_MINDSPORE else \
+                AdamWeightDecayZeRO2
             optimizer_kwargs.update(adam_kwargs)
+            optimizer_kwargs.update({"enable_fuse": getattr(args, "adamw_enable_fuse", True)})
             optimizer_kwargs.update({"shard_size": getattr(args, "adamw_zero_shard_size", None)})
-        elif args.optim == OptimizerNames.ADAMW_ZERO2_MINDSPORE:
-            try:
-                from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO2
-                optimizer_cls = AdamWeightDecayZeRO2
-            except ImportError:
-                logger.warning("get optimizer cls, import `AdamWeightDecayZeRO2` error, replace to `nn.AdamWeightDecay`")
-                optimizer_cls = nn.AdamWeightDecay
-            optimizer_kwargs.update(adam_kwargs)
-            optimizer_kwargs.update({"shard_size": getattr(args, "adamw_zero_shard_size", None)})
+            optimizer_kwargs.update({"momentum_dtype": getattr(args, "adamw_zero_momentum_dtype", ms.float32)})
         elif args.optim == OptimizerNames.SGD:
             optimizer_cls = nn.SGD
         elif args.optim == OptimizerNames.ADAGRAD:
@@ -572,6 +566,7 @@ class Trainer:
 
     def mindspore_jit_model(self, model, dataloader):
         # TODO: add pre-compile
+        logger.warning(f"wrap model[{model.__class__.__name__}] to jit model.")
 
         class JitWarpper(nn.Cell):
             def __init__(self, model):
@@ -585,19 +580,12 @@ class Trainer:
         return JitWarpper(model)
 
     def _wrap_model(self, model, dataloader=None):
-        if self.args.jit_mode:
+        if self.args.jit_mode and ms.get_context("mode") == ms.PYNATIVE_MODE:
             start_time = time.time()
             model = self.mindspore_jit_model(model, dataloader)
 
             # FIXME: level 3, just build model, time not included compile cost.
             self.jit_compilation_time = round(time.time() - start_time, 4)
-
-        assert not (self.args.fp16 and self.args.bf16)
-        amp_level = self.args.amp_opt_level if self.args.amp_opt_level is not None else "O2"
-        if self.args.fp16:
-            model = auto_mixed_precision(model, amp_level, dtype=ms.float16)
-        if self.args.bf16:
-            model = auto_mixed_precision(model, amp_level, dtype=ms.bfloat16)
 
         train_model = TrainOneStepWrapper(
             model,
@@ -610,6 +598,13 @@ class Trainer:
             clip_grad="global_norm",
             clip_value=self.args.max_grad_norm
         )
+
+        assert not (self.args.fp16 and self.args.bf16)
+        amp_level = self.args.amp_opt_level if self.args.amp_opt_level is not None else "O2"
+        if self.args.fp16:
+            train_model = auto_mixed_precision(train_model, amp_level, dtype=ms.float16)
+        if self.args.bf16:
+            train_model = auto_mixed_precision(train_model, amp_level, dtype=ms.bfloat16)
 
         return model, train_model
 

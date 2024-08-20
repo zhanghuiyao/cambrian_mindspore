@@ -1,34 +1,37 @@
 #!/bin/bash
 
 #export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
-export ASCEND_RT_VISIBLE_DEVICES=4,5,6,7
-device_num=4
+export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+device_num=8
 
 export MS_ENABLE_NUMA=0
-export MS_MEMORY_STATISTIC=1
 export GLOG_v=2
 
+export MS_MEMORY_STATISTIC=1
 export MS_DEV_RUNTIME_CONF="synchronize:True"
 
 
-# hyper-parameters
-task_name="cambrian-8b-finetune_4p"
+# common setting
+master_port=9001
 
+# hyper-parameters
+task_name="cambrian-8b-finetune"
+model_name_or_path="./cambrian/hf-configs/nyu-visionx-cambrian-8b"
+image_folder="./demo/toy-dataset/images_from_coco"
 pretrain_mm_mlp_adapter="./checkpoints/cambrian-8b-pretrain/mm_projector.bin"
 ckpt_dir="checkpoints"
 data_path="./demo/toy-dataset/alignment_2.5m.jsonl"  #  e.g. Cambrian7M_withsystemprompt.jsonl
-model_name_or_path="./cambrian/hf-configs/nyu-visionx-cambrian-8b"
-image_folder="./demo/toy-dataset/images_from_coco"
-enable_flash_attention="False"
 per_device_train_batch_size=1
+enable_flash_attention="True"
 optim="adamw_zero2_mindspore"
-adamw_zero_shard_size=$device_num
-output_dir=$task_name"_FA-"$enable_flash_attention"_bs-"$per_device_train_batch_size
+adamw_enable_fuse="True"
+adamw_zero_shard_size=8
+output_dir=$task_name"_optim-zero2_shard-"$adamw_zero_shard_size"_bs-"$per_device_train_batch_size"_8cards"
 
 
 
-msrun --bind_core=True --worker_num=$device_num --local_worker_num=$device_num --master_port=9102 --log_dir=$output_dir \
-python cambrian/train/train.py \
+msrun --bind_core=True --worker_num=$device_num --local_worker_num=$device_num --master_port=$master_port --log_dir=$output_dir \
+python -u cambrian/train/train.py \
     --model_name_or_path $model_name_or_path \
     --version llama_v3 \
     --data_path $data_path \
@@ -73,16 +76,19 @@ python cambrian/train/train.py \
     --lazy_preprocess True \
     --run_name $task_name \
     \
-    --is_distribute True \
-    --optim $optim \
-    --adamw_zero_shard_size $adamw_zero_shard_size \
-    \
-    --save_safetensors False \
     --device_target Ascend \
+    --is_distribute True \
+    --max_device_memory 59GB \
+    --enable_flash_attention $enable_flash_attention \
+    --fp16 True \
+    --optim $optim \
+    --adamw_enable_fuse $adamw_enable_fuse \
+    --adamw_zero_shard_size $adamw_zero_shard_size \
+    --save_safetensors False \
     --dataloader_num_workers 1 \
     \
     > .log_msrun.txt 2>&1 &
 
 
     # --pretrain_mm_mlp_adapter $pretrain_mm_mlp_adapter \
-    #--per_device_eval_batch_size 4 \
+    # --per_device_eval_batch_size 4 \

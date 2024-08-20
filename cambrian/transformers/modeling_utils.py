@@ -162,6 +162,11 @@ class PreTrainedModel(nn.Cell, ModuleUtilsMixin, GenerationMixin):
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
         use_flash_attention_2 = kwargs.pop("use_flash_attention_2", False)
+        mindspore_dtype = kwargs.pop("mindspore_dtype", None)
+        cache_dir = kwargs.pop("cache_dir", None)
+
+        if cache_dir is not None:
+            logger.warning(f"{cls.__name__}, not support cache_dir, force to None.")
 
         config, _ = cls.config_class.from_pretrained(
             pretrained_model_name_or_path,
@@ -202,12 +207,24 @@ class PreTrainedModel(nn.Cell, ModuleUtilsMixin, GenerationMixin):
                     subfolder="",
                     _from_auto=False,
                     _from_pipeline=None,
+                    **kwargs
                 )
+
+                # FIXME: level 3, support cache
+                if model.generation_config.use_cache:
+                    model.generation_config.use_cache = False
+                    print(f"not support use_cache, `generation_config.use_cache` force to `False`")
+
             except OSError:
                 logger.info(
                     "Generation config file not found, using a generation config created from the model config."
                 )
                 pass
+
+        # convert model param dtype
+        if mindspore_dtype is not None and mindspore_dtype != ms.float32:
+            from cambrian.mindspore_adapter.amp import convert_module_dtype
+            model = convert_module_dtype(model, dtype=mindspore_dtype)
 
         return model
 
@@ -329,7 +346,6 @@ class PreTrainedModel(nn.Cell, ModuleUtilsMixin, GenerationMixin):
         if hasattr(self.config, "text_config"):
             self.config.text_config.vocab_size = model_embeds.embedding_table.shape[0]
         # TODO: to be removed after v4.42, config.vocab_size is deprecated for models that have a config.text_config
-
         self.config.vocab_size = model_embeds.embedding_table.shape[0]
         self.vocab_size = model_embeds.embedding_table.shape[0]
 

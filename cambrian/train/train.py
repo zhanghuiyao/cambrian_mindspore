@@ -176,18 +176,18 @@ def train():
 
     if model_args.vision_tower_aux_list is not None:
         # copy image_token_len and image_position to model_args
-        # data_args.image_token_len = model_args.image_token_len
         model_args.image_position = data_args.image_position
 
         # Assuming model_args.model_name_or_path is a string that includes the model size
         model_name = model_args.model_name_or_path
 
-        # Regular expression to find the number of parameters in the model's name (assuming a convention like 'ModelName-30b')
-        match = re.search(r'(\d+)b', model_name)
-        num_parameters_billion = float(match.group(1)) if match else 0
-
-        # Determine if bfloat16 should be used based on the model's size
-        use_bfloat16 = training_args.bf16 or num_parameters_billion > 30
+        # # Regular expression to find the number of parameters in the model's name (assuming a convention like 'ModelName-30b')
+        # match = re.search(r'(\d+)b', model_name)
+        # num_parameters_billion = float(match.group(1)) if match else 0
+        #
+        # # Determine if bfloat16 should be used based on the model's size
+        # use_bfloat16 = training_args.bf16 or num_parameters_billion > 30
+        use_float16 = training_args.fp16
 
         if "yi" in model_args.model_name_or_path.lower():
             raise NotImplementedError
@@ -199,16 +199,18 @@ def train():
             logger.warning(f"Vision tower, loading CambrianLlamaForCausalLM: {model_args.model_name_or_path}")
             model = CambrianLlamaForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
-                mindspore_dtype=(ms.bfloat16 if use_bfloat16 else None),
-                # cache_dir=training_args.cache_dir,
-                # do_sample=True,
+                attn_implementation="flash_attention_2" if training_args.enable_flash_attention else None,
+                mindspore_dtype=(ms.float16 if use_float16 else None),  # FIXME: add bf16
+                cache_dir=training_args.cache_dir,
+                do_sample=True,
             )
-            model.generation_config.do_sample = True  # FIXME: move to `.from_pretrain()`
     else:
         logger.warning(f"No vision tower, loading pure language model: {model_args.model_name_or_path}")
         model = LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,
-            # cache_dir=training_args.cache_dir,
+            attn_implementation="flash_attention_2" if training_args.enable_flash_attention else None,
+            mindspore_dtype=(ms.float16 if training_args.fp16 else None),  # FIXME: add bf16
+            cache_dir=training_args.cache_dir,
         )
     model.config.use_cache = False
     model.generation_config.do_sample = True

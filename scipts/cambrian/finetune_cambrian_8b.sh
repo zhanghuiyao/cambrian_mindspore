@@ -1,12 +1,18 @@
 #!/bin/bash
 
+# envirment
 export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+device_num=8
+
 export MS_ENABLE_NUMA=0
-export MS_MEMORY_STATISTIC=1
 export GLOG_v=2
 
+export MS_MEMORY_STATISTIC=1
 export MS_DEV_RUNTIME_CONF="synchronize:True"
 
+
+# common setting
+master_port=9001
 
 # hyper-parameters
 task_name="cambrian-8b-finetune"
@@ -18,13 +24,14 @@ data_path="your_path_to_pretrain_jsonl e.g. Cambrian7M_withsystemprompt.jsonl"
 per_device_train_batch_size=8
 enable_flash_attention="True"
 optim="adamw_zero2_mindspore"
+adamw_enable_fuse="True"
 adamw_zero_shard_size=8
-output_dir=$task_name"_FA-"$enable_flash_attention"_bs-"$per_device_train_batch_size
+output_dir=$task_name"_optim-zero2_shard-"$adamw_zero_shard_size"_bs-"$per_device_train_batch_size"_8cards"
 
 
 
-msrun --bind_core=True --worker_num=8 --local_worker_num=8 --master_port=9001 --log_dir=$output_dir \
-python cambrian/train/train.py \
+msrun --bind_core=True --worker_num=$device_num --local_worker_num=$device_num --master_port=$master_port --log_dir=$output_dir \
+python -u cambrian/train/train.py \
     --model_name_or_path $model_name_or_path \
     --version llama_v3 \
     --data_path $data_path \
@@ -69,13 +76,16 @@ python cambrian/train/train.py \
     --lazy_preprocess True \
     --run_name $task_name \
     \
-    --save_safetensors False \
     --device_target Ascend \
-    --dataloader_num_workers 1 \
-    \
     --is_distribute True \
+    --max_device_memory 59GB \
+    --enable_flash_attention $enable_flash_attention \
+    --fp16 True \
     --optim $optim \
+    --adamw_enable_fuse $adamw_enable_fuse \
     --adamw_zero_shard_size $adamw_zero_shard_size \
+    --save_safetensors False \
+    --dataloader_num_workers 1 \
     \
     > .log_msrun.txt 2>&1 &
 

@@ -71,8 +71,8 @@ def test_llama3_causal(model_path: str, args):
         # FIXME: zhy_test
         # 1. force param fp16
         if args.force_param_fp16:
-            from cambrian.mindspore_adapter.amp import convert_module_param_to_fp16
-            model = convert_module_param_to_fp16(model, keep_norm_fp32=True)
+            from cambrian.mindspore_adapter.amp import convert_module_dtype
+            model = convert_module_dtype(model, dtype=ms.float16, keep_norm_fp32=True)
 
         # create optimizer
         if args.optim.lower() == "zero1":

@@ -89,10 +89,9 @@ def test_cambrian_llama_causal(model_path: str, args):
         if args.gradient_checkpointing:
             model.gradient_checkpointing_enable()
 
-        # FIXME: zhy_test
         if args.force_param_fp16:
-            from cambrian.mindspore_adapter.amp import convert_module_param_to_fp16
-            model = convert_module_param_to_fp16(model, keep_norm_fp32=True)
+            from cambrian.mindspore_adapter.amp import convert_module_dtype
+            model = convert_module_dtype(model, dtype=ms.float16, keep_norm_fp32=True)
 
         # create optimizer
         if args.optim.lower() == "zero1":
@@ -123,14 +122,6 @@ def test_cambrian_llama_causal(model_path: str, args):
         if args.amp_level == "O2":
             from cambrian.mindspore_adapter.amp import auto_mixed_precision
             train_model = auto_mixed_precision(train_model, amp_level=args.amp_level, dtype=ms.float16)
-        #
-        # force param fp16
-        # if args.force_param_fp16:
-        #     from cambrian.mindspore_adapter.amp import convert_module_param_to_fp16
-        #     train_model = convert_module_param_to_fp16(train_model, keep_norm_fp32=True)
-        #     if hasattr(train_model, "scaler") and train_model.scaler is not None:
-        #         train_model.scaler.scale_value.set_dtype(ms.float16)
-        #     print(f"zhy_test: scaler.dtype is {train_model.scaler.scale_value.dtype}")
 
         model.set_train()
         train_model.set_train()

@@ -76,6 +76,14 @@ def update_params(param, update):
 class AdamWeightDecay(nn.Optimizer):
     def __init__(self, params, learning_rate=1e-3, beta1=0.9, beta2=0.999, eps=1e-6, weight_decay=0.0, enable_fuse=False):
         super(AdamWeightDecay, self).__init__(learning_rate, params, weight_decay)
+
+        print(
+            f"WARNING: {self.__class__.__name__}, "
+            f"      beta1/beta2/eps     : {self.beta1}/{self.beta2}/{self.eps}, \n"
+            f"      weight_decay        : {weight_decay}, \n"
+            f"      enable_fuse         : {enable_fuse}, \n"
+        )
+
         self.beta1 = Tensor(np.array([beta1]).astype(np.float32))
         self.beta2 = Tensor(np.array([beta2]).astype(np.float32))
         self.eps = Tensor(np.array([eps]).astype(np.float32))

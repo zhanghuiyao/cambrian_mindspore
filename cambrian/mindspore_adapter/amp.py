@@ -58,7 +58,11 @@ def auto_mixed_precision(network, amp_level="O0", dtype=ms.float16):
     return network
 
 
-def convert_module_param_to_fp16(model, keep_norm_fp32=True):
+def convert_module_dtype(model, dtype=ms.float16, keep_norm_fp32=True):
+
+    if dtype not in (ms.float16, ms.bfloat16, ms.float32):
+        raise ValueError(f"convert_module_dtype, not support dtype: {dtype}")
+
     if model is not None:
         assert isinstance(model, nn.Cell)
 
@@ -72,11 +76,11 @@ def convert_module_param_to_fp16(model, keep_norm_fp32=True):
             # filter bool/int parameters
             elif p.dtype in (ms.bool_, ms.int32, ms.int64, ms.uint8):
                 k_num += 1
-            elif p.dtype == ms.float16:
+            elif p.dtype == dtype:
                 c_num += 1
             else:
                 c_num += 1
-                p.set_dtype(ms.float16)
+                p.set_dtype(dtype)
 
         print(f"Convert `{type(model).__name__}` param to fp16, keep/modify num {k_num}/{c_num}.")
 

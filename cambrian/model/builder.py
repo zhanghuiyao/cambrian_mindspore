@@ -22,13 +22,15 @@ from transformers import AutoTokenizer, AutoConfig
 from cambrian.constants import DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from cambrian.model.language_model.cambrian_llama import CambrianLlamaForCausalLM
 
+from cambrian.mindspore_adapter.amp import auto_mixed_precision
+
 from ezcolorlog import root_logger as logger
 
 
 def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=False, **kwargs):
 
     if use_flash_attn:
-        kwargs['attn_implementation'] = 'flash_attention'
+        kwargs['attn_implementation'] = 'flash_attention_2'
 
     checkpoint_path = kwargs.pop("checkpoint_path", None)
     load_8bit = kwargs.pop("load_8bit", False)
@@ -58,6 +60,9 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
                 logger.info(f'Loading Cambrian from {model_path}')
                 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
                 model = CambrianLlamaForCausalLM.from_pretrained(model_path, **kwargs)
+                if kwargs.get("mindspore_dtype", None) in (ms.float16, ms.bfloat16):
+                    _dtype = kwargs["mindspore_dtype"]
+                    model = auto_mixed_precision(model, _dtype)
     else:
         raise NotImplementedError
 
