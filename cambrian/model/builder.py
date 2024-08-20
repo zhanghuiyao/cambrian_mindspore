@@ -76,6 +76,7 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
         if mm_use_im_start_end:
             tokenizer.add_tokens([DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN], special_tokens=True)
 
+        # FIXME, double check it
         model.resize_token_embeddings(len(tokenizer))
 
         vision_tower_aux_list = model.get_vision_tower_aux_list()
@@ -83,9 +84,6 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
         for vision_tower_aux in vision_tower_aux_list:
             if not vision_tower_aux.is_loaded:
                 vision_tower_aux.load_model()
-
-            # FIXME: mix-precision
-            # vision_tower_aux.to_float(ms.float16)
 
         image_processor = [vision_tower_aux.image_processor for vision_tower_aux in vision_tower_aux_list]
 

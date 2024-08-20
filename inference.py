@@ -96,7 +96,21 @@ if __name__ == '__main__':
     args, _ = parser.parse_known_args()
 
     if args.ms_mode == 0:
+        if os.environ.get("MS_DEV_RUNTIME_CONF") is None:
+            os.environ["MS_DEV_RUNTIME_CONF"] = "synchronize:True"
+            print("WARNING: os environment MS_DEV_RUNTIME_CONF synchronize has not been set, force setting it now.")
+        else:
+            if "synchronize:True" not in os.environ.get("MS_DEV_RUNTIME_CONF"):
+                _old = os.environ.get("MS_DEV_RUNTIME_CONF")
+                _old.replace("synchronize:False,", "")
+                _old.replace(",synchronize:False", "")
+                _old.replace("synchronize:False", "")
+                _new = "synchronize:True," + _old if len(_old) > 0 else "synchronize:True"
+                os.environ["MS_DEV_RUNTIME_CONF"] = _new
+                print("WARNING: os environment MS_DEV_RUNTIME_CONF synchronize has not been set, force setting it now.")
+
         ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"}, max_device_memory="59GB")
+
     elif args.ms_mode == 1:
         ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True, max_device_memory="59GB")
     else:

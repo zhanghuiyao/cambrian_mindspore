@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -96,6 +97,22 @@ class MindSporeArguments:
 
 
 def init_environment(training_args: MindSporeArguments):
+
+    # FIXME, stream synchronize bug when jit_level is `O0` on MindSpore 2.3.0
+    if training_args.mode == 0:
+        if os.environ.get("MS_DEV_RUNTIME_CONF") is None:
+            os.environ["MS_DEV_RUNTIME_CONF"] = "synchronize:True"
+            print("WARNING: os environment MS_DEV_RUNTIME_CONF synchronize has not been set, force setting it now.")
+        else:
+            if "synchronize:True" not in os.environ.get("MS_DEV_RUNTIME_CONF"):
+                _old = os.environ.get("MS_DEV_RUNTIME_CONF")
+                _old.replace("synchronize:False,", "")
+                _old.replace(",synchronize:False", "")
+                _old.replace("synchronize:False", "")
+                _new = "synchronize:True," + _old if len(_old) > 0 else "synchronize:True"
+                os.environ["MS_DEV_RUNTIME_CONF"] = _new
+                print("WARNING: os environment MS_DEV_RUNTIME_CONF synchronize has not been set, force setting it now.")
+
     # set mindspore context
     ms.set_context(
         mode=training_args.mode,
