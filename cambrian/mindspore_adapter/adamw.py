@@ -104,7 +104,7 @@ class AdamWeightDecay(nn.Optimizer):
             if param_dtype == ms.float16:
                 print(f"[ERROR] {self.__class__.__name__}, param dtype fp16, may cause `sdma error` on MindSpore 2.3.0")
         else:
-            print(f"[ERROR] {self.__class__.__name__}, custom optimizer, may cause `memory leakage` on MindSpore 2.3.0")
+            print(f"[WARNING] {self.__class__.__name__}, custom optimizer, may cause `memory leakage` on MindSpore 2.3.0")
 
     def _param_init_op(self, params, prefix, init="zeros"):
         news = []

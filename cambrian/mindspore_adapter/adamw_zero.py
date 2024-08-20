@@ -132,7 +132,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
             if momentum_dtype == ms.float16:
                 print(f"[ERROR] {self.__class__.__name__}, momentum dtype fp16, may cause `sdma error` on MindSpore 2.3.0")
         else:
-            print(f"[ERROR] {self.__class__.__name__}, custom optimizer, may cause `memory leakage` on MindSpore 2.3.0")
+            print(f"[WARNING] {self.__class__.__name__}, custom optimizer, may cause `memory leakage` on MindSpore 2.3.0")
 
     def _init_all_gather_ops(self, params, group):
         op_list = []
