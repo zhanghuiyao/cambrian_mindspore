@@ -30,8 +30,8 @@ python -u cambrian/train/train.py \
     --version llama_v3 \
     --data_path $data_path \
     --image_folder $image_folder \
-    --vision_tower_aux_list '["siglip/CLIP-ViT-SO400M-14-384",]' \
-    --vision_tower_aux_token_len_list '[576,]' \
+    --vision_tower_aux_list '["siglip/CLIP-ViT-SO400M-14-384"]' \
+    --vision_tower_aux_token_len_list '[576]' \
     --image_token_len 576 \
     --num_query_group 1 \
     --query_num_list '[576]' \
