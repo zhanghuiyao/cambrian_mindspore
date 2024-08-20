@@ -14,19 +14,20 @@ export MS_DEV_RUNTIME_CONF="synchronize:True"
 # common setting
 master_port=9001
 
+
 # hyper-parameters
-task_name="cambrian-8b-finetune"
+task_name="run_cambrian-8b-finetune"
 model_name_or_path="./cambrian/hf-configs/nyu-visionx-cambrian-8b"              # your_path_to_llama3
 image_folder="./demo/toy-dataset/images_from_coco"                              # your_path_to_image_folder
 pretrain_mm_mlp_adapter="./checkpoints/cambrian-8b-pretrain/mm_projector.bin"   #
 ckpt_dir="checkpoints"                                                          #
 data_path="./demo/toy-dataset/alignment_2.5m.jsonl"                             # your_path_to_pretrain_jsonl e.g. Cambrian7M_withsystemprompt.jsonl
-per_device_train_batch_size=8                                                   # batch size per device
+per_device_train_batch_size=8
 enable_flash_attention="True"
 optim="adamw_zero2_mindspore"
 adamw_enable_fuse="True"
 adamw_zero_shard_size=8
-output_dir=$task_name"_bs"$per_device_train_batch_size"_zero2_fuseop_shard"$adamw_zero_shard_size"_8cards"
+output_dir=$task_name"_bs"$per_device_train_batch_size"_zero2_shard"$adamw_zero_shard_size"_fuseop_8cards"
 
 
 

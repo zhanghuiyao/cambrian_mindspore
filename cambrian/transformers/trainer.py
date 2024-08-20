@@ -962,10 +962,7 @@ class Trainer:
                     if is_last_step_and_steps_less_than_grad_acc:
                         logger.warning("last step not gradient_accumulation_steps, skip.")
 
-                    self.optimizer.step()
-
                     self.control = self.callback_handler.on_optimizer_step(args, self.state, self.control)
-
                     self.state.global_step += 1
                     self.state.epoch = epoch + (step + 1 + steps_skipped) / steps_in_epoch
                     self.control = self.callback_handler.on_step_end(args, self.state, self.control)

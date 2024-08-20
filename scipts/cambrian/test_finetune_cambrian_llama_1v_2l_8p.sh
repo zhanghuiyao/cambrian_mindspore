@@ -15,7 +15,7 @@ export MS_DEV_RUNTIME_CONF="synchronize:True"
 master_port=9001
 
 # hyper-parameters
-task_name="cambrian-8b-finetune"
+task_name="run_cambrian-8b-finetune"
 model_name_or_path="./cambrian/hf-configs/nyu-visionx-cambrian-8b"
 image_folder="./demo/toy-dataset/images_from_coco"
 pretrain_mm_mlp_adapter="./checkpoints/cambrian-8b-pretrain/mm_projector.bin"
