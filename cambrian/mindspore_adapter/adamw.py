@@ -79,7 +79,7 @@ class AdamWeightDecay(nn.Optimizer):
 
         print(
             f"WARNING: {self.__class__.__name__}, "
-            f"      beta1/beta2/eps     : {self.beta1}/{self.beta2}/{self.eps}, \n"
+            f"      beta1/beta2/eps     : {beta1}/{beta2}/{eps}, \n"
             f"      weight_decay        : {weight_decay}, \n"
             f"      enable_fuse         : {enable_fuse}, \n"
         )

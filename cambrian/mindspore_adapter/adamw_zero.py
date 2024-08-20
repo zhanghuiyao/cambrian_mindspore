@@ -94,7 +94,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
 
         print(
             f"WARNING: {self.__class__.__name__}, "
-            f"      beta1/beta2/eps     : {self.beta1}/{self.beta2}/{self.eps}, \n"
+            f"      beta1/beta2/eps     : {beta1}/{beta2}/{eps}, \n"
             f"      weight_decay        : {weight_decay}, \n"
             f"      shard size          : {self.shard_size}, \n"
             f"      shard_id            : {self.shard_id}, \n"
