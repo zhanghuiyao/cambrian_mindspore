@@ -93,7 +93,7 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
             self.shard_size = shard_size
 
         print(
-            f"WARNING: {self.__class__.__name__}, "
+            f"WARNING: {self.__class__.__name__}, \n"
             f"      beta1/beta2/eps     : {beta1}/{beta2}/{eps}, \n"
             f"      weight_decay        : {weight_decay}, \n"
             f"      shard size          : {self.shard_size}, \n"

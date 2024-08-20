@@ -1,7 +1,7 @@
 import numpy as np
 
 import mindspore as ms
-from mindspore import ParameterTuple, Tensor, nn, ops
+from mindspore import Parameter, ParameterTuple, Tensor, nn, ops
 from mindspore.ops import functional as F
 from mindspore.ops import operations as P
 
@@ -78,7 +78,7 @@ class AdamWeightDecay(nn.Optimizer):
         super(AdamWeightDecay, self).__init__(learning_rate, params, weight_decay)
 
         print(
-            f"WARNING: {self.__class__.__name__}, "
+            f"WARNING: {self.__class__.__name__}, \n"
             f"      beta1/beta2/eps     : {beta1}/{beta2}/{eps}, \n"
             f"      weight_decay        : {weight_decay}, \n"
             f"      enable_fuse         : {enable_fuse}, \n"
@@ -93,7 +93,15 @@ class AdamWeightDecay(nn.Optimizer):
         self.enable_fuse = enable_fuse
         if self.enable_fuse:
             self.fused_opt = ops.AdamWeightDecay()
-            if params[0].dtype == ms.float16:
+
+            # print
+            param_dtype = None
+            if isinstance(params[0], Parameter):
+                param_dtype = params[0].dtype
+            elif isinstance(params[0], dict):
+                if isinstance(params[0]["params"], list) and len(params[0]["params"]) > 0:
+                    param_dtype = params[0]["params"][0].dtype
+            if param_dtype == ms.float16:
                 print(f"[ERROR] {self.__class__.__name__}, param dtype fp16, may cause `sdma error` on MindSpore 2.3.0")
         else:
             print(f"[ERROR] {self.__class__.__name__}, custom optimizer, may cause `memory leakage` on MindSpore 2.3.0")
