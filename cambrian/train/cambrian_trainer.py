@@ -318,11 +318,11 @@ class CambrianTrainer(Trainer):
         # Name of files to save
         rank, world_size = get_rank() if _is_parallel() else 0, \
                            get_group_size() if _is_parallel() else 1
-        WEIGHTS_NAME = f'weights_rank-{rank:04d}-of-{world_size:04d}-{WEIGHTS_NAME}'
+        WEIGHTS_NAME_MODEL = f'weights_rank-{rank:04d}-of-{world_size:04d}-{WEIGHTS_NAME}'
         WEIGHTS_NAME_OPT = f'optimizer_rank-{rank:04d}-of-{world_size:04d}-{WEIGHTS_NAME}'
 
         # Path of files to save
-        WEIGHTS_NAME_PATH = os.path.join(output_dir, WEIGHTS_NAME)
+        WEIGHTS_NAME_PATH = os.path.join(output_dir, WEIGHTS_NAME_MODEL)
         WEIGHTS_NAME_OPT_PATH = os.path.join(output_dir, WEIGHTS_NAME_OPT)
         LR_PATH = os.path.join(output_dir, SCHEDULER_NAME)
         TRAIN_ARGS_PATH = os.path.join(output_dir, TRAINING_ARGS_NAME)
@@ -330,7 +330,8 @@ class CambrianTrainer(Trainer):
 
         ms.save_checkpoint(model if model is not None else self.model, WEIGHTS_NAME_PATH)
         ms.save_checkpoint(self.optimizer, WEIGHTS_NAME_OPT_PATH)
-        ms.save_checkpoint(self.lr_scheduler, LR_PATH)
+        if isinstance(self.lr_scheduler, nn.Cell):
+            ms.save_checkpoint(self.lr_scheduler, LR_PATH)
 
         json_string = json.dumps(dataclasses.asdict(self.state), indent=2, sort_keys=True) + "\n"
         with open(TRAINER_STATE_NAME_PATH, 'w') as f:
