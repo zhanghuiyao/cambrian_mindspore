@@ -311,13 +311,15 @@ class CambrianTrainer(Trainer):
         checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.global_step}"
         run_dir = self._get_output_dir(trial=trial)
         output_dir = os.path.join(run_dir, checkpoint_folder)
+        os.makedirs(run_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
         logger.info(f"Saving model checkpoint to {output_dir}")
 
         # Name of files to save
         rank, world_size = get_rank() if _is_parallel() else 0, \
                            get_group_size() if _is_parallel() else 1
-        WEIGHTS_NAME = f'weights_rank-{rank:08d}-of-{world_size:08d}-{WEIGHTS_NAME}'
-        WEIGHTS_NAME_OPT = f'optimizer_rank-{rank:08d}-of-{world_size:08d}-{WEIGHTS_NAME}'
+        WEIGHTS_NAME = f'weights_rank-{rank:04d}-of-{world_size:04d}-{WEIGHTS_NAME}'
+        WEIGHTS_NAME_OPT = f'optimizer_rank-{rank:04d}-of-{world_size:04d}-{WEIGHTS_NAME}'
 
         # Path of files to save
         WEIGHTS_NAME_PATH = os.path.join(output_dir, WEIGHTS_NAME)
