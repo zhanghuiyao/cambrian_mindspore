@@ -289,7 +289,7 @@ class CambrianTrainer(Trainer):
             state_dict = ms.load_checkpoint(WEIGHTS_PATH)
             m, u = ms.load_param_into_net(model, state_dict)
 
-            m = [n for n in m if ("_buffer" not in n) and (".inv_freq" not in n)]
+            m = [n for n in m if ".inv_freq" not in n]
             if len(m) > 0:
                 logger.warning(f"missing keys num: {len(m)}, top 10 name is: {m[:10]}")
             if len(u) > 0:

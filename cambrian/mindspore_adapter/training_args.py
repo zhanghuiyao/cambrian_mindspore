@@ -118,11 +118,12 @@ def init_environment(training_args: MindSporeArguments):
         mode=training_args.mode,
         device_target=training_args.device_target,
         jit_config={"jit_level": training_args.jit_level},
-        deterministic="ON"
+        deterministic="ON",
+        memory_optimize_level="O0",
+        pynative_synchronize=True
     )
 
     if training_args.mode == ms.PYNATIVE_MODE:
-        ms.set_context(pynative_synchronize=True)
         print("WARNING: run pynative mode, set `pynative_synchronize` True")
 
     if training_args.max_device_memory is not None:

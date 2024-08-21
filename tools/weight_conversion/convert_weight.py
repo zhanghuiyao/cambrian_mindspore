@@ -39,6 +39,9 @@ def name_replace_cambrian_8b(weight_name: str):
             weight_name = weight_name.replace(".0.weight", ".0.gamma")
             weight_name = weight_name.replace(".0.bias", ".0.beta")
 
+        if "pos_embed_" in weight_name:
+            weight_name = weight_name.replace('pos_embed_', 'pos_embeds.') + ".parameter_attr"
+
     # skip rmsnorm
     if weight_name.endswith("layernorm.weight"):
         return weight_name
