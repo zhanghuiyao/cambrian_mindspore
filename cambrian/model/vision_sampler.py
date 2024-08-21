@@ -266,12 +266,9 @@ class VisionCrossAttentionLayer(nn.Cell):
                 )
             else:
                 pos_embeds.append(
-                    PosEmbedAttrCell(
-                        Parameter(Tensor(np.zeros(1), ms.float32), name=f"pos_embed_{i}_buffer", requires_grad=False)
-                    )
+                    PosEmbedAttrCell(None)
                 )
         self.pos_embeds = nn.CellList(pos_embeds)
-
 
 
     def construct(

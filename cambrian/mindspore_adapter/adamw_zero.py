@@ -93,14 +93,14 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
             self.shard_size = shard_size
 
         print(
-            f"WARNING: {self.__class__.__name__}, \n"
-            f"      beta1/beta2/eps     : {beta1}/{beta2}/{eps}, \n"
-            f"      weight_decay        : {weight_decay}, \n"
-            f"      shard size          : {self.shard_size}, \n"
-            f"      shard_id            : {self.shard_id}, \n"
-            f"      comm group          : {comm_group}, \n"
-            f"      enable_fuse         : {enable_fuse}, \n"
-            f"      momentum_dtype      : {momentum_dtype}, \n"
+            f"WARNING: {self.__class__.__name__} \n"
+            f"      beta1/beta2/eps     : {beta1}/{beta2}/{eps} \n"
+            f"      weight_decay        : {weight_decay} \n"
+            f"      shard size          : {self.shard_size} \n"
+            f"      shard_id            : {self.shard_id} \n"
+            f"      comm group          : {comm_group} \n"
+            f"      enable_fuse         : {enable_fuse} \n"
+            f"      momentum_dtype      : {momentum_dtype} \n"
         )
 
         self.beta1 = Tensor(np.array([beta1]).astype(np.float32))

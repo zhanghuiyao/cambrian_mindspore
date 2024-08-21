@@ -1,6 +1,7 @@
 import copy
 from typing import Optional, Dict, Union, Any
 import mindspore as ms
+import numpy as np
 from mindspore import nn, ops, Tensor, Parameter
 
 from transformers import PretrainedConfig, GenerationConfig
@@ -54,7 +55,8 @@ class ModuleUtilsMixin:
                 if is_loaded_in_4bit:
                     raise NotImplementedError("4 bit not support on MindSpore 2.3")
                 else:
-                    total_numel.append(param.numel())
+                    # total_numel.append(param.numel())
+                    total_numel.append(np.prod(param.shape))
 
         return sum(total_numel)
 
@@ -71,7 +73,9 @@ class ModuleUtilsMixin:
         if not hasattr(self, "warnings_issued"):
             self.warnings_issued = {}
         if self.main_input_name in input_dict:
-            return input_dict[self.main_input_name].numel()
+            # return input_dict[self.main_input_name].numel()
+            return np.prod(input_dict[self.main_input_name].shape)
+
         elif "estimate_tokens" not in self.warnings_issued:
             logger.warning(
                 "Could not estimate the number of tokens of the input, floating-point operations will not be computed"

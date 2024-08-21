@@ -78,10 +78,10 @@ class AdamWeightDecay(nn.Optimizer):
         super(AdamWeightDecay, self).__init__(learning_rate, params, weight_decay)
 
         print(
-            f"WARNING: {self.__class__.__name__}, \n"
-            f"      beta1/beta2/eps     : {beta1}/{beta2}/{eps}, \n"
-            f"      weight_decay        : {weight_decay}, \n"
-            f"      enable_fuse         : {enable_fuse}, \n"
+            f"WARNING: {self.__class__.__name__} \n"
+            f"      beta1/beta2/eps     : {beta1}/{beta2}/{eps} \n"
+            f"      weight_decay        : {weight_decay} \n"
+            f"      enable_fuse         : {enable_fuse} \n"
         )
 
         self.beta1 = Tensor(np.array([beta1]).astype(np.float32))

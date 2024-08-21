@@ -931,13 +931,14 @@ class Trainer:
                 self.model.set_train(True)
                 self.train_model.set_train(True)
                 tr_loss_step, overflow = self.training_step(self.train_model, inputs)
+                tr_loss_step = tr_loss_step.asnumpy()
 
                 # FIXME: level 1, log by callback_fn
                 logger.info(f"Epoch: {epoch}, Step: {step}, tr_loss: {tr_loss_step}, overflow: {overflow}")
 
                 if (
                     args.logging_nan_inf_filter
-                    and (ops.isnan(tr_loss_step) or ops.isinf(tr_loss_step))
+                    and (np.isnan(tr_loss_step) or np.isinf(tr_loss_step))
                 ):
                     # if loss is nan or inf simply add the average of previous logged losses
                     tr_loss += tr_loss / (1 + self.state.global_step - self._globalstep_last_logged)
@@ -1114,12 +1115,14 @@ class Trainer:
 
             logs: Dict[str, float] = {}
 
+            # FIXME: level 3
             # get average loss over all processes
             # tr_loss_scalar = self._nested_gather(tr_loss).mean().item()
-            if _is_parallel():
-                tr_loss_scalar = self._nested_reduce_sum(tr_loss).item() / get_group_size()
-            else:
-                tr_loss_scalar = tr_loss.item()
+            # if _is_parallel():
+            #     tr_loss_scalar = self._nested_reduce_sum(tr_loss).item() / get_group_size()
+            # else:
+            #     tr_loss_scalar = tr_loss.item()
+            tr_loss_scalar = tr_loss.item() if isinstance(tr_loss, (Tensor, np.ndarray)) else tr_loss
 
             # reset tr_loss to zero
             tr_loss -= tr_loss
@@ -1253,9 +1256,11 @@ class Trainer:
         # Storing the number of floating-point operations that went into the model
 
         if _is_parallel():
-            self.state.total_flos += (
-                ops.AllReduce()(Tensor(self.current_flos, ms.float32)).item()
-            )
+            # FIXME: level 3
+            # self.state.total_flos += (
+            #     ops.AllReduce()(Tensor(self.current_flos, ms.float32)).item()
+            # )
+            self.state.total_flos += self.current_flos * get_group_size()
             self.current_flos = 0
         else:
             self.state.total_flos += self.current_flos
