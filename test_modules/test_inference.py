@@ -99,9 +99,9 @@ if __name__ == '__main__':
     args, _ = parser.parse_known_args()
 
     if args.ms_mode == 0:
-        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"}, max_device_memory="59GB")
+        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"}, max_device_memory="59GB", deterministic="ON")
     elif args.ms_mode == 1:
-        ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True, max_device_memory="59GB")
+        ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True, max_device_memory="59GB", deterministic="ON")
     else:
         raise ValueError
 

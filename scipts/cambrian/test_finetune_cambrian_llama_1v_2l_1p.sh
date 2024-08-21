@@ -1,6 +1,8 @@
 #!/bin/bash
 
 export ASCEND_RT_VISIBLE_DEVICES=0
+export HCCL_DETERMINISTIC=true
+export ASCEND_LAUNCH_BLOCKING=1
 export MS_ENABLE_NUMA=0
 export GLOG_v=2
 export MS_MEMORY_STATISTIC=1

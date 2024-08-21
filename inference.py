@@ -109,10 +109,22 @@ if __name__ == '__main__':
                 os.environ["MS_DEV_RUNTIME_CONF"] = _new
                 print("WARNING: os environment MS_DEV_RUNTIME_CONF synchronize has not been set, force setting it now.")
 
-        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"}, max_device_memory="59GB")
+        ms.set_context(
+            mode=ms.GRAPH_MODE,
+            device_target="Ascend",
+            jit_config={"jit_level": "O0"},
+            max_device_memory="59GB",
+            deterministic="ON"
+        )
 
     elif args.ms_mode == 1:
-        ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True, max_device_memory="59GB")
+        ms.set_context(
+            mode=ms.PYNATIVE_MODE,
+            device_target="Ascend",
+            pynative_synchronize=True,
+            max_device_memory="59GB",
+            deterministic="ON"
+        )
     else:
         raise ValueError
 

@@ -4,6 +4,8 @@ export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 #export ASCEND_RT_VISIBLE_DEVICES=4,5,6,7
 device_num=8
 
+export HCCL_DETERMINISTIC=true
+export ASCEND_LAUNCH_BLOCKING=1
 export MS_ENABLE_NUMA=0
 export GLOG_v=2
 
@@ -13,7 +15,7 @@ export GLOG_v=2
 #export MS_DEV_RUNTIME_CONF="synchronize:True"
 export MS_MEMORY_STATISTIC=2
 export MS_MEMORY_TRACE_PATH="./trackers"
-export MS_DEV_RUNTIME_CONF="memory_statistics:True,compile_statistics:True,multi_stream:False"
+export MS_DEV_RUNTIME_CONF="synchronize:True,memory_statistics:True,compile_statistics:True,multi_stream:False"
 export MS_ALLOC_CONF="memory_tracker:True"  # enable_vmm:True
 
 

@@ -86,7 +86,7 @@ if __name__ == '__main__':
     args, _ = parser.parse_known_args()
 
     # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
-    ms.set_context(mode=ms.GRAPH_MODE, device_target="CPU", jit_config={"jit_level": "O0"})
+    ms.set_context(mode=ms.GRAPH_MODE, device_target="CPU", jit_config={"jit_level": "O0"}, deterministic="ON")
 
     if args.module_name == "attention":
         test_llama3_attention(args.model_path)

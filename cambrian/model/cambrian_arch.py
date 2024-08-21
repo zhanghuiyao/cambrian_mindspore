@@ -498,7 +498,13 @@ class CambrianMetaForCausalLM:
         # if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_im_start_end', False):
         #     raise NotImplementedError
 
-        # FIXME: fixed
+        # FIXME: level 0, avoid gather_op out of bounds
+        input_ids = ops.clip(
+            input_ids,
+            min=0,
+            max=self.model.embed_tokens.embedding_table.shape[0] - 1
+        )
+
         if self.training:
 
             # embed the input_ids
@@ -620,6 +626,7 @@ class CambrianMetaForCausalLM:
                     _index_table < _im_positions, _index_table, 0)
                 gather_index = ops.select(
                     _index_table > (_im_positions + _im_token_len - 1), _index_table - _im_token_len, gather_index)
+                gather_index = ops.clip(gather_index, min=0, max=cur_input_ids.shape[0] - 1)
                 cur_input_ids = ops.gather(cur_input_ids, gather_index, axis=0)
                 cur_labels = ops.gather(labels[batch_idx], gather_index, axis=0)
                 cur_attention_mask = ops.gather(cur_attention_mask.to(ms.int32), gather_index, axis=0).to(ms.bool_)

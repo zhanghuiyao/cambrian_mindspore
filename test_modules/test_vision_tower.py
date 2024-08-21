@@ -72,7 +72,7 @@ if __name__ == '__main__':
     parser.add_argument("--image_path", type=str, default="./images/cambrian.png")
     args, _ = parser.parse_known_args()
 
-    ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"})
+    ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"}, deterministic="ON")
     # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
 
     config, _ = CambrianConfig.from_pretrained(

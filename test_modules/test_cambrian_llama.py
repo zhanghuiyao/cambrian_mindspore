@@ -207,7 +207,7 @@ if __name__ == '__main__':
 
     # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
     ms.set_context(mode=ms.GRAPH_MODE, device_target=args.device_target, jit_config = {"jit_level": "O0"})
-    ms.set_context(max_device_memory=args.max_device_memory)
+    ms.set_context(max_device_memory=args.max_device_memory, deterministic="ON")
     if args.enable_tracker:
         ms.set_context(memory_optimize_level="O0", pynative_synchronize=True)
     if args.save_graphs:

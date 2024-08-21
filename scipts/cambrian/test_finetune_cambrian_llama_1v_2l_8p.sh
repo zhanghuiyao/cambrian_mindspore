@@ -4,6 +4,8 @@
 export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 device_num=8
 
+export HCCL_DETERMINISTIC=true
+export ASCEND_LAUNCH_BLOCKING=1
 export MS_ENABLE_NUMA=0
 export GLOG_v=2
 
