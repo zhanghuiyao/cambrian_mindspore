@@ -119,8 +119,8 @@ def init_environment(training_args: MindSporeArguments):
         device_target=training_args.device_target,
         jit_config={"jit_level": training_args.jit_level},
         deterministic="ON",
-        memory_optimize_level="O0",
-        pynative_synchronize=True
+        pynative_synchronize=True,
+        memory_optimize_level="O1",
     )
 
     if training_args.mode == ms.PYNATIVE_MODE:
