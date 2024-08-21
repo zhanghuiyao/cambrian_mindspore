@@ -11,6 +11,29 @@ from cambrian.mindspore_adapter.train_onestep_wrapper import TrainOneStepWrapper
 from cambrian.model.language_model.cambrian_llama import CambrianLlamaModel, CambrianLlamaForCausalLM, TrainWrapperForCambrianLlamaForCausalLM
 
 
+def get_optimizer_param_group(opt_model):
+    from cambrian.transformers.mindspore_utils import ALL_LAYERNORM_LAYERS
+    from cambrian.transformers.trainer_ms_utils import get_parameter_names
+
+    decay_parameters = get_parameter_names(opt_model, ALL_LAYERNORM_LAYERS)
+    decay_parameters = [name for name in decay_parameters if "bias" not in name]
+    optimizer_grouped_parameters = [
+        {
+            "params": [
+                p for n, p in opt_model.parameters_and_names() if (n in decay_parameters and p.requires_grad)
+            ],
+            "weight_decay": 0.0,
+        },
+        {
+            "params": [
+                p for n, p in opt_model.parameters_and_names() if (n not in decay_parameters and p.requires_grad)
+            ],
+            "weight_decay": 0.0,
+        },
+    ]
+
+    return optimizer_grouped_parameters
+
 
 def test_generate_wo_image(model_path: str):
     from transformers import AutoTokenizer
@@ -93,19 +116,24 @@ def test_cambrian_llama_causal(model_path: str, args):
             from cambrian.mindspore_adapter.amp import convert_module_dtype
             model = convert_module_dtype(model, dtype=ms.float16, keep_norm_fp32=True)
 
+        if args.enable_group:
+            train_params = get_optimizer_param_group(model)
+        else:
+            train_params = model.trainable_params()
+
         # create optimizer
         if args.optim.lower() == "zero1":
             from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO1
-            optimizer = AdamWeightDecayZeRO1(model.trainable_params(), 1e-5, shard_size=args.shard_size, enable_fuse=args.enable_fuse)
+            optimizer = AdamWeightDecayZeRO1(train_params, 1e-5, shard_size=args.shard_size, enable_fuse=args.enable_fuse)
         elif args.optim.lower() == "zero2":
             from cambrian.mindspore_adapter.adamw_zero import AdamWeightDecayZeRO2
-            optimizer = AdamWeightDecayZeRO2(model.trainable_params(), 1e-5, shard_size=args.shard_size, enable_fuse=args.enable_fuse)
+            optimizer = AdamWeightDecayZeRO2(train_params, 1e-5, shard_size=args.shard_size, enable_fuse=args.enable_fuse)
         elif args.optim.lower() == "adamw":
             from cambrian.mindspore_adapter.adamw import AdamWeightDecay
             # optimizer = nn.AdamWeightDecay(model.trainable_params(), 1e-5)
-            optimizer = AdamWeightDecay(model.trainable_params(), 1e-5, enable_fuse=args.enable_fuse)
+            optimizer = AdamWeightDecay(train_params, 1e-5, enable_fuse=args.enable_fuse)
         elif args.optim.lower() == "sgd":
-            optimizer = nn.SGD(model.trainable_params(), 1e-5)
+            optimizer = nn.SGD(train_params, 1e-5)
         else:
             raise NotImplementedError
 
@@ -127,6 +155,7 @@ def test_cambrian_llama_causal(model_path: str, args):
         train_model.set_train()
 
         print("Test cambrian-8b casual model, build train model done.")
+        print(f"Args: {args}")
         print("Strat training...")
 
         temp_data_list = ()
@@ -165,6 +194,7 @@ if __name__ == '__main__':
     parser.add_argument("--shard_size", type=int, default=8)
     parser.add_argument("--drop_overflow_step", type=ast.literal_eval, default=True)
     parser.add_argument("--enable_fuse", type=ast.literal_eval, default=False)
+    parser.add_argument("--enable_group", type=ast.literal_eval, default=True)
 
     parser.add_argument("--run_forward", type=ast.literal_eval, default=False)
     parser.add_argument("--run_backward", type=ast.literal_eval, default=True)
