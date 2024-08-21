@@ -374,15 +374,18 @@ class CambrianTrainer(Trainer):
 
             logs: Dict[str, float] = {}
 
+            # FIXME: level 3
             # get average loss over all processes
             # tr_loss_scalar = self._nested_gather(tr_loss).mean().item()
-            if _is_parallel():
-                tr_loss_scalar = self._nested_reduce_sum(tr_loss).item() / get_group_size()
-            else:
-                tr_loss_scalar = tr_loss.item()
+            # if _is_parallel():
+            #     tr_loss_scalar = self._nested_reduce_sum(tr_loss).item() / get_group_size()
+            # else:
+            #     tr_loss_scalar = tr_loss.item()
+            tr_loss_scalar = tr_loss.item() if isinstance(tr_loss, (Tensor, np.ndarray)) else tr_loss
 
             # reset tr_loss to zero
             tr_loss -= tr_loss
+
             logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
             if grad_norm is not None:
                 logs["grad_norm"] = grad_norm.item() if isinstance(grad_norm, (Tensor, np.ndarray)) else grad_norm
