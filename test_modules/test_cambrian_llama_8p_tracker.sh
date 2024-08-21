@@ -25,6 +25,7 @@ num_vision_tower=4
 
 optim="zero2"
 enable_fuse=True
+enable_group=True
 force_param_fp16=True
 run_steps=10
 
@@ -43,6 +44,7 @@ python -u test_modules/test_cambrian_llama.py \
     --optim $optim \
     --shard_size $device_num \
     --enable_fuse $enable_fuse \
+    --enable_group $enable_group \
     --num_vision_tower $num_vision_tower \
     --run_steps $run_steps \
     \
