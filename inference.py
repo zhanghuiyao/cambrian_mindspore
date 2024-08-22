@@ -90,6 +90,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--ms_mode", type=int, default=1, help="0 is Graph, 1 is Pynative")
+    parser.add_argument("--jit_level", type=str, default="O0")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
     parser.add_argument("--checkpoint_path", type=str, default="./cambrian-8b.ckpt")
     parser.add_argument("--use_fa", type=ast.literal_eval, default=True)
@@ -112,7 +113,7 @@ if __name__ == '__main__':
         ms.set_context(
             mode=ms.GRAPH_MODE,
             device_target="Ascend",
-            jit_config={"jit_level": "O0"},
+            jit_config={"jit_level": args.jit_level},
             max_device_memory="59GB",
             deterministic="ON"
         )
