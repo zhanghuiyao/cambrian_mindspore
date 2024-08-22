@@ -30,6 +30,7 @@ adamw_enable_fuse="True"
 adamw_zero_shard_size=8
 output_dir=$task_name"_bs"$per_device_train_batch_size"_zero2_fuseop_shard"$adamw_zero_shard_size"_8cards"
 
+num_epochs=1000
 
 
 msrun --bind_core=True --worker_num=$device_num --local_worker_num=$device_num --master_port=$master_port --log_dir=$output_dir \
@@ -59,7 +60,7 @@ python -u cambrian/train/train.py \
     --group_by_modality_length True \
     --bf16 False \
     --output_dir $output_dir/$ckpt_dir \
-    --num_train_epochs 1 \
+    --num_train_epochs $num_epochs \
     --per_device_train_batch_size $per_device_train_batch_size \
     --gradient_accumulation_steps 1 \
     --evaluation_strategy "no" \
