@@ -280,7 +280,7 @@ class CambrianMetaForCausalLM:
         bs = vision_tower_aux_feature_list[0].shape[0]
         for vision_tower_aux_feature, vision_tower_aux_attention_masks in zip(vision_tower_aux_feature_list, vision_tower_aux_attention_masks_list):
 
-            vision_tower_aux_feature = ops.depend(vision_tower_aux_feature, vision_tower_aux_feature_rearranged_list) # FIXME: zhy_test
+            vision_tower_aux_feature = ops.depend(vision_tower_aux_feature, vision_tower_aux_feature_rearranged_list) # FIXME: zhy_test depend
 
             aux_height = aux_width = int(vision_tower_aux_feature.shape[1]**0.5)
             # assert aux_height * aux_width == vision_tower_aux_feature.shape[1]
@@ -301,6 +301,8 @@ class CambrianMetaForCausalLM:
         vision_tower_aux_attention_masks_rearranged_list = ()
         bs = vision_tower_aux_feature_list[0].shape[0]
         for vision_tower_aux_feature in vision_tower_aux_feature_list:
+            vision_tower_aux_feature = ops.depend(vision_tower_aux_feature, vision_tower_aux_feature_rearranged_list)  # FIXME: zhy_test depend
+
             aux_height = aux_width = int(vision_tower_aux_feature.shape[1]**0.5)
             # assert (aux_height//query_side_len) * query_side_len == aux_height
 
@@ -348,7 +350,7 @@ class CambrianMetaForCausalLM:
         vision_tower_aux_list = self.model.vision_tower_aux_list  # self.model.get_vision_tower_aux_list()
         image_aux_features_list = ()
         for image_aux, vision_tower_aux in zip(image_aux_list, vision_tower_aux_list):
-            image_aux = ops.depend(image_aux, image_aux_features_list)  # FIXME: zhy_test
+            image_aux = ops.depend(image_aux, image_aux_features_list)  # FIXME: zhy_test depend
             image_aux_features = vision_tower_aux(image_aux)
             image_aux_features_list += (image_aux_features,)
         return image_aux_features_list
@@ -404,6 +406,7 @@ class CambrianMetaForCausalLM:
             # get vision tokens from each vision tower
             for aux_i in range(len(vision_tower_aux_list)):
                 image_aux_features = image_aux_features_list[aux_i]
+                image_aux_features = ops.depend(image_aux_features, vision_tower_aux_feature_list) # FIXME: zhy_test depend
 
                 # image_aux_features = getattr(self.model, 'mm_projector_aux_{}'.format(aux_i))(image_aux_features).to(dtype)
                 image_aux_features = self.model.mm_projector_auxes[aux_i](image_aux_features).to(dtype)
@@ -415,6 +418,7 @@ class CambrianMetaForCausalLM:
             # perform vision sampling for each query group
             for query_group_i, query_num in enumerate(query_num_list):
                 query_features_i = self.model.vision_query[query_group_i, :].view(1, 1, 1, -1).broadcast_to((bs, query_num, -1, -1))
+                query_features_i = ops.depend(query_features_i, final_image_features_list)  # FIXME: zhy_test depend
                 global_context_feature_i = global_context_feature.broadcast_to((-1, query_num, 1, -1)).flatten(start_dim=0, end_dim=1)
                 query_side_len = int(query_num**0.5)
 
