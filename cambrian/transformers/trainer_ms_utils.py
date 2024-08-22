@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from typing import Dict
 from dataclasses import dataclass
 
@@ -57,7 +58,8 @@ def get_model_param_count(model, trainable_only=False):
     """
 
     def numel(p):
-        return p.numel()
+        # return p.numel()
+        return np.prod(p.shape)
 
     return sum(numel(p) for p in model.get_parameters() if not trainable_only or p.requires_grad)
 

@@ -551,7 +551,8 @@ class Trainer:
             # FIXME: Consider padding
             for step, batch in enumerate(train_dl):
                 if isinstance(batch["input_ids"], Tensor):
-                    tokens = batch["input_ids"].numel()
+                    # tokens = batch["input_ids"].numel()
+                    tokens = np.prod(batch["input_ids"].shape)
                 elif isinstance(batch["input_ids"], np.ndarray):
                     tokens = batch["input_ids"].size
                 else:
@@ -1130,7 +1131,7 @@ class Trainer:
             logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
             if grad_norm is not None:
                 logs["grad_norm"] = grad_norm.item() if isinstance(grad_norm, (Tensor, np.ndarray)) else grad_norm
-            logs["learning_rate"] = _get_learning_rate(self.optimizer, self.state.global_step)
+            # logs["learning_rate"] = _get_learning_rate(self.optimizer, self.state.global_step) # FIXME: level 0, zhy_test
 
             self._total_loss_scalar += tr_loss_scalar
             self._globalstep_last_logged = self.state.global_step
