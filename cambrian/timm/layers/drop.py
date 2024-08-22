@@ -5,9 +5,11 @@ from mindspore import nn, ops, Tensor
 _is_ascend = ms.get_context("device_target") == "Ascend"
 
 
+
+
 def _bernoulli(shape, p):
     if _is_ascend:
-        _uniform_samples = ops.ones(shape, ms.float32).uniform()
+        _uniform_samples = ops.uniform(shape, ops.zeros((), ms.float32), ops.ones((), ms.float32))
         bernoulli_tensor = ops.select(
             ops.less_equal(_uniform_samples, p),
             ops.ones((), ms.float32),
