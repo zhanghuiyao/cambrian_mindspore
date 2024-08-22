@@ -107,10 +107,21 @@ class CambrianTrainer(Trainer):
         train_model.set_train(True)
 
         # inputs to tensor
-        inputs = self._prepare_inputs(inputs)
+        # inputs = self._prepare_inputs(inputs)
 
         # inputs dict to list
-        inputs = self._prepare_inputs_dict2list(dict_inputs=inputs, train_model=model)
+        _inputs = self._prepare_inputs_dict2list(dict_inputs=inputs, train_model=model)
+
+        # to tensor
+        inputs = ()
+        for data in _inputs:
+            if data is not None:
+                if hasattr(self.args, "input_dtype") and \
+                        data.dtype not in (np.int, np.int32, np.int64, np.bool_):
+                    data = Tensor(data, dtype=self.args.input_dtype)
+                else:
+                    data = Tensor(data)
+            inputs += (data,)
 
         loss, _, overflow = train_model(*inputs)
 
