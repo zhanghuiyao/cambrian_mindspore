@@ -117,7 +117,7 @@ class CambrianTrainer(Trainer):
         for data in _inputs:
             if data is not None:
                 if hasattr(self.args, "input_dtype") and \
-                        data.dtype not in (np.uint8, np.int32, np.int64, np.bool_):
+                        data.dtype in (np.float32, np.float16, np.float64):
                     data = Tensor(data, dtype=self.args.input_dtype)
                 else:
                     data = Tensor(data)
