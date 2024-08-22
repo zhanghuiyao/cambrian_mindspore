@@ -279,6 +279,9 @@ class CambrianMetaForCausalLM:
         vision_tower_aux_attention_masks_rearranged_list = ()
         bs = vision_tower_aux_feature_list[0].shape[0]
         for vision_tower_aux_feature, vision_tower_aux_attention_masks in zip(vision_tower_aux_feature_list, vision_tower_aux_attention_masks_list):
+
+            vision_tower_aux_feature = ops.depend(vision_tower_aux_feature, vision_tower_aux_feature_rearranged_list) # FIXME: zhy_test
+
             aux_height = aux_width = int(vision_tower_aux_feature.shape[1]**0.5)
             # assert aux_height * aux_width == vision_tower_aux_feature.shape[1]
             # assert (aux_height//query_side_len) * query_side_len == aux_height
@@ -342,9 +345,10 @@ class CambrianMetaForCausalLM:
         return vision_tower_aux_feature_rearranged_list, vision_tower_aux_attention_masks_rearranged_list
 
     def encode_images(self, image_aux_list):
-        vision_tower_aux_list = self.model.get_vision_tower_aux_list()
+        vision_tower_aux_list = self.model.vision_tower_aux_list  # self.model.get_vision_tower_aux_list()
         image_aux_features_list = ()
         for image_aux, vision_tower_aux in zip(image_aux_list, vision_tower_aux_list):
+            image_aux = ops.depend(image_aux, image_aux_features_list)  # FIXME: zhy_test
             image_aux_features = vision_tower_aux(image_aux)
             image_aux_features_list += (image_aux_features,)
         return image_aux_features_list
@@ -707,6 +711,10 @@ class CambrianMetaForCausalLM:
                     input_embeddings[-num_new_tokens:] = embed_tokens_weight
                 else:
                     raise ValueError(f"Unexpected embed_tokens_weight shape. Pretrained: {embed_tokens_weight.shape}. Current: {input_embeddings.shape}. Numer of new tokens: {num_new_tokens}.")
+
+                input_embeddings_p.set_data(Tensor(input_embeddings, input_embeddings_p.dtype))
+                output_embeddings_p.set_data(Tensor(output_embeddings, output_embeddings_p.dtype))
+
         elif model_args.mm_use_im_patch_token:
             if model_args.tune_mm_mlp_adapter:
                 for p in self.get_input_embeddings().get_parameters():
