@@ -2,6 +2,7 @@ import mindspore as ms
 from mindspore import nn
 
 import os
+import numpy as np
 from typing import Any, Callable, Dict, Optional, Union
 
 
@@ -46,9 +47,11 @@ def remap_state_dict(
     """
     out_dict = {}
     for (ka, va), (kb, vb) in zip(model.parameters_dict().items(), state_dict.items()):
-        assert va.numel() == vb.numel(), f'Tensor size mismatch {ka}: {va.shape} vs {kb}: {vb.shape}. Remap failed.'
+        # assert va.numel() == vb.numel(), f'Tensor size mismatch {ka}: {va.shape} vs {kb}: {vb.shape}. Remap failed.'
+        assert np.prod(va.shape) == np.prod(vb.shape), f'Tensor size mismatch {ka}: {va.shape} vs {kb}: {vb.shape}. Remap failed.'
         if va.shape != vb.shape:
             if allow_reshape:
+                print(f"WARNING: timm.models._helpers.remap_state_dict: reshape parameter vb:{vb.shape} to {va.shape}")
                 vb = vb.reshape(va.shape)
             else:
                 assert False,  f'Tensor shape mismatch {ka}: {va.shape} vs {kb}: {vb.shape}. Remap failed.'

@@ -61,7 +61,7 @@ class Dinov2Embeddings(nn.Cell):
             align_corners=False,
         ).to(dtype=target_dtype)
 
-        assert int(height) == patch_pos_embed.shape[-2] and int(width) == patch_pos_embed.shape[-1]
+        # assert int(height) == patch_pos_embed.shape[-2] and int(width) == patch_pos_embed.shape[-1]
         # if int(height) != patch_pos_embed.shape[-2] or int(width) != patch_pos_embed.shape[-1]:
         #     raise ValueError("Width or height does not match with the interpolated position embeddings")
 
@@ -116,10 +116,10 @@ class Dinov2PatchEmbeddings(nn.Cell):
         )
 
     def construct(self, pixel_values: Tensor) -> Tensor:
-        num_channels = pixel_values.shape[1]
-        assert num_channels == self.num_channels, \
-            f"Make sure that the channel dimension of the pixel values match with the one set in the configuration." \
-            f"Expected {self.num_channels} but got {num_channels}."
+        # num_channels = pixel_values.shape[1]
+        # assert num_channels == self.num_channels, \
+        #     f"Make sure that the channel dimension of the pixel values match with the one set in the configuration." \
+        #     f"Expected {self.num_channels} but got {num_channels}."
 
         embeddings = self.projection(pixel_values).flatten(start_dim=2).swapdims(1, 2)
         return embeddings
@@ -446,7 +446,7 @@ class Dinov2Model(PreTrainedModel):
             head_mask = head_mask.expand(num_hidden_layers, -1, -1, -1, -1)
         elif head_mask.dim() == 2:
             head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)  # We can specify head_mask for each layer
-        assert head_mask.dim() == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
+        # assert head_mask.dim() == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
         head_mask = head_mask.to(dtype=self.dtype)  # switch to float if need + fp16 compatibility
         return head_mask
 

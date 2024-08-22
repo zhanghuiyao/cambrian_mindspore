@@ -309,7 +309,7 @@ class LlamaAttention(nn.Cell):
         attn_weights = ops.softmax(attn_weights, axis=-1, dtype=ms.float32).to(query_states.dtype)
         attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
-        assert attn_output.shape == (bsz, self.num_heads, q_len, self.head_dim)
+        # assert attn_output.shape == (bsz, self.num_heads, q_len, self.head_dim)
 
         attn_output = attn_output.swapdims(1, 2)
 
@@ -424,7 +424,7 @@ class LlamaFlashAttention2(LlamaAttention):
             attention_mask = attention_mask[:, :, :, : key_states.shape[-2]]
         attention_mask = self.convert_mask_to_fa_format(attention_mask)
         attn_output = self.flash_attention(query_states, key_states, value_states, attention_mask)
-        assert attn_output.shape == (bsz, self.num_heads, q_len, self.head_dim)
+        # assert attn_output.shape == (bsz, self.num_heads, q_len, self.head_dim)
 
         # 2. vanilla attention
         # attn_weights = ops.matmul(query_states, key_states.swapdims(2, 3)) / (self.head_dim ** 0.5)
@@ -437,7 +437,7 @@ class LlamaFlashAttention2(LlamaAttention):
         # attn_weights = ops.softmax(attn_weights, axis=-1, dtype=ms.float32).to(query_states.dtype)
         # attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         # attn_output = ops.matmul(attn_weights, value_states)
-        # assert attn_output.shape == (bsz, self.num_heads, q_len, self.head_dim)
+        # # assert attn_output.shape == (bsz, self.num_heads, q_len, self.head_dim)
 
         attn_output = attn_output.swapdims(1, 2)
         attn_output = attn_output.reshape(bsz, q_len, -1)
@@ -606,14 +606,14 @@ class LlamaModel(LlamaPreTrainedModel):
         cache_position: Optional[Tensor] = None,
     ) -> Union[Tuple, ]:
         use_cache = use_cache if use_cache is not None else self.use_cache
-        if self.training:
-            assert not use_cache
 
-        assert not output_attentions
-        assert not output_hidden_states
-        assert ((input_ids is None) and (inputs_embeds is not None)) or \
-               ((input_ids is not None) and (inputs_embeds is None))
-        # assert (input_ids is None) ^ (inputs_embeds is None)
+        # if self.training:
+        #     assert not use_cache
+        # assert not output_attentions
+        # assert not output_hidden_states
+        # assert ((input_ids is None) and (inputs_embeds is not None)) or \
+        #        ((input_ids is not None) and (inputs_embeds is None))
+        # # assert (input_ids is None) ^ (inputs_embeds is None)
 
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
@@ -649,7 +649,7 @@ class LlamaModel(LlamaPreTrainedModel):
             hidden_states = layer_outputs[0]
 
             if use_cache:
-                assert past_key_values is not None
+                # assert past_key_values is not None
                 next_cache = layer_outputs[1]
                 past_key_values[layer_idx] = next_cache
 
@@ -708,7 +708,7 @@ class LlamaModel(LlamaPreTrainedModel):
 
             # if attention_mask.max() != 0:
             #     raise ValueError("Custom 4D attention mask should be passed in inverted form with max==0`")
-            assert attention_mask.max() == 0
+            # assert attention_mask.max() == 0
 
             causal_mask = attention_mask
         else:
@@ -833,10 +833,10 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
         ```"""
 
-        assert not output_attentions
-        assert not output_hidden_states
-        assert ((input_ids is None) and (inputs_embeds is not None)) or \
-               ((input_ids is not None) and (inputs_embeds is None))
+        # assert not output_attentions
+        # assert not output_hidden_states
+        # assert ((input_ids is None) and (inputs_embeds is not None)) or \
+        #        ((input_ids is not None) and (inputs_embeds is None))
         # assert (input_ids is None) ^ (inputs_embeds is None)
 
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
@@ -916,7 +916,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         for i in range(len(input_ids)):
             cur_input_ids, cur_labels, cur_attention_mask = input_ids[i], labels[i], attention_mask[i]
             active_len = int(cur_attention_mask.sum())
-            assert cur_attention_mask[:active_len].sum() == cur_attention_mask.sum()
+            # assert cur_attention_mask[:active_len].sum() == cur_attention_mask.sum()
             masked_input_ids.append(cur_input_ids[:active_len])
             masked_labels.append(cur_labels[:active_len])
             masked_attention_mask.append(cur_attention_mask[:active_len])

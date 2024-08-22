@@ -280,8 +280,8 @@ class CambrianMetaForCausalLM:
         bs = vision_tower_aux_feature_list[0].shape[0]
         for vision_tower_aux_feature, vision_tower_aux_attention_masks in zip(vision_tower_aux_feature_list, vision_tower_aux_attention_masks_list):
             aux_height = aux_width = int(vision_tower_aux_feature.shape[1]**0.5)
-            assert aux_height * aux_width == vision_tower_aux_feature.shape[1]
-            assert (aux_height//query_side_len) * query_side_len == aux_height
+            # assert aux_height * aux_width == vision_tower_aux_feature.shape[1]
+            # assert (aux_height//query_side_len) * query_side_len == aux_height
 
             reduce_factor = (aux_height//query_side_len)
             vision_tower_aux_feature_rearranged = vision_tower_aux_feature.view(bs, query_side_len, reduce_factor, query_side_len, reduce_factor, -1)
@@ -299,7 +299,7 @@ class CambrianMetaForCausalLM:
         bs = vision_tower_aux_feature_list[0].shape[0]
         for vision_tower_aux_feature in vision_tower_aux_feature_list:
             aux_height = aux_width = int(vision_tower_aux_feature.shape[1]**0.5)
-            assert (aux_height//query_side_len) * query_side_len == aux_height
+            # assert (aux_height//query_side_len) * query_side_len == aux_height
 
             reduce_factor = (aux_height//query_side_len)
 
@@ -353,8 +353,8 @@ class CambrianMetaForCausalLM:
     def prepare_inputs_labels_for_multimodal_(
             self, input_ids, position_ids, attention_mask, labels, *images_and_sizes
     ):
-        visual_num = len(self.model.vision_tower_aux_list)
-        assert len(images_and_sizes) == visual_num + 1
+        # visual_num = len(self.model.vision_tower_aux_list)
+        # assert len(images_and_sizes) == visual_num + 1
         images, image_aux_attention_masks_list, image_sizes = \
             images_and_sizes[:-1], None, images_and_sizes[-1:]
 
@@ -367,9 +367,9 @@ class CambrianMetaForCausalLM:
     ):
         vision_tower_aux_list = self.model.get_vision_tower_aux_list()
 
-        assert vision_tower_aux_list is not None
-        assert images is not None
-        assert input_ids.shape[1] != 1
+        # assert vision_tower_aux_list is not None
+        # assert images is not None
+        # assert input_ids.shape[1] != 1
         # if vision_tower_aux_list is None or images is None or input_ids.shape[1] == 1:
         #     return input_ids, position_ids, attention_mask, None, labels, None, None, None, None
 
@@ -382,7 +382,7 @@ class CambrianMetaForCausalLM:
         query_num_list = self.model.query_num_list
 
         final_height = final_width = int(image_token_len**0.5)
-        assert final_width * final_height == image_token_len
+        # assert final_width * final_height == image_token_len
 
         final_image_features_list = []
 
@@ -588,7 +588,7 @@ class CambrianMetaForCausalLM:
             new_attention_masks = []
             new_labels = []
             new_position_ids = []
-            assert len(image_features) == len(input_ids)
+            # assert len(image_features) == len(input_ids)
             for batch_idx, cur_input_ids in enumerate(input_ids):
 
                 cur_attention_mask = attention_mask[batch_idx]

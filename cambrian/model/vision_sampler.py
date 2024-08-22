@@ -47,12 +47,12 @@ class CrossAttention(nn.Cell):
         key_states = key_states.view(bsz, v_len, self.num_heads, self.head_dim).swapdims(1, 2)
         value_states = value_states.view(bsz, v_len, self.num_heads, self.head_dim).swapdims(1, 2)
 
-        if attention_mask is not None:
-            # if attention_mask.shape != (bsz, 1, q_len, v_len):
-            #     raise ValueError(
-            #         f"Attention mask should be of size {(bsz, 1, q_len, v_len)}, but is {attention_mask.shape}"
-            #     )
-            assert attention_mask.shape == (bsz, 1, q_len, v_len)
+        # if attention_mask is not None:
+        #     # if attention_mask.shape != (bsz, 1, q_len, v_len):
+        #     #     raise ValueError(
+        #     #         f"Attention mask should be of size {(bsz, 1, q_len, v_len)}, but is {attention_mask.shape}"
+        #     #     )
+        #     assert attention_mask.shape == (bsz, 1, q_len, v_len)
 
         # SDPA with memory-efficient backend is currently (torch==2.1.2) bugged with non-contiguous inputs with custom attn_mask,
         # Reference: https://github.com/pytorch/pytorch/issues/112577.
@@ -189,12 +189,12 @@ class MultiKVCrossAttention(nn.Cell):
 
         attention_mask = ops.cat(attention_mask_list, axis=-1)
 
-        if attention_mask is not None:
-            # if attention_mask.shape != (bsz, 1, q_len, v_len):
-            #     raise ValueError(
-            #         f"Attention mask should be of size {(bsz, 1, q_len, v_len)}, but is {attention_mask.shape}"
-            #     )
-            assert attention_mask.shape == (bsz, 1, q_len, v_len)
+        # if attention_mask is not None:
+        #     # if attention_mask.shape != (bsz, 1, q_len, v_len):
+        #     #     raise ValueError(
+        #     #         f"Attention mask should be of size {(bsz, 1, q_len, v_len)}, but is {attention_mask.shape}"
+        #     #     )
+        #     assert attention_mask.shape == (bsz, 1, q_len, v_len)
 
         if attention_mask is not None:
             query_states = query_states

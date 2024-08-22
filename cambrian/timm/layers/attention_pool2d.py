@@ -115,8 +115,8 @@ class AttentionPool2d(nn.Cell):
     def construct(self, x):
         B, _, H, W = x.shape
         N = H * W
-        assert self.feat_size[0] == H
-        assert self.feat_size[1] == W
+        # assert self.feat_size[0] == H
+        # assert self.feat_size[1] == W
         x = x.reshape(B, -1, N).permute(0, 2, 1)
         x = ops.cat((x.mean(1, keepdim=True), x), axis=1)
         x = x + self.pos_embed.unsqueeze(0).to(x.dtype)

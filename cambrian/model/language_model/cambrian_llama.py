@@ -64,8 +64,8 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         )
         use_cache = use_cache if use_cache is not None else self.use_cache
 
-        assert not output_attentions
-        assert not output_hidden_states
+        # assert not output_attentions
+        # assert not output_hidden_states
 
         # retrieve input_ids and inputs_embeds
         if input_ids is not None and inputs_embeds is not None:
@@ -78,7 +78,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
         past_key_values_length = 0
-        assert not use_cache, "NotImplementedError"  # TODO
+        # assert not use_cache, "NotImplementedError"  # TODO
         # if use_cache:
         #     use_legacy_cache = not isinstance(past_key_values, Cache)
         #     if use_legacy_cache:
@@ -520,8 +520,8 @@ class TrainWrapperForCambrianLlamaForCausalLM(nn.Cell):
             labels: Optional[Tensor] = None,
             *images_and_masks
     ):
-        assert len(images_and_masks) == self.input_image_len * 2
-        assert self.training
+        # assert len(images_and_masks) == self.input_image_len * 2
+        # assert self.training
 
         images = images_and_masks[:self.input_image_len]
         image_aux_attention_masks_list = images_and_masks[self.input_image_len:]

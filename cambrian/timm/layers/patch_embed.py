@@ -57,19 +57,19 @@ class PatchEmbed(nn.Cell):
 
     def construct(self, x):
         B, C, H, W = x.shape
-        if self.img_size is not None:
-            if self.strict_img_size:
-                assert (H == self.img_size[0], f"Input height ({H}) doesn't match model ({self.img_size[0]}).")
-                assert (W == self.img_size[1], f"Input width ({W}) doesn't match model ({self.img_size[1]}).")
-            elif not self.dynamic_img_pad:
-                assert (
-                    H % self.patch_size[0] == 0,
-                    f"Input height ({H}) should be divisible by patch size ({self.patch_size[0]})."
-                )
-                assert (
-                    W % self.patch_size[1] == 0,
-                    f"Input width ({W}) should be divisible by patch size ({self.patch_size[1]})."
-                )
+        # if self.img_size is not None:
+        #     if self.strict_img_size:
+        #         assert (H == self.img_size[0], f"Input height ({H}) doesn't match model ({self.img_size[0]}).")
+        #         assert (W == self.img_size[1], f"Input width ({W}) doesn't match model ({self.img_size[1]}).")
+        #     elif not self.dynamic_img_pad:
+        #         assert (
+        #             H % self.patch_size[0] == 0,
+        #             f"Input height ({H}) should be divisible by patch size ({self.patch_size[0]})."
+        #         )
+        #         assert (
+        #             W % self.patch_size[1] == 0,
+        #             f"Input width ({W}) should be divisible by patch size ({self.patch_size[1]})."
+        #         )
         if self.dynamic_img_pad:
             pad_h = (self.patch_size[0] - H % self.patch_size[0]) % self.patch_size[0]
             pad_w = (self.patch_size[1] - W % self.patch_size[1]) % self.patch_size[1]

@@ -1,12 +1,12 @@
 import collections.abc
 import math
 import re
+import numpy as np
 from collections import defaultdict
 from itertools import chain
 from typing import Iterator, Tuple, Any, Union, Dict, Callable
 
-import mindspore as ms
-from mindspore import nn
+from mindspore import nn, Tensor
 
 
 def named_apply(
@@ -197,13 +197,13 @@ def checkpoint_seq(
 
 def adapt_input_conv(in_chans, conv_weight):
     conv_type = conv_weight.dtype
-    conv_weight = conv_weight.to(ms.float32)  # Some weights are in torch.half, ensure it's float for sum on CPU
+    conv_weight = conv_weight.asnumpy()  # Some weights are in torch.half, ensure it's float for sum on CPU
     O, I, J, K = conv_weight.shape
     if in_chans == 1:
         if I > 3:
             assert conv_weight.shape[1] % 3 == 0
             # For models with space2depth stems
-            conv_weight = conv_weight.reshape(O, I // 3, 3, J, K)
+            conv_weight = conv_weight.reshape((O, I // 3, 3, J, K))
             conv_weight = conv_weight.sum(axis=2, keepdims=False)
         else:
             conv_weight = conv_weight.sum(axis=1, keepdims=True)
@@ -214,7 +214,8 @@ def adapt_input_conv(in_chans, conv_weight):
             # NOTE this strategy should be better than random init, but there could be other combinations of
             # the original RGB input layer weights that'd work better for specific cases.
             repeat = int(math.ceil(in_chans / 3))
-            conv_weight = conv_weight.tile((1, repeat, 1, 1))[:, :in_chans, :, :]
+            # conv_weight = conv_weight.tile((1, repeat, 1, 1))[:, :in_chans, :, :]
+            conv_weight = np.tile(conv_weight, (1, repeat, 1, 1))[:, :in_chans, :, :]
             conv_weight *= (3 / float(in_chans))
-    conv_weight = conv_weight.to(conv_type)
+    conv_weight = Tensor(conv_weight, conv_type)
     return conv_weight

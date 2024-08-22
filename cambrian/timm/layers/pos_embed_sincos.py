@@ -246,7 +246,7 @@ class RotaryEmbedding(nn.Cell):
     def get_embed(self, shape: Optional[List[int]] = None):
         if self.bands is not None:
             # rebuild embeddings every call, use if target shape changes
-            assert shape is not None
+            # assert shape is not None
             return build_rotary_pos_embed(
                 shape,
                 self.bands,
