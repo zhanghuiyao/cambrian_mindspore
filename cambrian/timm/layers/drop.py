@@ -2,21 +2,13 @@ import mindspore as ms
 from mindspore import nn, ops, Tensor
 
 
-_is_ascend = ms.get_context("device_target") == "Ascend"
-
-
-
-
 def _bernoulli(shape, p):
-    if _is_ascend:
-        _uniform_samples = ops.uniform(shape, ops.zeros((), ms.float32), ops.ones((), ms.float32))
-        bernoulli_tensor = ops.select(
-            ops.less_equal(_uniform_samples, p),
-            ops.ones((), ms.float32),
-            ops.zeros((), ms.float32)
-        )
-    else:
-        bernoulli_tensor = ops.bernoulli(ops.zeros(shape), p=p)
+    _uniform_samples = ops.uniform(shape, ops.zeros((), ms.float32), ops.ones((), ms.float32))
+    bernoulli_tensor = ops.select(
+        ops.less_equal(_uniform_samples, p),
+        ops.ones((), ms.float32),
+        ops.zeros((), ms.float32)
+    )
 
     return bernoulli_tensor
 
