@@ -7,6 +7,7 @@ from mindspore import nn, ops, Tensor, constexpr
 def _bernoulli(shape, p):
     _uniform_samples = np.random.uniform(0., 1., shape)
     bernoulli_tensor = np.ones(shape)
+
     bernoulli_tensor[_uniform_samples > p] = 0.
     return Tensor(bernoulli_tensor, ms.float32)
 
@@ -39,7 +40,7 @@ def drop_path(x, drop_prob: float = 0., training: bool = False, scale_by_keep: b
 
     # FIXME: `ops.bernoulli` has bug on MindSpore 2.3.0 + jit_level O2
     # random_tensor = ops.bernoulli(ops.zeros(shape), p=keep_prob)
-    random_tensor = _bernoulli(shape, p=keep_prob)
+    random_tensor = _bernoulli(shape, keep_prob)
 
     if keep_prob > 0.0 and scale_by_keep:
         random_tensor.div(keep_prob)
