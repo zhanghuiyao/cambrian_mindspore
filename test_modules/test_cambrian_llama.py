@@ -60,6 +60,24 @@ def test_cambrian_llama_causal(model_path: str, args):
             image_aux_attention_masks_list=(Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),),     # ((1, 576, 1),)
             images=(Tensor(np.random.randn(1, 3, 384, 384), dtype=ms.float32),)                 # ((1, 3, 384, 384), (1, 3, 1024, 1024))
         )
+    elif args.num_vision_tower == 3:
+        # for siglip, clip, dinov2, convnext-xxl
+        temp_data = dict(
+            input_ids=Tensor(np.random.randint(0, 12000, size=(1, 2048)), dtype=ms.int32),
+            labels=Tensor(np.ones((1, 2048)), dtype=ms.int32),
+            attention_mask=Tensor(np.ones((1, 2048)), dtype=ms.bool_),
+            position_ids=Tensor(np.arange(0, 2048, 1)[None], ms.int32),
+            image_aux_attention_masks_list=(
+                Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),
+                Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),
+                Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),
+            ),
+            images=(
+                Tensor(np.random.randn(1, 3, 384, 384), dtype=ms.float32),
+                Tensor(np.random.randn(1, 3, 336, 336), dtype=ms.float32),
+                Tensor(np.random.randn(1, 3, 378, 378), dtype=ms.float32),
+            )
+        )
     elif args.num_vision_tower == 4:
         # for siglip, clip, dinov2, convnext-xxl
         temp_data = dict(
