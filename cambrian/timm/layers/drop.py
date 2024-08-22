@@ -4,14 +4,14 @@ from mindspore import nn, ops, Tensor, constexpr
 
 
 @constexpr(reuse_result=False)
-def _bernoulli(shape, p):
+def _bak_bernoulli(shape, p):
     _uniform_samples = np.random.uniform(0., 1., shape)
     bernoulli_tensor = np.ones(shape)
     bernoulli_tensor[_uniform_samples > p] = 0.
     return Tensor(bernoulli_tensor, ms.float32)
 
 
-def _bak_bernoulli(shape, p):
+def _bernoulli(shape, p):
     _uniform_samples = ops.uniform(shape, ops.zeros((), ms.float32), ops.ones((), ms.float32))
     bernoulli_tensor = ops.select(
         ops.less_equal(_uniform_samples, p),
