@@ -92,6 +92,7 @@ def test_cambrian_8b_inference(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--ms_mode", type=int, default=1, help="0 is Graph, 1 is Pynative")
+    parser.add_argument("--jit_level", type=str, default="O0")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
     parser.add_argument("--image_path", type=str, default="./demo/math.png")
     parser.add_argument("--question", type=str, default="Please solve this question step by step.")
@@ -99,7 +100,7 @@ if __name__ == '__main__':
     args, _ = parser.parse_known_args()
 
     if args.ms_mode == 0:
-        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"}, max_device_memory="59GB", deterministic="ON")
+        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": args.jit_level}, max_device_memory="59GB", deterministic="ON")
     elif args.ms_mode == 1:
         ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True, max_device_memory="59GB", deterministic="ON")
     else:

@@ -171,6 +171,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
     parser.add_argument("--device_target", type=str, default="Ascend")
+    parser.add_argument("--jit_level", type=str, default="O0")
     parser.add_argument("--max_device_memory", type=str, default="59GB")
     parser.add_argument("--is_distribute", type=ast.literal_eval, default=False)
 
@@ -191,7 +192,7 @@ if __name__ == '__main__':
 
 
     # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
-    ms.set_context(mode=ms.GRAPH_MODE, device_target=args.device_target, jit_config={"jit_level": "O0"})
+    ms.set_context(mode=ms.GRAPH_MODE, device_target=args.device_target, jit_config={"jit_level": args.jit_level})
     ms.set_context(max_device_memory=args.max_device_memory, deterministic="ON")
     if args.enable_tracker:
         ms.set_context(memory_optimize_level="O0", pynative_synchronize=True)

@@ -69,10 +69,11 @@ def test_vision_tower_bp(args, config, replace_name: str = None, replace_len: in
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
+    parser.add_argument("--jit_level", type=str, default="O0")
     parser.add_argument("--image_path", type=str, default="./images/cambrian.png")
     args, _ = parser.parse_known_args()
 
-    ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": "O0"}, deterministic="ON")
+    ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": args.jit_level}, deterministic="ON")
     # ms.set_context(mode=ms.PYNATIVE_MODE, device_target="CPU", pynative_synchronize=True)
 
     config, _ = CambrianConfig.from_pretrained(

@@ -25,6 +25,7 @@ task_name="logs_test_cambrian_llama_8p"
 output_dir=$task_name
 num_vision_tower=4
 
+jit_level="O2"
 optim="zero2"
 enable_fuse=True
 enable_group=True
@@ -37,6 +38,7 @@ master_port=9001
 msrun --bind_core=True --worker_num=$device_num --local_worker_num=$device_num --master_port=$master_port --log_dir=$output_dir \
 python -u test_modules/test_cambrian_llama.py \
     --device_target Ascend \
+    --jit_level $jit_level \
     --is_distribute True \
     --max_device_memory 59GB \
     --enable_fa True \
