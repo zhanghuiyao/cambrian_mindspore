@@ -23,7 +23,7 @@ export MS_ALLOC_CONF="memory_tracker:True"  # enable_vmm:True
 # hyper-parameters
 task_name="logs_test_cambrian_llama_8p"
 output_dir=$task_name
-num_vision_tower=4
+vision_tower_index="0,1,2,3"
 
 jit_level="O2"
 optim="zero2"
@@ -49,7 +49,7 @@ python -u test_modules/test_cambrian_llama.py \
     --shard_size $device_num \
     --enable_fuse $enable_fuse \
     --enable_group $enable_group \
-    --num_vision_tower $num_vision_tower \
+    --vision_tower_index $vision_tower_index \
     --run_steps $run_steps \
     \
     --enable_tracker True \

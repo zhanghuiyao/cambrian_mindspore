@@ -49,57 +49,33 @@ def test_generate_wo_image(model_path: str):
 
 
 def test_cambrian_llama_causal(model_path: str, args):
+    vision_tower_index = [int(i) for i in args.vision_tower_index.split(",")]
 
-    if args.num_vision_tower == 1:
-        # for siglip
-        temp_data = dict(
-            input_ids=Tensor(np.random.randint(0, 12000, size=(1, 2048)), dtype=ms.int32),
-            labels=Tensor(np.ones((1, 2048)), dtype=ms.int32),
-            attention_mask=Tensor(np.ones((1, 2048)), dtype=ms.bool_),
-            position_ids=Tensor(np.arange(0, 2048, 1)[None], ms.int32),
-            image_aux_attention_masks_list=(Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),),     # ((1, 576, 1),)
-            images=(Tensor(np.random.randn(1, 3, 384, 384), dtype=ms.float32),)                 # ((1, 3, 384, 384), (1, 3, 1024, 1024))
-        )
-    elif args.num_vision_tower == 3:
-        # for siglip, clip, dinov2, convnext-xxl
-        temp_data = dict(
-            input_ids=Tensor(np.random.randint(0, 12000, size=(1, 2048)), dtype=ms.int32),
-            labels=Tensor(np.ones((1, 2048)), dtype=ms.int32),
-            attention_mask=Tensor(np.ones((1, 2048)), dtype=ms.bool_),
-            position_ids=Tensor(np.arange(0, 2048, 1)[None], ms.int32),
-            image_aux_attention_masks_list=(
-                Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),
-                Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),
-                Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),
-            ),
-            images=(
-                Tensor(np.random.randn(1, 3, 384, 384), dtype=ms.float32),
-                Tensor(np.random.randn(1, 3, 336, 336), dtype=ms.float32),
-                Tensor(np.random.randn(1, 3, 378, 378), dtype=ms.float32),
-            )
-        )
-    elif args.num_vision_tower == 4:
-        # for siglip, clip, dinov2, convnext-xxl
-        temp_data = dict(
-            input_ids=Tensor(np.random.randint(0, 12000, size=(1, 2048)), dtype=ms.int32),
-            labels=Tensor(np.ones((1, 2048)), dtype=ms.int32),
-            attention_mask=Tensor(np.ones((1, 2048)), dtype=ms.bool_),
-            position_ids=Tensor(np.arange(0, 2048, 1)[None], ms.int32),
-            image_aux_attention_masks_list=(
-                Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),
-                Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),
-                Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),
-                Tensor(np.ones((1, 576, 16)), dtype=ms.bool_),
-            ),
-            images=(
-                Tensor(np.random.randn(1, 3, 384, 384), dtype=ms.float32),
-                Tensor(np.random.randn(1, 3, 336, 336), dtype=ms.float32),
-                Tensor(np.random.randn(1, 3, 378, 378), dtype=ms.float32),
-                Tensor(np.random.randn(1, 3, 1024, 1024), dtype=ms.float32),
-            )
-        )
-    else:
-        raise NotImplementedError
+    full_image_aux_attention_masks_list = (
+        Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),
+        Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),
+        Tensor(np.ones((1, 576, 1)), dtype=ms.bool_),
+        Tensor(np.ones((1, 576, 16)), dtype=ms.bool_),
+    )
+    full_images = (
+        Tensor(np.random.randn(1, 3, 384, 384), dtype=ms.float32),
+        Tensor(np.random.randn(1, 3, 336, 336), dtype=ms.float32),
+        Tensor(np.random.randn(1, 3, 378, 378), dtype=ms.float32),
+        Tensor(np.random.randn(1, 3, 1024, 1024), dtype=ms.float32),
+    )
+    image_aux_attention_masks_list = [full_image_aux_attention_masks_list[i] for i in vision_tower_index]
+    images = [full_images[i] for i in vision_tower_index]
+
+    # for siglip, clip, dinov2, convnext-xxl
+    temp_data = dict(
+        input_ids=Tensor(np.random.randint(0, 12000, size=(1, 2048)), dtype=ms.int32),
+        labels=Tensor(np.ones((1, 2048)), dtype=ms.int32),
+        attention_mask=Tensor(np.ones((1, 2048)), dtype=ms.bool_),
+        position_ids=Tensor(np.arange(0, 2048, 1)[None], ms.int32),
+        image_aux_attention_masks_list=tuple(image_aux_attention_masks_list),
+        images=tuple(images)
+    )
+
     activate_len = 120
     temp_data["attention_mask"][0, activate_len:] = False
     temp_data["input_ids"][0, activate_len-1] = IMAGE_TOKEN_INDEX
@@ -198,7 +174,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
-    parser.add_argument("--num_vision_tower", type=int, default=1, choices=[1, 3, 4])
+    parser.add_argument("--vision_tower_index", type=str, default="0,1,2,3")
     parser.add_argument("--device_target", type=str, default="Ascend")
     parser.add_argument("--jit_level", type=str, default="O0")
     parser.add_argument("--max_device_memory", type=str, default="59GB")

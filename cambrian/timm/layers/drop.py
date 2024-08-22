@@ -1,5 +1,14 @@
+import numpy as np
 import mindspore as ms
-from mindspore import nn, ops, Tensor
+from mindspore import nn, ops, Tensor, constexpr
+
+
+@constexpr(reuse_result=False)
+def _bernoulli_fix(shape, p):
+    _uniform_samples = np.random.uniform(0., 1., shape)
+    bernoulli_tensor = np.ones(shape)
+    bernoulli_tensor[_uniform_samples > p] = 0.
+    return Tensor(bernoulli_tensor)
 
 
 def _bernoulli(shape, p):
