@@ -198,7 +198,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
-    parser.add_argument("--num_vision_tower", type=int, default=1, choices=[1, 4])
+    parser.add_argument("--num_vision_tower", type=int, default=1, choices=[1, 3, 4])
     parser.add_argument("--device_target", type=str, default="Ascend")
     parser.add_argument("--jit_level", type=str, default="O0")
     parser.add_argument("--max_device_memory", type=str, default="59GB")
