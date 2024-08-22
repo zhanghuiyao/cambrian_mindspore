@@ -1,4 +1,22 @@
+import mindspore as ms
 from mindspore import nn, ops, Tensor
+
+
+_is_ascend = ms.get_context("device_target") == "Ascend"
+
+
+def _bernoulli(shape, p):
+    if _is_ascend:
+        _uniform_samples = ops.ones(shape, ms.float32).uniform()
+        bernoulli_tensor = ops.select(
+            ops.less_equal(_uniform_samples, p),
+            ops.ones((), ms.float32),
+            ops.zeros((), ms.float32)
+        )
+    else:
+        bernoulli_tensor = ops.bernoulli(ops.zeros(shape), p=p)
+
+    return bernoulli_tensor
 
 
 def drop_path(x, drop_prob: float = 0., training: bool = False, scale_by_keep: bool = True):
@@ -16,7 +34,9 @@ def drop_path(x, drop_prob: float = 0., training: bool = False, scale_by_keep: b
     keep_prob = 1 - drop_prob
     shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
 
-    random_tensor = ops.bernoulli(ops.zeros(shape), p=keep_prob)
+    # FIXME: `ops.bernoulli` has bug on MindSpore 2.3.0 + jit_level O2
+    # random_tensor = ops.bernoulli(ops.zeros(shape), p=keep_prob)
+    random_tensor = _bernoulli(shape, p=keep_prob)
 
     if keep_prob > 0.0 and scale_by_keep:
         random_tensor.div(keep_prob)
