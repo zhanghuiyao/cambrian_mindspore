@@ -80,6 +80,7 @@ python -u cambrian/train/train.py \
     --run_name $task_name \
     \
     --device_target Ascend \
+    --jit_level O2 \
     --is_distribute True \
     --max_device_memory 59GB \
     --enable_flash_attention $enable_flash_attention \
