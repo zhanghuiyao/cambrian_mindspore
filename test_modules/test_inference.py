@@ -1,3 +1,4 @@
+import ast
 import argparse
 import os
 import json
@@ -39,6 +40,7 @@ def process(image, question, tokenizer, image_processor, model_config):
 
     image_tensor = process_images([image], image_processor, model_config)
     image_tensor = tuple([Tensor(i) for i in image_tensor])
+
     # FIXME: unpad image input
     # image_size = [image.size]
     image_size = [image_tensor[0].shape[-2:]]
@@ -58,7 +60,8 @@ def test_cambrian_8b_inference(args):
 
     model_name = get_model_name_from_path(model_path)
     tokenizer, model, image_processor, context_len = \
-        load_pretrained_model(model_path, None, model_name, checkpoint_path=args.checkpoint_path)
+        load_pretrained_model(
+            model_path, None, model_name, use_flash_attn=args.use_fa, checkpoint_path=args.checkpoint_path)
 
     print(f"=====> Building model done.")
 
@@ -90,6 +93,7 @@ def test_cambrian_8b_inference(args):
 
 
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--ms_mode", type=int, default=1, help="0 is Graph, 1 is Pynative")
     parser.add_argument("--jit_level", type=str, default="O0")
@@ -97,12 +101,39 @@ if __name__ == '__main__':
     parser.add_argument("--image_path", type=str, default="./demo/math.png")
     parser.add_argument("--question", type=str, default="Please solve this question step by step.")
     parser.add_argument("--checkpoint_path", type=str, default="./cambrian-8b.ckpt")
+    parser.add_argument("--use_fa", type=ast.literal_eval, default=True)
     args, _ = parser.parse_known_args()
 
     if args.ms_mode == 0:
-        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": args.jit_level}, max_device_memory="59GB", deterministic="ON")
+        if os.environ.get("MS_DEV_RUNTIME_CONF") is None:
+            os.environ["MS_DEV_RUNTIME_CONF"] = "synchronize:True"
+            print("WARNING: os environment MS_DEV_RUNTIME_CONF synchronize has not been set, force setting it now.")
+        else:
+            if "synchronize:True" not in os.environ.get("MS_DEV_RUNTIME_CONF"):
+                _old = os.environ.get("MS_DEV_RUNTIME_CONF")
+                _old.replace("synchronize:False,", "")
+                _old.replace(",synchronize:False", "")
+                _old.replace("synchronize:False", "")
+                _new = "synchronize:True," + _old if len(_old) > 0 else "synchronize:True"
+                os.environ["MS_DEV_RUNTIME_CONF"] = _new
+                print("WARNING: os environment MS_DEV_RUNTIME_CONF synchronize has not been set, force setting it now.")
+
+        ms.set_context(
+            mode=ms.GRAPH_MODE,
+            device_target="Ascend",
+            jit_config={"jit_level": args.jit_level},
+            max_device_memory="59GB",
+            deterministic="ON"
+        )
+
     elif args.ms_mode == 1:
-        ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True, max_device_memory="59GB", deterministic="ON")
+        ms.set_context(
+            mode=ms.PYNATIVE_MODE,
+            device_target="Ascend",
+            pynative_synchronize=True,
+            max_device_memory="59GB",
+            deterministic="ON"
+        )
     else:
         raise ValueError
 
