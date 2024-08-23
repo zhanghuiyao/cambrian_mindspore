@@ -347,7 +347,7 @@ class CambrianMetaForCausalLM:
         return vision_tower_aux_feature_rearranged_list, vision_tower_aux_attention_masks_rearranged_list
 
     def encode_images(self, image_aux_list):
-        vision_tower_aux_list = self.model.vision_tower_aux_list  # self.model.get_vision_tower_aux_list()
+        vision_tower_aux_list = self.model.vision_tower_aux_list  # .get_vision_tower_aux_list()
         image_aux_features_list = ()
         for image_aux, vision_tower_aux in zip(image_aux_list, vision_tower_aux_list):
             image_aux = ops.depend(image_aux, image_aux_features_list)  # FIXME: zhy_test depend
@@ -371,7 +371,7 @@ class CambrianMetaForCausalLM:
         self, input_ids, position_ids, attention_mask, labels,
         images, image_aux_attention_masks_list=None, image_sizes=None
     ):
-        vision_tower_aux_list = self.model.get_vision_tower_aux_list()
+        vision_tower_aux_list = self.model.vision_tower_aux_list  #.get_vision_tower_aux_list()
 
         # assert vision_tower_aux_list is not None
         # assert images is not None
