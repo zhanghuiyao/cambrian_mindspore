@@ -105,7 +105,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         for i, decoder_layer in enumerate(self.layers):
 
             # zhy_test infer
-            import pdb;pdb.set_trace()
+            breakpoint()
 
             layer_outputs = decoder_layer(
                 hidden_states,
@@ -446,8 +446,14 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         #     raise NotImplementedError("`inputs_embeds` is not supported")
         assert inputs_embeds is None
 
+        # zhy_test infer
+        breakpoint()
+
         inputs, _, position_ids, attention_mask = \
             self.preprocess_input_before_generate_numpy(inputs, None, position_ids, attention_mask)
+
+        # zhy_test infer
+        breakpoint()
 
         if images is not None:
 
@@ -477,7 +483,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             inputs_embeds = self.get_model().embed_tokens(inputs)
 
         # zhy_test infer
-        import pdb;pdb.set_trace()
+        breakpoint()
 
         return super().generate(
             position_ids=position_ids,

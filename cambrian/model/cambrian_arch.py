@@ -397,6 +397,8 @@ class CambrianMetaForCausalLM:
         vision_tower_aux_attention_masks_list_final = None
         global_context_feature_final = None
 
+        breakpoint() # point 1, before encoder images
+
         image_aux_features_list = self.encode_images(image_aux_list)
 
         vision_tower_aux_feature_list = ()
@@ -414,6 +416,8 @@ class CambrianMetaForCausalLM:
                     global_context_feature = image_aux_features.mean(1).view(bs, 1, 1, -1)
 
                 vision_tower_aux_feature_list += (image_aux_features,)
+
+            breakpoint()  # point 2, after mm_projector_aux
 
             # perform vision sampling for each query group
             for query_group_i, query_num in enumerate(query_num_list):
@@ -451,6 +455,8 @@ class CambrianMetaForCausalLM:
                     query_features_i = query_features_i.permute(0, 2, 3, 1).flatten(start_dim=1, end_dim=2)
                 final_image_features_list.append(query_features_i)
 
+            breakpoint()  # point 3, after vision_sampler
+
             if self.training:
                 vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final = \
                     self.rearrange_vision_tower_features_train(vision_tower_aux_feature_list, image_aux_attention_masks_list, final_height)
@@ -460,6 +466,8 @@ class CambrianMetaForCausalLM:
 
         image_features = ops.cat(final_image_features_list, -1)
         image_features = self.model.mm_projector(image_features).to(dtype)
+
+        breakpoint()  # point 4, after mm_projector
 
         if self.training:
             image_features = image_features.view(image_features.shape[0], final_height, final_width, -1)
@@ -501,6 +509,8 @@ class CambrianMetaForCausalLM:
                 global_context_feature_final = ops.cat(global_context_feature_final, 0)
 
             image_features = image_features_unpadded
+
+        breakpoint()  # point 5, after concat
 
         # TODO: image start / end is not implemented here to support pretraining.
         # if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_im_start_end', False):
@@ -667,6 +677,8 @@ class CambrianMetaForCausalLM:
             attention_mask = new_attention_masks
             labels = new_labels if _labels is not None else None
             position_ids = new_position_ids if _position_ids is not None else None
+
+            breakpoint()  # point 7, before return
 
             return None, position_ids, attention_mask, input_embeds, labels, \
                    vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final, \
