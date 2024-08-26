@@ -103,6 +103,10 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         hidden_states = inputs_embeds
 
         for i, decoder_layer in enumerate(self.layers):
+
+            # zhy_test infer
+            import pdb;pdb.set_trace()
+
             layer_outputs = decoder_layer(
                 hidden_states,
                 attention_mask=attention_mask,
@@ -157,7 +161,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                         latent_query_list = []
                         for batch_i in range(bs):
                             cur_h, cur_w = final_vision_feature_size[batch_i]
-                    
+
                             cur_latent_query_num = cur_h*cur_w
                             cur_latent_query_newline_num = cur_h * (cur_w+1)
                             cur_latent_query_with_newline = hidden_states[batch_i:batch_i+1, latent_query_start_idx:latent_query_start_idx+cur_latent_query_newline_num, :]
@@ -471,6 +475,9 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             self.global_context_feature = global_context_feature
         else:
             inputs_embeds = self.get_model().embed_tokens(inputs)
+
+        # zhy_test infer
+        import pdb;pdb.set_trace()
 
         return super().generate(
             position_ids=position_ids,
