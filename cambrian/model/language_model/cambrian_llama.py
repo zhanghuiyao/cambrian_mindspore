@@ -118,6 +118,9 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
 
             hidden_states = layer_outputs[0]
 
+            # zhy_test infer, breakpoint()
+            np.save(f"hidden_states_out_{i}.npy", hidden_states.asnumpy())
+
             if not self.connector_only:
 
                 cross_layers_start_idx = self.start_of_vision_sampler_layers
