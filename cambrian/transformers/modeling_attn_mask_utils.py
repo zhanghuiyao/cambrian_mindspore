@@ -136,7 +136,7 @@ class AttentionMaskConverter:
         bsz, tgt_len = input_ids_shape
         mask = ops.full((tgt_len, tgt_len), DTYPE_FP16_MIN)
         mask_cond = ops.arange(mask.shape[-1])
-        mask.masked_fill(mask_cond < (mask_cond + 1).view(mask.shape[-1], 1), ops.full((), 0, dtype=mask.dtype))
+        mask = mask.masked_fill(mask_cond < (mask_cond + 1).view(mask.shape[-1], 1), ops.full((), 0, dtype=mask.dtype))
 
         mask = mask.to(dtype)
 
@@ -148,7 +148,7 @@ class AttentionMaskConverter:
             diagonal = past_key_values_length - sliding_window - 1
 
             context_mask = ops.tril(ops.ones_like(mask, dtype=ms.bool_), diagonal=diagonal)
-            mask.masked_fill(context_mask, ops.full((), DTYPE_FP16_MIN, dtype=mask.dtype))
+            mask = mask.masked_fill(context_mask, ops.full((), DTYPE_FP16_MIN, dtype=mask.dtype))
 
         return mask[None, None, :, :].broadcast_to((bsz, 1, tgt_len, tgt_len + past_key_values_length))
 
