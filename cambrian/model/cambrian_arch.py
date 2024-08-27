@@ -659,7 +659,7 @@ class CambrianMetaForCausalLM:
                 gather_index = ops.select(
                     _index_table < _im_positions, _index_table, 0)
                 gather_index = ops.select(
-                    _index_table > (_im_positions + _im_token_len - 1), _index_table - _im_token_len, gather_index)
+                    _index_table >= (_im_positions + _im_token_len - 1), _index_table - _im_token_len + 2, gather_index)
                 gather_index = ops.clip(gather_index, min=0, max=cur_input_ids.shape[0] - 1)
                 cur_input_ids = ops.gather(cur_input_ids, gather_index, axis=0)
                 cur_labels = ops.gather(labels[batch_idx], gather_index, axis=0)
