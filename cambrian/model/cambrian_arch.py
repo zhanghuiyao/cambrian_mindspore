@@ -399,7 +399,14 @@ class CambrianMetaForCausalLM:
 
         breakpoint() # point 1, before encoder images
 
-        image_aux_features_list = self.encode_images(image_aux_list)
+        # zhy_test infer, breakpoint()
+        # image_aux_features_list = self.encode_images(image_aux_list)
+        image_aux_features_list = [
+            Tensor(np.load("./pt_tensors/image_aux_features_list_0.npy"), ms.float16),
+            Tensor(np.load("./pt_tensors/image_aux_features_list_1.npy"), ms.float16),
+            Tensor(np.load("./pt_tensors/image_aux_features_list_2.npy"), ms.float16),
+            Tensor(np.load("./pt_tensors/image_aux_features_list_3.npy"), ms.float16),
+        ]
 
         vision_tower_aux_feature_list = ()
         vision_tower_aux_attention_masks_list = ()
@@ -516,20 +523,18 @@ class CambrianMetaForCausalLM:
         # if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_im_start_end', False):
         #     raise NotImplementedError
 
-        # FIXME: level 0, avoid gather_op out of bounds
-        input_ids = ops.clip(
-            input_ids,
-            min=0,
-            max=self.model.embed_tokens.embedding_table.shape[0] - 1
-        )
-
         if self.training:
 
             # embed the input_ids
             new_input_ids_padded_for_emb = ops.where(input_ids == IMAGE_TOKEN_INDEX, 0, input_ids)
 
-            # FIXME: level 3, replace `self.get_model()` with `self.model`
-            # input_embeds = self.get_model().embed_tokens(new_input_ids_padded_for_emb)
+            # FIXME: level 0, avoid gather_op out of bounds
+            new_input_ids_padded_for_emb = ops.clip(
+                new_input_ids_padded_for_emb,
+                min=0,
+                max=self.model.embed_tokens.embedding_table.shape[0] - 1
+            )
+
             input_embeds = self.model.embed_tokens(new_input_ids_padded_for_emb)
 
             new_input_embeds = []
@@ -614,7 +619,13 @@ class CambrianMetaForCausalLM:
                 num_images = (cur_input_ids == IMAGE_TOKEN_INDEX).sum()
 
                 if num_images == 0:
-                    # cur_image_features = image_features[batch_idx]
+                    # FIXME: level 0, avoid gather_op out of bounds
+                    cur_input_ids = ops.clip(
+                        cur_input_ids,
+                        min=0,
+                        max=self.model.embed_tokens.embedding_table.shape[0] - 1
+                    )
+
                     cur_input_embeds = self.model.embed_tokens(cur_input_ids)
                     new_input_embed = cur_input_embeds
                     new_label = labels[batch_idx]
@@ -649,6 +660,12 @@ class CambrianMetaForCausalLM:
                 cur_labels = ops.gather(labels[batch_idx], gather_index, axis=0)
                 cur_attention_mask = ops.gather(cur_attention_mask.to(ms.int32), gather_index, axis=0).to(ms.bool_)
 
+                # FIXME: level 0, avoid gather_op out of bounds
+                cur_input_ids = ops.clip(
+                    cur_input_ids,
+                    min=0,
+                    max=self.model.embed_tokens.embedding_table.shape[0] - 1
+                )
                 cur_input_embeds = self.model.embed_tokens(cur_input_ids)
                 _img_indexes = ops.arange(0, _im_token_len, 1, dtype=ms.int32) + _im_positions
                 # _img_indexes = ops.broadcast_to(_img_indexes[:, None], (-1, cur_image_features.shape[-1]))
