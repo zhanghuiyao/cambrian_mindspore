@@ -130,7 +130,8 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                 if vision_tower_aux_feature_list is not None and i in cross_layers_start_idx_list:
                     latent_query_start_idx = self.image_position
 
-                    if EXPAND_FOR_BATCH:
+                    # if EXPAND_FOR_BATCH:
+                    if self.training:
                         image_token_len_per_side = int(self.image_token_len ** 0.5)
                         latent_query_newline_num = self.image_token_len + image_token_len_per_side
                         latent_query_num = self.image_token_len
