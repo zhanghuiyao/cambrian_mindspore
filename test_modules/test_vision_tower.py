@@ -1,3 +1,4 @@
+import ast
 import argparse
 import sys
 import time
@@ -31,6 +32,7 @@ def test_vision_tower(args, config, replace_name: str = None, replace_len: int =
 
     out = model(image_tensor)
 
+    print(f"Run Backward...")
     print(f"Image Process: image_tensor.shape: {image_tensor.shape}")
     print(f"Result: out.shape: {out.shape}, time cost: {time.time() - s_time:.2f}s")
 
@@ -58,6 +60,7 @@ def test_vision_tower_bp(args, config, replace_name: str = None, replace_len: in
     out = train_net(image_tensor)
     loss, _, overflow = out
 
+    print(f"Run Forward...")
     print(f"Image Process: image_tensor.shape: {image_tensor.shape}")
     print(f"Result: loss: {loss.item():.4f}, overflow: {overflow}, time cost: {time.time() - s_time:.2f}s")
 
@@ -70,7 +73,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
     parser.add_argument("--jit_level", type=str, default="O0")
-    parser.add_argument("--image_path", type=str, default="./images/cambrian.png")
+    parser.add_argument("--image_path", type=str, default="./demo/math.png")
+
+    parser.add_argument("--vision_tower_index", type=str, default="0,1,2,3")
+
+    parser.add_argument("--run_forward", type=ast.literal_eval, default=True)
+    parser.add_argument("--run_backward", type=ast.literal_eval, default=False)
     args, _ = parser.parse_known_args()
 
     ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": args.jit_level}, deterministic="ON")
@@ -91,28 +99,34 @@ if __name__ == '__main__':
         _from_pipeline=None,
     )
 
+    full_mm_vision_tower_aux_list = [
+        "siglip/CLIP-ViT-SO400M-14-384",        # https://huggingface.co/timm/ViT-SO400M-14-SigLIP-384
+        "openai/clip-vit-large-patch14-336",    # https://huggingface.co/openai/clip-vit-large-patch14-336
+        "facebook/dinov2-giant-res378",         # https://huggingface.co/facebook/dinov2-giant
+        "clip-convnext-XXL-multi-stage"         # https://huggingface.co/laion/CLIP-convnext_xxlarge-laion2B-s34B-b82K-augreg-soup
+    ]
+    full_mm_vision_tower_aux_token_len_list = [
+        576,
+        576,
+        576,
+        9216
+    ]
+    vision_tower_index = [int(i) for i in args.vision_tower_index.split(",")]
+    mm_vision_tower_aux_list = [full_mm_vision_tower_aux_list[i] for i in vision_tower_index]
+    mm_vision_tower_aux_token_len_list = [full_mm_vision_tower_aux_token_len_list[i] for i in vision_tower_index]
     replace_dict = {
-        "mm_vision_tower_aux_list": [
-            "siglip/CLIP-ViT-SO400M-14-384",        # https://huggingface.co/timm/ViT-SO400M-14-SigLIP-384
-            "openai/clip-vit-large-patch14-336",    # https://huggingface.co/openai/clip-vit-large-patch14-336
-            "facebook/dinov2-giant-res378",         # https://huggingface.co/facebook/dinov2-giant
-            "clip-convnext-XXL-multi-stage"         # https://huggingface.co/laion/CLIP-convnext_xxlarge-laion2B-s34B-b82K-augreg-soup
-        ],
-        "mm_vision_tower_aux_token_len_list": [
-            576,
-            576,
-            576,
-            9216
-        ],
+        "mm_vision_tower_aux_list": mm_vision_tower_aux_list,
+        "mm_vision_tower_aux_token_len_list": mm_vision_tower_aux_token_len_list,
     }
-
-    assert len(replace_dict['mm_vision_tower_aux_list']) == len(replace_dict['mm_vision_tower_aux_token_len_list'])
 
     module_len = len(replace_dict['mm_vision_tower_aux_list'])
     for i, (module_name, token_len) in enumerate(zip(replace_dict["mm_vision_tower_aux_list"], replace_dict["mm_vision_tower_aux_token_len_list"])):
         print(f"======> {i + 1}/{module_len}, Before, model name: {module_name}")
 
-        # out = test_vision_tower(args, config, module_name, token_len)
-        out = test_vision_tower_bp(args, config, module_name, token_len)
+        if args.run_forward:
+            out = test_vision_tower(args, config, module_name, token_len)
+
+        if args.run_backward:
+            out = test_vision_tower_bp(args, config, module_name, token_len)
 
         print(f"======> {i + 1}/{module_len}, After, model name: {module_name}, token_len: {token_len}")
