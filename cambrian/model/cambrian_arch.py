@@ -397,7 +397,7 @@ class CambrianMetaForCausalLM:
         vision_tower_aux_attention_masks_list_final = None
         global_context_feature_final = None
 
-        breakpoint() # point 1, before encoder images
+        # breakpoint() # point 1, before encoder images
 
         # zhy_test infer, breakpoint()
         # image_aux_features_list = self.encode_images(image_aux_list)
@@ -424,7 +424,7 @@ class CambrianMetaForCausalLM:
 
                 vision_tower_aux_feature_list += (image_aux_features,)
 
-            breakpoint()  # point 2, after mm_projector_aux
+            # breakpoint()  # point 2, after mm_projector_aux
 
             # perform vision sampling for each query group
             for query_group_i, query_num in enumerate(query_num_list):
@@ -442,7 +442,7 @@ class CambrianMetaForCausalLM:
 
                 # query_features_i = getattr(self.model, "vision_sampler_{}".format(query_group_i))(query_features_i.flatten(start_dim=0, end_dim=1), global_context_feature_i, *vision_tower_aux_feature_list_i, *vision_tower_aux_attention_masks_list_i)
 
-                breakpoint()  # point 3.1, before vision_sampler
+                # breakpoint()  # point 3.1, before vision_sampler
 
                 query_features_i = self.model.vision_samplers[query_group_i](
                     query_features_i.flatten(start_dim=0, end_dim=1),
@@ -455,7 +455,7 @@ class CambrianMetaForCausalLM:
                 # interpolate to the final target size
                 if query_side_len != final_height:
 
-                    breakpoint()  # point 3.2, before interpolate
+                    # breakpoint()  # point 3.2, before interpolate
 
                     query_features_i = query_features_i.permute(0, 2, 1).view(bs, -1, query_side_len, query_side_len)
                     query_features_i = ops.interpolate(
@@ -467,7 +467,7 @@ class CambrianMetaForCausalLM:
                     query_features_i = query_features_i.permute(0, 2, 3, 1).flatten(start_dim=1, end_dim=2)
                 final_image_features_list.append(query_features_i)
 
-            breakpoint()  # point 3, after vision_sampler
+            # breakpoint()  # point 3, after vision_sampler
 
             if self.training:
                 vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final = \
@@ -479,7 +479,7 @@ class CambrianMetaForCausalLM:
         image_features = ops.cat(final_image_features_list, -1)
         image_features = self.model.mm_projector(image_features).to(dtype)
 
-        breakpoint()  # point 4, after mm_projector
+        # breakpoint()  # point 4, after mm_projector
 
         if self.training:
             image_features = image_features.view(image_features.shape[0], final_height, final_width, -1)
@@ -522,7 +522,7 @@ class CambrianMetaForCausalLM:
 
             image_features = image_features_unpadded
 
-        breakpoint()  # point 5, after concat
+        # breakpoint()  # point 5, after concat
 
         # TODO: image start / end is not implemented here to support pretraining.
         # if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_im_start_end', False):
@@ -700,7 +700,7 @@ class CambrianMetaForCausalLM:
             labels = new_labels if _labels is not None else None
             position_ids = new_position_ids if _position_ids is not None else None
 
-            breakpoint()  # point 7, before return
+            # breakpoint()  # point 7, before return
 
             return None, position_ids, attention_mask, input_embeds, labels, \
                    vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final, \
