@@ -240,25 +240,9 @@ class VisionCrossAttentionLayer(nn.Cell):
         self.cross_attn = MultiKVCrossAttention(hidden_dim, kv_dim_list, hidden_dim, num_heads)
         self.kv_size_list = kv_size_list
 
-        # pos_embeds = []
-        # for i, kv_size in enumerate(kv_size_list):
-        #     if kv_size > 1:
-        #         # setattr(self, "pos_embed_{}".format(i),
-        #         #         Parameter(Tensor(np.random.randn(kv_size**2, hidden_dim), ms.float32)))
-        #         pos_embeds.append(
-        #             Parameter(Tensor(np.random.randn(kv_size ** 2, hidden_dim), ms.float32), name=f"pos_embed_{i}")
-        #         )
-        #     else:
-        #         pos_embeds.append(
-        #             Parameter(Tensor(np.zeros(1), ms.float32), name=f"pos_embed_{i}_buffer", requires_grad=False)
-        #         )
-        # self.pos_embeds = ParameterTuple(pos_embeds)
-
         pos_embeds = []
         for i, kv_size in enumerate(kv_size_list):
             if kv_size > 1:
-                # setattr(self, "pos_embed_{}".format(i),
-                #         Parameter(Tensor(np.random.randn(kv_size**2, hidden_dim), ms.float32)))
                 pos_embeds.append(
                     PosEmbedAttrCell(
                         Parameter(Tensor(np.random.randn(kv_size ** 2, hidden_dim), ms.float32), name=f"pos_embed_{i}")
@@ -308,7 +292,6 @@ class VisionCrossAttentionLayer(nn.Cell):
         vision_latents_pos_list = []
         for i, vision_latents in enumerate(vision_latents_list):
             if vision_latents.shape[1] > 1:
-                # vision_latents_pos_list.append(vision_latents + getattr(self, "pos_embed_{}".format(i))[None, :, :].to(vision_latents.dtype))
                 vision_latents_pos_list.append(
                     vision_latents + self.pos_embeds[i].parameter_attr[None, :, :].to(vision_latents.dtype)
                 )

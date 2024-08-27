@@ -328,7 +328,7 @@ class CambrianMetaForCausalLM:
                 cur_vision_tower_aux_attention_masks_rearranged = cur_vision_tower_aux_attention_masks_rearranged.flatten(start_dim=0, end_dim=2).flatten(start_dim=1, end_dim=2)
 
                 _mask = cur_vision_tower_aux_attention_masks_rearranged.sum(-1) == 0
-                ops.masked_fill(
+                cur_vision_tower_aux_attention_masks_rearranged = ops.masked_fill(
                     cur_vision_tower_aux_attention_masks_rearranged,
                     _mask[:, None],
                     True
@@ -442,6 +442,8 @@ class CambrianMetaForCausalLM:
 
                 # query_features_i = getattr(self.model, "vision_sampler_{}".format(query_group_i))(query_features_i.flatten(start_dim=0, end_dim=1), global_context_feature_i, *vision_tower_aux_feature_list_i, *vision_tower_aux_attention_masks_list_i)
 
+                breakpoint()  # point 3.1, before vision_sampler
+
                 query_features_i = self.model.vision_samplers[query_group_i](
                     query_features_i.flatten(start_dim=0, end_dim=1),
                     global_context_feature_i,
@@ -452,6 +454,9 @@ class CambrianMetaForCausalLM:
                 query_features_i = query_features_i.view(bs, query_num, -1)
                 # interpolate to the final target size
                 if query_side_len != final_height:
+
+                    breakpoint()  # point 3.2, before interpolate
+
                     query_features_i = query_features_i.permute(0, 2, 1).view(bs, -1, query_side_len, query_side_len)
                     query_features_i = ops.interpolate(
                         query_features_i.to(ms.float32),
