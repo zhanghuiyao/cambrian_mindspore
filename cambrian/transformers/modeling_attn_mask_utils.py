@@ -107,7 +107,6 @@ class AttentionMaskConverter:
                 past_key_values_length=past_key_values_length,
                 sliding_window=sliding_window,
             )
-            breakpoint()
         elif sliding_window is not None:
             raise NotImplementedError("Sliding window is currently only implemented for causal masking")
 
