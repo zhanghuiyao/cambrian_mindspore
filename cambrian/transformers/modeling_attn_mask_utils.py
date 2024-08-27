@@ -114,7 +114,9 @@ class AttentionMaskConverter:
         expanded_attn_mask = self._expand_mask(attention_mask_2d, dtype, tgt_len=input_shape[-1])
 
         if causal_4d_mask is not None:
-            expanded_attn_mask = causal_4d_mask.masked_fill(expanded_attn_mask.astype(ms.bool_), ops.full((), DTYPE_FP16_MIN, dtype=causal_4d_mask.dtype))
+            expanded_attn_mask = causal_4d_mask.masked_fill(
+                expanded_attn_mask.astype(ms.bool_),
+                ops.full((), DTYPE_FP16_MIN, dtype=causal_4d_mask.dtype))
 
         # expanded_attn_mask + causal_4d_mask can cause some overflow
         expanded_4d_mask = expanded_attn_mask
@@ -162,7 +164,9 @@ class AttentionMaskConverter:
 
         inverted_mask = 1.0 - expanded_mask
 
-        return inverted_mask.masked_fill(inverted_mask.to(ms.bool_), ops.full((), DTYPE_FP16_MIN, dtype=inverted_mask.dtype))
+        return inverted_mask.masked_fill(
+            inverted_mask.to(ms.bool_),
+            ops.full((), DTYPE_FP16_MIN, dtype=inverted_mask.dtype))
 
     @staticmethod
     def _unmask_unattended(

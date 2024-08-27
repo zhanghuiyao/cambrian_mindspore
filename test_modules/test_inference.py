@@ -100,7 +100,7 @@ if __name__ == '__main__':
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
     parser.add_argument("--image_path", type=str, default="./demo/math.png")
     parser.add_argument("--question", type=str, default="Please solve this question step by step.")
-    parser.add_argument("--checkpoint_path", type=str, default="./cambrian-8b.ckpt")
+    parser.add_argument("--checkpoint_path", type=str, default=None)  #"./cambrian-8b.ckpt")
     parser.add_argument("--use_fa", type=ast.literal_eval, default=True)
     args, _ = parser.parse_known_args()
 
