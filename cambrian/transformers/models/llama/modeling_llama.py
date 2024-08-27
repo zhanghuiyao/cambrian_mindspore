@@ -510,6 +510,8 @@ class LlamaDecoderLayer(nn.Cell):
                 into the model
         """
 
+        breakpoint()
+
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
