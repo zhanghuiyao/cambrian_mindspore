@@ -105,7 +105,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         for i, decoder_layer in enumerate(self.layers):
 
             # zhy_test infer, breakpoint()
-            np.save(f"hidden_states_in_{i}.npy", hidden_states.asnumpy())
+            # np.save(f"hidden_states_in_{i}.npy", hidden_states.asnumpy())
 
             layer_outputs = decoder_layer(
                 hidden_states,
@@ -201,7 +201,8 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
 
         hidden_states = self.norm(hidden_states)
 
-        np.save(f"hidden_states_out.npy", hidden_states.asnumpy())
+        # zhy_test infer, breakpoint()
+        # np.save(f"hidden_states_out.npy", hidden_states.asnumpy())
 
         breakpoint()
 
