@@ -223,6 +223,8 @@ class LlamaAttention(nn.Cell):
         self.o_proj = nn.Dense(self.hidden_size, self.hidden_size, has_bias=config.attention_bias)
         self._init_rope()
 
+        self.softmax = nn.Softmax()
+
         _name_list = [
             'pretraining_tp',
         ]
@@ -321,7 +323,7 @@ class LlamaAttention(nn.Cell):
 
         # upcast attention to fp32
         # attn_weights = ops.softmax(attn_weights, axis=-1, dtype=ms.float32).to(query_states.dtype)
-        attn_weights = ops.softmax(attn_weights, axis=-1).to(query_states.dtype)
+        attn_weights = self.softmax(attn_weights).to(query_states.dtype)
 
         attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
