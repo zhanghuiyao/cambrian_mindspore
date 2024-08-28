@@ -165,7 +165,8 @@ class LlamaMLP(nn.Cell):
         else:
             # down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
-            breakpoint()
+            # breakpoint()
+            ops.TensorDump()("x", x)
             x_gate = self.gate_proj(x)
             x_gate = self.act_fn(x_gate)
             x_up = self.up_proj(x)
@@ -256,7 +257,6 @@ class LlamaAttention(nn.Cell):
             else:
                 raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
 
-    # @ms.jit
     def construct(
         self,
         hidden_states: Tensor,
@@ -526,7 +526,7 @@ class LlamaDecoderLayer(nn.Cell):
                 into the model
         """
 
-        breakpoint()
+        # breakpoint()
 
         residual = hidden_states
 
