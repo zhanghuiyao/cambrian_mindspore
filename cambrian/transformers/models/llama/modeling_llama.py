@@ -310,6 +310,8 @@ class LlamaAttention(nn.Cell):
 
         attn_weights = ops.matmul(query_states, key_states.swapdims(2, 3)) / (self.head_dim ** 0.5)
 
+        breakpoint()
+
         attn_weights = ops.cast(attn_weights, ms.float32)
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
