@@ -40,7 +40,7 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
         raise NotImplementedError
     else:
         # kwargs['mindspore_dtype'] = ms.float16
-        if ms.get_context("ms_mode") == ms.PYNATIVE_MODE:
+        if ms.get_context("mode") == ms.PYNATIVE_MODE:
             if kwargs.get("mindspore_dtype", ms.float32) == ms.float16:
                 warnings.warn("Cannot run correctly at mixed precision with float16 on MindSpore 2.3")
         else:
