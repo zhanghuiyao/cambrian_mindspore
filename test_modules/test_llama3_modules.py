@@ -109,10 +109,16 @@ if __name__ == '__main__':
     args, _ = parser.parse_known_args()
 
     if args.ms_mode == 0:
-        ms.set_context(mode=ms.GRAPH_MODE, device_target="Ascend", jit_config={"jit_level": args.jit_level},
+        ms.set_context(mode=ms.GRAPH_MODE,
+                       device_target="Ascend",
+                       jit_config={"jit_level": args.jit_level},
+                       max_device_memory="59GB",
                        deterministic="ON")
     else:
-        ms.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", pynative_synchronize=True,
+        ms.set_context(mode=ms.PYNATIVE_MODE,
+                       device_target="Ascend",
+                       pynative_synchronize=True,
+                       max_device_memory="59GB",
                        deterministic="ON")
 
     if args.module_name == "attention":
