@@ -260,6 +260,8 @@ class LlamaAttention(nn.Cell):
         cache_position: Optional[Tensor] = None,
         **kwargs,
     ):
+        breakpoint()
+
         bsz, q_len, _ = hidden_states.shape
 
         if self.pretraining_tp > 1:
