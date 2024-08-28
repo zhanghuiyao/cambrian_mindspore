@@ -45,7 +45,8 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
                 warnings.warn("Cannot run correctly at mixed precision with float16 on MindSpore 2.3")
         else:
             kwargs['mindspore_dtype'] = ms.float16
-        print(f"Run mix-precision: {_DTYPE_2_STRING.get(kwargs.get('mindspore_dtype', ms.float32))}")
+        print(f"Run mindspore mode: {'graph' if ms.get_context('mode') == 0 else 'pynative'}, "
+              f"mix-precision: {_DTYPE_2_STRING.get(kwargs.get('mindspore_dtype', ms.float32))}")
 
     if 'cambrian' in model_name.lower():
         # Load Cambrian model
