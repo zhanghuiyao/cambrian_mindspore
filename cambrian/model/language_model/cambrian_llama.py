@@ -105,7 +105,8 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         for i, decoder_layer in enumerate(self.layers):
 
             # zhy_test infer, breakpoint()
-            np.save(f"hidden_states_in_{i}.npy", hidden_states.asnumpy())
+            # np.save(f"hidden_states_in_{i}.npy", hidden_states.asnumpy())
+            ops.TensorDump(f"hidden_states_in_{i}.npy", hidden_states)
 
             layer_outputs = decoder_layer(
                 hidden_states,
@@ -119,7 +120,8 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
             hidden_states = layer_outputs[0]
 
             # zhy_test infer, breakpoint()
-            np.save(f"hidden_states_out_{i}.npy", hidden_states.asnumpy())
+            # np.save(f"hidden_states_out_{i}.npy", hidden_states.asnumpy())
+            ops.TensorDump(f"hidden_states_out_{i}.npy", hidden_states)
 
             if not self.connector_only:
 
@@ -205,9 +207,10 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         hidden_states = self.norm(hidden_states)
 
         # zhy_test infer, breakpoint()
-        np.save(f"hidden_states_out.npy", hidden_states.asnumpy())
+        # np.save(f"hidden_states_out.npy", hidden_states.asnumpy())
+        ops.TensorDump(f"hidden_states_out.npy", hidden_states)
 
-        breakpoint()
+        # breakpoint()
 
         outputs = (hidden_states,)
         if use_cache and past_key_values is not None:
@@ -456,13 +459,13 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         assert inputs_embeds is None
 
         # zhy_test infer
-        breakpoint()
+        # breakpoint()
 
         inputs, _, position_ids, attention_mask = \
             self.preprocess_input_before_generate_numpy(inputs, None, position_ids, attention_mask)
 
         # zhy_test infer
-        breakpoint()
+        # breakpoint()
 
         if images is not None:
 

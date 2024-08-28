@@ -95,7 +95,7 @@ def test_cambrian_8b_inference(args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="test")
-    parser.add_argument("--ms_mode", type=int, default=1, help="0 is Graph, 1 is Pynative")
+    parser.add_argument("--ms_mode", type=int, default=0, help="0 is Graph, 1 is Pynative")
     parser.add_argument("--jit_level", type=str, default="O0")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
     parser.add_argument("--image_path", type=str, default="./demo/math.png")

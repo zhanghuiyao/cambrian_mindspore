@@ -23,6 +23,7 @@ from cambrian.constants import DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN
 from cambrian.model.language_model.cambrian_llama import CambrianLlamaForCausalLM
 
 from cambrian.mindspore_adapter.amp import auto_mixed_precision
+from cambrian.mindspore_adapter.utils import _DTYPE_2_STRING
 
 from ezcolorlog import root_logger as logger
 
@@ -38,7 +39,13 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
     if load_8bit or load_4bit:
         raise NotImplementedError
     else:
-        kwargs['mindspore_dtype'] = ms.float16
+        # kwargs['mindspore_dtype'] = ms.float16
+        if ms.get_context("ms_mode") == ms.PYNATIVE_MODE:
+            if kwargs.get("mindspore_dtype", ms.float32) == ms.float16:
+                warnings.warn("Cannot run correctly at mixed precision with float16 on MindSpore 2.3")
+        else:
+            kwargs['mindspore_dtype'] = ms.float16
+        print(f"Run mix-precision: {_DTYPE_2_STRING.get(kwargs.get('mindspore_dtype', ms.float32))}")
 
     if 'cambrian' in model_name.lower():
         # Load Cambrian model
