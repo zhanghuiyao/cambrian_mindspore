@@ -71,7 +71,7 @@ def test_llama3_decoder_layer(args):
     # )
     temp_data = dict(
         # _hidden_states_in_1_pt, hidden_states_in_1, hidden_states_out_0
-        hidden_states=Tensor(np.load("./hidden_states_in_0.npy"), dtype=ms.float32),
+        hidden_states=Tensor(np.load("./hidden_states_in_2.npy"), dtype=ms.float32),
         attention_mask=Tensor(np.load("./attention_mask.npy"), dtype=ms.float32),
         position_ids=Tensor(np.load("./position_ids.npy"), ms.int32),
     )
@@ -101,8 +101,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="test")
     parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
-    parser.add_argument("--checkpoint_path", type=str, default="./llama3_8b_layers_0.ckpt")
-    parser.add_argument("--layer_idx", type=int, default=0)
+    parser.add_argument("--checkpoint_path", type=str, default="./llama3_8b_layers_2.ckpt")
+    parser.add_argument("--layer_idx", type=int, default=2)
     parser.add_argument("--ms_mode", type=int, default=1)
     parser.add_argument("--jit_level", type=str, default="O0")
     parser.add_argument("--module_name", type=str, default="decoder_layer", choices=["attention", "decoder_layer"])
