@@ -313,6 +313,7 @@ class LlamaAttention(nn.Cell):
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             attn_weights = attn_weights + causal_mask
+            attn_weights = ops.clip(attn_weights, min=DTYPE_FP16_MIN)
 
         # upcast attention to fp32
         attn_weights = ops.softmax(attn_weights, axis=-1, dtype=ms.float32).to(query_states.dtype)
