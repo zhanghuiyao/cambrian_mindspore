@@ -81,7 +81,7 @@ def test_llama3_decoder_layer(args):
 
     if args.checkpoint_path is not None:
         _state_dict = ms.load_checkpoint(args.checkpoint_path)
-        state_dict = {k.replace("model.layers.1.", ""): v for k, v in _state_dict.items()}
+        state_dict = {k.replace(f"model.layers.{layer_idx}.", ""): v for k, v in _state_dict.items()}
         param_not_load, ckpt_not_load = ms.load_param_into_net(model, state_dict)
         print(f"param_not_load: {param_not_load}")
         print(f"ckpt_not_load: {ckpt_not_load}")
