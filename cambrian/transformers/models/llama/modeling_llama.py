@@ -223,8 +223,6 @@ class LlamaAttention(nn.Cell):
         self.o_proj = nn.Dense(self.hidden_size, self.hidden_size, has_bias=config.attention_bias)
         self._init_rope()
 
-        self.softmax = nn.Softmax()
-
         _name_list = [
             'pretraining_tp',
         ]
@@ -258,6 +256,7 @@ class LlamaAttention(nn.Cell):
             else:
                 raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
 
+    @ms.jit
     def construct(
         self,
         hidden_states: Tensor,
@@ -269,7 +268,7 @@ class LlamaAttention(nn.Cell):
         cache_position: Optional[Tensor] = None,
         **kwargs,
     ):
-        breakpoint()
+        # breakpoint()
 
         bsz, q_len, _ = hidden_states.shape
 
@@ -312,7 +311,7 @@ class LlamaAttention(nn.Cell):
 
         attn_weights = ops.matmul(query_states, key_states.swapdims(2, 3)) / (self.head_dim ** 0.5)
 
-        breakpoint()
+        # breakpoint()
 
         attn_weights = ops.cast(attn_weights, ms.float32)
         if attention_mask is not None:  # no matter the length, we just slice it
@@ -322,8 +321,7 @@ class LlamaAttention(nn.Cell):
             # attn_weights = ops.clip(attn_weights, min=DTYPE_FP16_MIN)
 
         # upcast attention to fp32
-        # attn_weights = ops.softmax(attn_weights, axis=-1, dtype=ms.float32).to(query_states.dtype)
-        attn_weights = self.softmax(attn_weights).to(query_states.dtype)
+        attn_weights = ops.softmax(attn_weights, axis=-1, dtype=ms.float32).to(query_states.dtype)
 
         attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
