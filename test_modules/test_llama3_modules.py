@@ -1,3 +1,4 @@
+import ast
 import argparse
 import time
 import numpy as np
@@ -79,6 +80,12 @@ def test_llama3_decoder_layer(args):
     config = _get_llama_config(model_path)
     model = LlamaDecoderLayer(config, layer_idx=layer_idx)
 
+    if args.fp16:
+        # convert model param dtype
+        from cambrian.mindspore_adapter.amp import convert_module_dtype, auto_mixed_precision
+        model = convert_module_dtype(model, dtype=ms.float16)
+        model = auto_mixed_precision(model, amp_level="O2", dtype=ms.float16)
+
     if args.checkpoint_path is not None:
         _state_dict = ms.load_checkpoint(args.checkpoint_path)
         state_dict = {k.replace(f"model.layers.{layer_idx}.", ""): v for k, v in _state_dict.items()}
@@ -106,6 +113,7 @@ if __name__ == '__main__':
     parser.add_argument("--ms_mode", type=int, default=1)
     parser.add_argument("--jit_level", type=str, default="O0")
     parser.add_argument("--module_name", type=str, default="decoder_layer", choices=["attention", "decoder_layer"])
+    parser.add_argument("--fp16", type=ast.literal_eval, default=True)
     args, _ = parser.parse_known_args()
 
     if args.ms_mode == 0:
