@@ -400,7 +400,12 @@ class CambrianMetaForCausalLM:
         # breakpoint() # point 1, before encoder images
 
         # zhy_test infer, breakpoint()
-        # image_aux_features_list = self.encode_images(image_aux_list)
+        image_aux_features_list = self.encode_images(image_aux_list)
+        np.save("image_aux_features_list_0.npy", image_aux_features_list[0].asnumpy())
+        np.save("image_aux_features_list_1.npy", image_aux_features_list[1].asnumpy())
+        np.save("image_aux_features_list_2.npy", image_aux_features_list[2].asnumpy())
+        np.save("image_aux_features_list_3.npy", image_aux_features_list[3].asnumpy())
+
         image_aux_features_list = [
             Tensor(np.load("./pt_tensors/image_aux_features_list_0.npy"), ms.float16),
             Tensor(np.load("./pt_tensors/image_aux_features_list_1.npy"), ms.float16),
