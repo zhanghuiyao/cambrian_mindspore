@@ -163,14 +163,14 @@ class LlamaMLP(nn.Cell):
             ]
             down_proj = sum(down_proj)
         else:
-            # down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+            down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
-            breakpoint()
-            x_gate = self.gate_proj(x)
-            x_gate = self.act_fn(x_gate)
-            x_up = self.up_proj(x)
-            x = x_gate * x_up
-            down_proj = self.down_proj(x)
+            # breakpoint()
+            # x_gate = self.gate_proj(x)
+            # x_gate = self.act_fn(x_gate)
+            # x_up = self.up_proj(x)
+            # x = x_gate * x_up
+            # down_proj = self.down_proj(x)
 
         return down_proj
 
@@ -267,7 +267,7 @@ class LlamaAttention(nn.Cell):
         cache_position: Optional[Tensor] = None,
         **kwargs,
     ):
-        breakpoint()
+        # breakpoint()
 
         bsz, q_len, _ = hidden_states.shape
 
@@ -519,7 +519,7 @@ class LlamaDecoderLayer(nn.Cell):
                 into the model
         """
 
-        breakpoint()
+        # breakpoint()
 
         residual = hidden_states
 
