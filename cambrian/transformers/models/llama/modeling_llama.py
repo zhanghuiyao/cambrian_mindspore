@@ -318,7 +318,9 @@ class LlamaAttention(nn.Cell):
             # attn_weights = ops.clip(attn_weights, min=DTYPE_FP16_MIN)
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, axis=-1, dtype=ms.float32).to(query_states.dtype)
+        # attn_weights = ops.softmax(attn_weights, axis=-1, dtype=ms.float32).to(query_states.dtype)
+        attn_weights = ops.softmax(attn_weights, axis=-1).to(query_states.dtype)
+
         attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
         # assert attn_output.shape == (bsz, self.num_heads, q_len, self.head_dim)
