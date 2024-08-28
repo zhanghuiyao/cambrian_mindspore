@@ -484,6 +484,26 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 *images,
                 *image_sizes,
             )
+
+            vision_tower_aux_feature_list = [
+                Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_0_pt.npy"), ms.float16),
+                Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_1_pt.npy"), ms.float16),
+                Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_2_pt.npy"), ms.float16),
+                Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_3_pt.npy"), ms.float16),
+            ]
+            vision_tower_aux_attention_masks_list = [
+                Tensor(np.load("./pt_tensors/_vision_tower_aux_attention_masks_list_0_pt.npy"), ms.bool_),
+                Tensor(np.load("./pt_tensors/_vision_tower_aux_attention_masks_list_1_pt.npy"), ms.bool_),
+                Tensor(np.load("./pt_tensors/_vision_tower_aux_attention_masks_list_2_pt.npy"), ms.bool_),
+                Tensor(np.load("./pt_tensors/_vision_tower_aux_attention_masks_list_3_pt.npy"), ms.bool_),
+            ]
+            final_vision_feature_size = np.load("./pt_tensors/_final_vision_feature_size_pt.npy").tolist()
+            global_context_feature = Tensor(np.load("./pt_tensors/_global_context_feature_pt.npy"), ms.float16)
+            inputs_embeds = Tensor(np.load("./pt_tensors/_inputs_embeds_pt.npy"), ms.float16)
+            position_ids = None
+            attention_mask = Tensor(np.load("./pt_tensors/mask.npy"), ms.bool_)
+            breakpoint()
+
             self.vision_tower_aux_feature_list = vision_tower_aux_feature_list
             self.vision_tower_aux_attention_masks_list = vision_tower_aux_attention_masks_list
             self.final_vision_feature_size = final_vision_feature_size
