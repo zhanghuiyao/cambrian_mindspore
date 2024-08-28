@@ -99,7 +99,7 @@ class Block(nn.Cell):
             attn_drop: float = 0.,
             init_values: Optional[float] = None,
             drop_path: float = 0.,
-            act_layer: nn.Cell = nn.GELU,
+            act_layer: nn.Cell = partial(nn.GELU, approximate=False),
             norm_layer: nn.Cell = LayerNorm,
             mlp_layer: nn.Cell = Mlp,
     ) -> None:
@@ -209,7 +209,7 @@ class VisionTransformer(nn.Cell):
         assert class_token or global_pool != 'token'
         use_fc_norm = global_pool == 'avg' if fc_norm is None else fc_norm
         norm_layer = get_norm_layer(norm_layer) or partial(LayerNorm, epsilon=1e-6)
-        act_layer = get_act_layer(act_layer) or nn.GELU
+        act_layer = get_act_layer(act_layer) or partial(nn.GELU, approximate=False)
 
         self.num_classes = num_classes
         self.global_pool = global_pool

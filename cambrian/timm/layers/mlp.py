@@ -14,7 +14,7 @@ class Mlp(nn.Cell):
             in_features,
             hidden_features=None,
             out_features=None,
-            act_layer=nn.GELU,
+            act_layer=partial(nn.GELU, approximate=False),
             norm_layer=None,
             bias=True,
             drop=0.,

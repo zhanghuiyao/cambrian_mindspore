@@ -1,3 +1,4 @@
+from functools import partial
 from collections import OrderedDict
 from mindspore import nn
 
@@ -10,8 +11,8 @@ class ClassInstantier(OrderedDict):
 
 
 ACT2CLS = {
-    "gelu": nn.GELU,
-    "quick_gelu": nn.GELU,
+    "gelu": partial(nn.GELU, approximate=False),
+    "quick_gelu": partial(nn.GELU, approximate=False),
     "leaky_relu": nn.LeakyReLU,
     "mish": nn.Mish,
     "relu": nn.ReLU,

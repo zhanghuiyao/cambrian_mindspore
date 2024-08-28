@@ -27,7 +27,7 @@ class SimpleResBlock(nn.Cell):
 
         self.proj = nn.SequentialCell([
             nn.Dense(channels, channels),
-            nn.GELU(),
+            nn.GELU(approximate=False),
             nn.Dense(channels, channels)
         ])
 
@@ -41,14 +41,14 @@ class SEMLP(nn.Cell):
         super().__init__()
         self.se = nn.SequentialCell([
             nn.Dense(in_channels, in_channels, has_bias=False),
-            nn.GELU(),
+            nn.GELU(approximate=False),
             nn.Dense(in_channels, in_channels, has_bias=False),
             nn.Sigmoid()
         ])
 
         self.proj = nn.SequentialCell([
             nn.Dense(in_channels, out_channels),
-            nn.GELU(),
+            nn.GELU(approximate=False),
             nn.Dense(out_channels, out_channels)
         ])
 
@@ -70,7 +70,7 @@ def build_vision_projector(config, delay_load=False, **kwargs):
         mlp_depth = int(mlp_gelu_match.group(1))
         modules = [nn.Dense(config.mm_hidden_size, config.hidden_size)]
         for _ in range(1, mlp_depth):
-            modules.append(nn.GELU())
+            modules.append(nn.GELU(approximate=False))
             modules.append(nn.Dense(config.hidden_size, config.hidden_size))
         return nn.SequentialCell(modules)
 

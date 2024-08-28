@@ -80,7 +80,7 @@ class MLP(nn.Cell):
     def __init__(self, d_in, d_hidden, d_out):
         super().__init__()
         self.linear_1 = nn.Dense(d_in, d_hidden, has_bias=False)
-        self.act = nn.GELU()
+        self.act = nn.GELU(approximate=False)
         self.linear_2 = nn.Dense(d_hidden, d_out, has_bias=False)
 
     def construct(self, x):

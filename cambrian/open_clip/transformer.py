@@ -1,6 +1,7 @@
 # reference to https://github.com/mlfoundations/open_clip
 
 import math
+from functools import partial
 from collections import OrderedDict
 from typing import Callable, Optional, Tuple
 
@@ -217,7 +218,7 @@ class ResidualAttentionBlock(nn.Cell):
         n_head: int,
         mlp_ratio: float = 4.0,
         ls_init_value: float = None,
-        act_layer: Callable = nn.GELU,
+        act_layer: Callable = partial(nn.GELU, approximate=False),
         norm_layer: Callable = nn.LayerNorm,
         is_cross_attention: bool = False,
     ):
@@ -286,7 +287,7 @@ class Transformer(nn.Cell):
         heads: int,
         mlp_ratio: float = 4.0,
         ls_init_value: float = None,
-        act_layer: Callable = nn.GELU,
+        act_layer: Callable = partial(nn.GELU, approximate=False),
         norm_layer: Callable = nn.LayerNorm,
     ):
         super().__init__()
@@ -323,7 +324,7 @@ class VisionTransformer(nn.Cell):
         output_dim: int = 512,
         input_patchnorm: bool = False,
         final_ln_after_pool: bool = False,
-        act_layer: Callable = nn.GELU,
+        act_layer: Callable = partial(nn.GELU, approximate=False),
         norm_layer: Callable = nn.LayerNorm,
     ):
         super().__init__()
@@ -441,7 +442,7 @@ class TextTransformer(nn.Cell):
         layers: int = 12,
         ls_init_value: float = None,
         output_dim: int = 512,
-        act_layer: Callable = nn.GELU,
+        act_layer: Callable = partial(nn.GELU, approximate=False),
         norm_layer: Callable = nn.LayerNorm,
         embed_cls: bool = False,
         pad_id: int = 0,

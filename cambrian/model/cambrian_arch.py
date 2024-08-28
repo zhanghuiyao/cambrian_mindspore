@@ -37,7 +37,7 @@ class CambrianMetaModel:
                 self.vision_tower_aux_list = nn.CellList(vision_tower_aux_list)
                 self.mm_projector = nn.SequentialCell([
                     nn.Dense(vision_hidden_size * num_query_group, config.hidden_size),
-                    nn.GELU(),
+                    nn.GELU(approximate=False),
                     nn.Dense(config.hidden_size, config.hidden_size)
                 ])
 
@@ -51,7 +51,7 @@ class CambrianMetaModel:
                     mm_projector_auxes.append(
                         nn.SequentialCell([
                             nn.Dense(vision_tower_aux.hidden_size, vision_hidden_size),
-                            nn.GELU(),
+                            nn.GELU(approximate=False),
                             nn.Dense(vision_hidden_size, vision_hidden_size),
                             nn.LayerNorm([vision_hidden_size])
                         ])

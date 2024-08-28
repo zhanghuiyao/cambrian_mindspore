@@ -114,7 +114,7 @@ class CAbstractor(nn.Cell):
         
         self.readout = nn.SequentialCell([
             nn.Dense(self.hidden_size, output_hidden_size),
-            nn.GELU(),
+            nn.GELU(approximate=False),
             nn.Dense(output_hidden_size, output_hidden_size)
         ])
 

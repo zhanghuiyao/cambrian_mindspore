@@ -1,5 +1,6 @@
 import copy
 import numpy as np
+from functools import partial
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple, Union
 
@@ -82,7 +83,7 @@ def _build_vision_tower(
     # OpenAI models are pretrained w/ QuickGELU but native nn.GELU is both faster and more
     # memory efficient in recent PyTorch releases (>= 1.10).
     # NOTE: timm models always use native GELU regardless of quick_gelu flag.
-    act_layer = QuickGELU if quick_gelu else nn.GELU
+    act_layer = QuickGELU if quick_gelu else partial(nn.GELU, approximate=False)
 
     if vision_cfg.timm_model_name:
         visual = TimmModel(
