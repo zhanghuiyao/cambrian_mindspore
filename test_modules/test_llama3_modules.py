@@ -78,6 +78,13 @@ def test_llama3_decoder_layer(args):
     config = _get_llama_config(model_path)
     model = LlamaDecoderLayer(config, layer_idx=layer_idx)
 
+    if args.checkpoint_path is not None:
+        _state_dict = ms.load_checkpoint(args.checkpoint_path)
+        param_not_load, ckpt_not_load = ms.load_param_into_net(model, _state_dict)
+        print(f"param_not_load: {param_not_load}")
+        print(f"ckpt_not_load: {ckpt_not_load}")
+        print(f"load checkpoint from `{args.checkpoint_path}` success.")
+
     print(f"=====> Building model done.")
 
     breakpoint()
