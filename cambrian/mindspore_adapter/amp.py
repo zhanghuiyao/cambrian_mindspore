@@ -34,7 +34,6 @@ def auto_mixed_precision(network, amp_level="O0", dtype=ms.float16):
     elif amp_level == "O1":
         raise NotImplementedError
     elif amp_level == "O2":
-        from cambrian.transformers.models.llama.modeling_llama import LlamaAttention  # breakpoint()
         _auto_black_list(
             network,
             AMP_BLACK_LIST + [
@@ -50,7 +49,6 @@ def auto_mixed_precision(network, amp_level="O0", dtype=ms.float16):
                 nn.AvgPool2d,
                 nn.AvgPool3d,
                 nn.CrossEntropyLoss,
-                LlamaAttention
             ],
             dtype,
         )
