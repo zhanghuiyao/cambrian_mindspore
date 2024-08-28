@@ -41,6 +41,7 @@ def auto_mixed_precision(network, amp_level="O0", dtype=ms.float16):
                 nn.SiLU,
                 nn.GELU,
                 nn.Softmax,
+                nn.Sigmoid,
                 nn.MaxPool1d,
                 nn.MaxPool2d,
                 nn.MaxPool3d,
