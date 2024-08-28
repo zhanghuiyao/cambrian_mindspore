@@ -256,7 +256,7 @@ class LlamaAttention(nn.Cell):
             else:
                 raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
 
-    @ms.jit
+    # @ms.jit
     def construct(
         self,
         hidden_states: Tensor,
