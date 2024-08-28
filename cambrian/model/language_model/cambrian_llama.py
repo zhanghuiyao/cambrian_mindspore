@@ -499,7 +499,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             ]
             final_vision_feature_size = np.load("./pt_tensors/_final_vision_feature_size_pt.npy").tolist()
             global_context_feature = Tensor(np.load("./pt_tensors/_global_context_feature_pt.npy"), ms.float16)
-            inputs_embeds = Tensor(np.load("./pt_tensors/_inputs_embeds_pt.npy"), ms.float16)
+            inputs_embeds = Tensor(np.load("./pt_tensors/_inputs_embeds_pt_fixed.npy"), ms.float16)
             position_ids = None
             attention_mask = Tensor(np.load("./pt_tensors/mask.npy"), ms.bool_)
             breakpoint()
