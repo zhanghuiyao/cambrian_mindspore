@@ -70,7 +70,7 @@ def test_llama3_decoder_layer(args):
     #     position_ids=Tensor(np.arange(0, 2048, 1)[None], ms.int32),
     # )
     temp_data = dict(
-        hidden_states=Tensor(np.load("./hidden_states_in_1.npy"), dtype=ms.float32),
+        hidden_states=Tensor(np.load("./_hidden_states_in_1_pt.npy"), dtype=ms.float32),
         attention_mask=Tensor(np.load("./attention_mask.npy"), dtype=ms.float32),
         position_ids=Tensor(np.load("./position_ids.npy"), ms.int32),
     )

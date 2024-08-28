@@ -169,7 +169,8 @@ class LlamaMLP(nn.Cell):
             x_gate = self.gate_proj(x)
             x_gate = self.act_fn(x_gate)
             x_up = self.up_proj(x)
-            down_proj = self.down_proj(x_gate * x_up)
+            x = x_gate * x_up
+            down_proj = self.down_proj(x)
 
         return down_proj
 
