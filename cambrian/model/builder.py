@@ -100,6 +100,7 @@ def load_pretrained_model(model_path, model_base, model_name, use_flash_attn=Fal
     else:
         context_len = 2048
 
+    checkpoint_path = checkpoint_path if checkpoint_path.lower() not in ("", "none") else None
     if checkpoint_path is not None:
         s_time = time.time()
         print(f"checkpoint loading...")
