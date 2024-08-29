@@ -50,14 +50,25 @@ class Dinov2Embeddings(nn.Cell):
         # we add a small number to avoid floating point error in the interpolation
         # see discussion at https://github.com/facebookresearch/dino/issues/8
         height, width = height + 0.1, width + 0.1
+
+        breakpoint()
+
         patch_pos_embed = patch_pos_embed.reshape(1, int(num_positions ** 0.5), int(num_positions ** 0.5), dim)
         patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
         target_dtype = patch_pos_embed.dtype
+        # patch_pos_embed = ops.interpolate(
+        #     patch_pos_embed.to(dtype=ms.float32),
+        #     scale_factor=(float(height / (num_positions ** 0.5)), float(width / (num_positions ** 0.5))),
+        #     recompute_scale_factor=True,
+        #     mode="bilinear", #"bicubic",
+        #     align_corners=False,
+        # ).to(dtype=target_dtype)
+        _h, _w = patch_pos_embed.shape[-2:]
+        size = (height / (num_positions ** 0.5) * _h, width / (num_positions ** 0.5) * _w)
         patch_pos_embed = ops.interpolate(
             patch_pos_embed.to(dtype=ms.float32),
-            scale_factor=(float(height / (num_positions ** 0.5)), float(width / (num_positions ** 0.5))),
-            recompute_scale_factor=True,
-            mode="bilinear", #"bicubic",
+            size=size,
+            mode="bilinear",  # "bicubic",
             align_corners=False,
         ).to(dtype=target_dtype)
 
