@@ -333,6 +333,9 @@ class Dinov2Layer(nn.Cell):
         head_mask: Optional[Tensor] = None,
         output_attentions: bool = False,
     ) -> Union[Tuple[Tensor, Tensor], Tuple[Tensor]]:
+
+        breakpoint()
+
         self_attention_outputs = self.attention(
             self.norm1(hidden_states),  # in Dinov2, layernorm is applied before self-attention
             head_mask,
