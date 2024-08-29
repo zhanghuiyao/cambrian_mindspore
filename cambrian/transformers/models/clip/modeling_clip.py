@@ -160,7 +160,7 @@ class CLIPEncoderLayer(nn.Cell):
         """
         residual = hidden_states
 
-        breakpoint()
+        # breakpoint()
 
         hidden_states = self.layer_norm1(hidden_states)
         hidden_states, attn_weights = self.self_attn(
@@ -245,7 +245,7 @@ class CLIPEncoder(nn.Cell):
             if output_hidden_states:
                 encoder_states = encoder_states + (hidden_states,)
 
-            breakpoint()
+            # breakpoint()
 
             hidden_states, attn_weights = encoder_layer(
                 hidden_states,
@@ -333,7 +333,7 @@ class CLIPVisionTransformer(nn.Cell):
         if pixel_values is None:
             raise ValueError("You have to specify pixel_values")
 
-        breakpoint()
+        # breakpoint()
 
         hidden_states = self.embeddings(pixel_values)
         hidden_states = self.pre_layrnorm(hidden_states)
