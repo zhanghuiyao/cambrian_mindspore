@@ -71,6 +71,9 @@ class Dinov2Embeddings(nn.Cell):
     def construct(self, pixel_values: Tensor, bool_masked_pos: Optional[Tensor] = None) -> Tensor:
         batch_size, _, height, width = pixel_values.shape
         target_dtype = self.patch_embeddings.projection.weight.dtype
+
+        breakpoint()
+
         embeddings = self.patch_embeddings(pixel_values.to(dtype=target_dtype))
 
         if bool_masked_pos is not None:
