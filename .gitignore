@@ -29,3 +29,6 @@ irs
 
 git_push.sh
 
+*.npy
+
+*.ckpt
