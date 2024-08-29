@@ -25,10 +25,33 @@ class SiLU32(nn.Cell):
         return out
 
 
+class QuickGELUActivation(nn.Cell):
+    """
+    Applies GELU approximation that is fast but somewhat inaccurate. See: https://github.com/hendrycks/GELUs
+    """
+
+    def __init__(self):
+        super(QuickGELUActivation, self).__init__()
+        self.sigmoid = nn.Sigmoid()
+
+    def construct(self, input):
+        return input * self.sigmoid(1.702 * input)
+
+
+class LeakyReLU(nn.Cell):
+
+    def __init__(self, negative_slope: float = 1e-2) -> None:
+        super(LeakyReLU, self).__init__()
+        self.negative_slope = negative_slope
+
+    def construct(self, input):
+        return ops.leaky_relu(input, self.negative_slope)
+
+
 ACT2CLS = {
     "gelu": partial(nn.GELU, approximate=False),
-    "quick_gelu": partial(nn.GELU, approximate=False),
-    "leaky_relu": nn.LeakyReLU,
+    "quick_gelu": QuickGELUActivation,
+    "leaky_relu": LeakyReLU,
     "mish": nn.Mish,
     "relu": nn.ReLU,
     "relu6": nn.ReLU6,
