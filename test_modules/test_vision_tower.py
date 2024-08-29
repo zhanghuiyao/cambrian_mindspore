@@ -118,7 +118,7 @@ def test_vision_tower(args):
             print(f"======> {i + 1}/{module_len}, Result: loss: {loss.item():.4f}, overflow: {overflow}, time cost: {time.time() - s_time:.2f}s")
 
         print(f"======> {i + 1}/{module_len}, model name: {module_name}, token_len: {token_len}, run done.")
-        print(f"=" * 50)
+        print(f"=" * 100)
 
 
 if __name__ == '__main__':
