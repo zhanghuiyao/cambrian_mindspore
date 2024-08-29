@@ -128,6 +128,7 @@ if __name__ == '__main__':
     parser.add_argument("--image_path", type=str, default="./demo/math.png")
     parser.add_argument("--fp16", type=ast.literal_eval, default=True)
 
+    parser.add_argument("--model_path", type=str, default="./cambrian/hf-configs/nyu-visionx-cambrian-8b")
     parser.add_argument("--vision_tower_index", type=str, default="0,1,2,3")
     parser.add_argument("--checkpoint_path", type=str, default=None, help="None,None,None,None")
 
