@@ -64,7 +64,7 @@ class Dinov2Embeddings(nn.Cell):
         #     align_corners=False,
         # ).to(dtype=target_dtype)
         _h, _w = patch_pos_embed.shape[-2:]
-        size = (height / (num_positions ** 0.5) * _h, width / (num_positions ** 0.5) * _w)
+        size = (int(height / (num_positions ** 0.5) * _h), int(width / (num_positions ** 0.5) * _w))
         patch_pos_embed = ops.interpolate(
             patch_pos_embed.to(dtype=ms.float32),
             size=size,
