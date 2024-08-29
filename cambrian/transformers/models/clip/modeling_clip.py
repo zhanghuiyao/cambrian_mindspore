@@ -243,6 +243,8 @@ class CLIPEncoder(nn.Cell):
             if output_hidden_states:
                 encoder_states = encoder_states + (hidden_states,)
 
+            breakpoint()
+
             hidden_states, attn_weights = encoder_layer(
                 hidden_states,
                 attention_mask,
