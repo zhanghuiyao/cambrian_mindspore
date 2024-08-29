@@ -18,6 +18,9 @@ def process_images(images, image_processor, model_cfg):
     for image in images:
         image_aux_list = []
         for processor_aux in processor_aux_list:
+
+            breakpoint()
+
             image_aux = image
             if hasattr(processor_aux, 'image_mean'):
                 target_resolution = processor_aux.crop_size['height']

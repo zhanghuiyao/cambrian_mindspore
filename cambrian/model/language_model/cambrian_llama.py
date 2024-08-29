@@ -488,11 +488,12 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 *image_sizes,
             )
 
+            _dtype = vision_tower_aux_feature_list[0].dtype
             vision_tower_aux_feature_list = [
-                Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_0_pt.npy"), ms.float16),
-                Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_1_pt.npy"), ms.float16),
-                Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_2_pt.npy"), ms.float16),
-                Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_3_pt.npy"), ms.float16),
+                Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_0_pt.npy"), _dtype),
+                Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_1_pt.npy"), _dtype),
+                Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_2_pt.npy"), _dtype),
+                Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_3_pt.npy"), _dtype),
             ]
             vision_tower_aux_attention_masks_list = [
                 Tensor(np.load("./pt_tensors/_vision_tower_aux_attention_masks_list_0_pt.npy"), ms.bool_),
@@ -501,8 +502,8 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 Tensor(np.load("./pt_tensors/_vision_tower_aux_attention_masks_list_3_pt.npy"), ms.bool_),
             ]
             final_vision_feature_size = np.load("./pt_tensors/_final_vision_feature_size_pt.npy").tolist()
-            global_context_feature = Tensor(np.load("./pt_tensors/_global_context_feature_pt.npy"), ms.float16)
-            inputs_embeds = Tensor(np.load("./pt_tensors/_inputs_embeds_pt_fixed.npy"), ms.float16)
+            global_context_feature = Tensor(np.load("./pt_tensors/_global_context_feature_pt.npy"), _dtype)
+            inputs_embeds = Tensor(np.load("./pt_tensors/_inputs_embeds_pt_fixed.npy"), _dtype)
             position_ids = None
             attention_mask = Tensor(np.load("./pt_tensors/mask.npy"), ms.bool_)
             breakpoint()

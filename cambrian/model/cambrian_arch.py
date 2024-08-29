@@ -406,11 +406,12 @@ class CambrianMetaForCausalLM:
         np.save("image_aux_features_list_2.npy", image_aux_features_list[2].asnumpy())
         np.save("image_aux_features_list_3.npy", image_aux_features_list[3].asnumpy())
 
+        _dtype = image_aux_features_list[0].dtype
         image_aux_features_list = [
-            Tensor(np.load("./pt_tensors/image_aux_features_list_0.npy"), ms.float16),
-            Tensor(np.load("./pt_tensors/image_aux_features_list_1.npy"), ms.float16),
-            Tensor(np.load("./pt_tensors/image_aux_features_list_2.npy"), ms.float16),
-            Tensor(np.load("./pt_tensors/image_aux_features_list_3.npy"), ms.float16),
+            Tensor(np.load("./pt_tensors/image_aux_features_list_0.npy"), _dtype),
+            Tensor(np.load("./pt_tensors/image_aux_features_list_1.npy"), _dtype),
+            Tensor(np.load("./pt_tensors/image_aux_features_list_2.npy"), _dtype),
+            Tensor(np.load("./pt_tensors/image_aux_features_list_3.npy"), _dtype),
         ]
 
         vision_tower_aux_feature_list = ()
