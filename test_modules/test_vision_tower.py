@@ -102,6 +102,8 @@ def test_vision_tower(args):
             s_time = time.time()
             print(f"======> {i + 1}/{module_len}, Run Forward...")
 
+            breakpoint()
+
             out = model(image_tensor)
 
             print(f"======> {i + 1}/{module_len}, Image Process: image_tensor.shape: {image_tensor.shape}")
