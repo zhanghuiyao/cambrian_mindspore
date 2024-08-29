@@ -57,7 +57,7 @@ class Dinov2Embeddings(nn.Cell):
             patch_pos_embed.to(dtype=ms.float32),
             scale_factor=(float(height / (num_positions ** 0.5)), float(width / (num_positions ** 0.5))),
             recompute_scale_factor=True,
-            mode="bicubic",
+            mode="bilinear", #"bicubic",
             align_corners=False,
         ).to(dtype=target_dtype)
 
