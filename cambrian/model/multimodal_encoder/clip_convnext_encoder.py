@@ -1,6 +1,8 @@
 import mindspore as ms
 from mindspore import nn, ops, Tensor, Parameter
 
+from mindspore.dataset.vision import CenterCrop, Resize
+
 from cambrian.timm.models.convnext import ConvNeXt
 from cambrian.open_clip.factory import create_model_from_pretrained
 from cambrian.model.multimodal_encoder.base_encoder import BaseVisionTower, ProcessorWrapper
@@ -88,8 +90,14 @@ class CLIPConvNextTower(BaseVisionTower):
         assert "clip-convnext" in self.vision_tower_name.lower()
         self.vision_model = "convnext"
         clip_model, processor = create_model_from_pretrained(self.vision_tower_name)
-        processor.transforms[0].size = self._image_size
+
+        assert isinstance(processor.transforms[0], Resize)  # diff setting on MindSpore
+        # processor.transforms[0].size = self._image_size
+        processor.transforms[0].py_size = self._image_size
+        processor.transforms[0].c_size = (self._image_size,)
+        assert isinstance(processor.transforms[1], CenterCrop)
         processor.transforms[1].size = (self._image_size, self._image_size)
+
         self.image_processor = ProcessorWrapper(processor, height=self._image_size, width=self._image_size)
         self.vision_tower: ConvNeXt = clip_model.visual.trunk
         self.vision_tower.output_tokens = True
