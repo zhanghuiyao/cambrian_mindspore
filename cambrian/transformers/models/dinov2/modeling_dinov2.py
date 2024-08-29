@@ -382,6 +382,8 @@ class Dinov2Encoder(nn.Cell):
 
             layer_head_mask = head_mask[i] if head_mask is not None else None
 
+            breakpoint()
+
             layer_outputs = layer_module(hidden_states, layer_head_mask, output_attentions)
 
             hidden_states = layer_outputs[0]
