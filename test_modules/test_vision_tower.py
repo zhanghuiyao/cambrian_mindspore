@@ -113,6 +113,9 @@ def test_vision_tower(args):
             s_time = time.time()
             print(f"======> {i + 1}/{module_len}, Run Backward...")
 
+            model.set_train()
+            train_net.set_train()
+
             out = train_net(image_tensor)
             loss, _, overflow = out
 

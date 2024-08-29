@@ -329,6 +329,8 @@ class CLIPVisionTransformer(nn.Cell):
         if pixel_values is None:
             raise ValueError("You have to specify pixel_values")
 
+        breakpoint()
+
         hidden_states = self.embeddings(pixel_values)
         hidden_states = self.pre_layrnorm(hidden_states)
 
