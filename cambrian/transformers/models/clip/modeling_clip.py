@@ -160,6 +160,8 @@ class CLIPEncoderLayer(nn.Cell):
         """
         residual = hidden_states
 
+        breakpoint()
+
         hidden_states = self.layer_norm1(hidden_states)
         hidden_states, attn_weights = self.self_attn(
             hidden_states=hidden_states,
