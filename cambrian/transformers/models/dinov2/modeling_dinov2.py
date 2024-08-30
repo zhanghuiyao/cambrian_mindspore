@@ -51,24 +51,14 @@ class Dinov2Embeddings(nn.Cell):
         # see discussion at https://github.com/facebookresearch/dino/issues/8
         height, width = height + 0.1, width + 0.1
 
-        breakpoint()
-
         patch_pos_embed = patch_pos_embed.reshape(1, int(num_positions ** 0.5), int(num_positions ** 0.5), dim)
         patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
         target_dtype = patch_pos_embed.dtype
-        # patch_pos_embed = ops.interpolate(
-        #     patch_pos_embed.to(dtype=ms.float32),
-        #     scale_factor=(float(height / (num_positions ** 0.5)), float(width / (num_positions ** 0.5))),
-        #     recompute_scale_factor=True,
-        #     mode="bicubic",
-        #     align_corners=False,
-        # ).to(dtype=target_dtype)  # breakpoint
-        _h, _w = patch_pos_embed.shape[-2:]
-        size = (int(height / (num_positions ** 0.5) * _h), int(width / (num_positions ** 0.5) * _w))
         patch_pos_embed = ops.interpolate(
             patch_pos_embed.to(dtype=ms.float32),
-            size=size,
-            mode="bicubic",  # "bicubic", "bilinear"
+            scale_factor=(float(height / (num_positions ** 0.5)), float(width / (num_positions ** 0.5))),
+            recompute_scale_factor=True,
+            mode="bicubic",  # FIXME: `recompute_scale_factor=None` not support on MindSpore 2.3, it may lead to large accuracy errors !
             align_corners=False,
         ).to(dtype=target_dtype)
 
@@ -82,8 +72,6 @@ class Dinov2Embeddings(nn.Cell):
     def construct(self, pixel_values: Tensor, bool_masked_pos: Optional[Tensor] = None) -> Tensor:
         batch_size, _, height, width = pixel_values.shape
         target_dtype = self.patch_embeddings.projection.weight.dtype
-
-        # breakpoint()
 
         embeddings = self.patch_embeddings(pixel_values.to(dtype=target_dtype))
 
@@ -347,9 +335,6 @@ class Dinov2Layer(nn.Cell):
         head_mask: Optional[Tensor] = None,
         output_attentions: bool = False,
     ) -> Union[Tuple[Tensor, Tensor], Tuple[Tensor]]:
-
-        # breakpoint()
-
         self_attention_outputs = self.attention(
             self.norm1(hidden_states),  # in Dinov2, layernorm is applied before self-attention
             head_mask,
@@ -398,8 +383,6 @@ class Dinov2Encoder(nn.Cell):
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
             layer_head_mask = head_mask[i] if head_mask is not None else None
-
-            # breakpoint()
 
             layer_outputs = layer_module(hidden_states, layer_head_mask, output_attentions)
 
@@ -493,11 +476,7 @@ class Dinov2Model(PreTrainedModel):
         # input head_mask has shape [num_heads] or [num_hidden_layers x num_heads]
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
-
-        # breakpoint()
-
         embedding_output = self.embeddings(pixel_values, bool_masked_pos=bool_masked_pos)
-
         encoder_outputs = self.encoder(
             embedding_output,
             head_mask=head_mask,
