@@ -122,8 +122,6 @@ class CLIPConvNextTower(BaseVisionTower):
         if self._interp_size is None:
             return image_forward_outs
 
-        breakpoint()
-
         image_features = ops.interpolate(
             image_forward_outs.to(ms.float32),
             size=(self.num_patches_per_side, self.num_patches_per_side),
@@ -144,7 +142,6 @@ class CLIPConvNextTower(BaseVisionTower):
             torch.Tensor: The output features from the vision tower after interpolation.
         """
         image_features_stages = []
-        breakpoint()
         x = self.vision_tower.stem(images.to(dtype=self.dtype))
         for stage in self.vision_tower.stages:
             x = stage(x)
