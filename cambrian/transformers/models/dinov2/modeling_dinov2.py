@@ -56,21 +56,21 @@ class Dinov2Embeddings(nn.Cell):
         patch_pos_embed = patch_pos_embed.reshape(1, int(num_positions ** 0.5), int(num_positions ** 0.5), dim)
         patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
         target_dtype = patch_pos_embed.dtype
-        # patch_pos_embed = ops.interpolate(
-        #     patch_pos_embed.to(dtype=ms.float32),
-        #     scale_factor=(float(height / (num_positions ** 0.5)), float(width / (num_positions ** 0.5))),
-        #     recompute_scale_factor=True,
-        #     mode="bilinear", #"bicubic",
-        #     align_corners=False,
-        # ).to(dtype=target_dtype)
-        _h, _w = patch_pos_embed.shape[-2:]
-        size = (int(height / (num_positions ** 0.5) * _h), int(width / (num_positions ** 0.5) * _w))
         patch_pos_embed = ops.interpolate(
             patch_pos_embed.to(dtype=ms.float32),
-            size=size,
-            mode="bilinear",  # "bicubic",
+            scale_factor=(float(height / (num_positions ** 0.5)), float(width / (num_positions ** 0.5))),
+            # recompute_scale_factor=True,
+            mode="bicubic",
             align_corners=False,
-        ).to(dtype=target_dtype)
+        ).to(dtype=target_dtype)  # breakpoint
+        # _h, _w = patch_pos_embed.shape[-2:]
+        # size = (int(height / (num_positions ** 0.5) * _h), int(width / (num_positions ** 0.5) * _w))
+        # patch_pos_embed = ops.interpolate(
+        #     patch_pos_embed.to(dtype=ms.float32),
+        #     size=size,
+        #     mode="bilinear",  # "bicubic",
+        #     align_corners=False,
+        # ).to(dtype=target_dtype)
 
         # assert int(height) == patch_pos_embed.shape[-2] and int(width) == patch_pos_embed.shape[-1]
         # if int(height) != patch_pos_embed.shape[-2] or int(width) != patch_pos_embed.shape[-1]:
