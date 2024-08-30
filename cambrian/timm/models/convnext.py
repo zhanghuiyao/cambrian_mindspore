@@ -373,6 +373,8 @@ class ConvNeXt(nn.Cell):
         self.head.reset(num_classes, global_pool)
 
     def forward_features(self, x):
+        breakpoint()
+
         x = self.stem(x)
         for stage in self.stages:
             x = stage(x)
@@ -380,9 +382,13 @@ class ConvNeXt(nn.Cell):
         return x
 
     def forward_head(self, x, pre_logits: bool = False):
+        breakpoint()
+
         return self.head(x, pre_logits=True) if pre_logits else self.head(x)
 
     def construct(self, x):
+        breakpoint()
+
         x = self.forward_features(x)
         x = self.forward_head(x)
         return x
