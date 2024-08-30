@@ -83,7 +83,7 @@ class Dinov2Embeddings(nn.Cell):
         batch_size, _, height, width = pixel_values.shape
         target_dtype = self.patch_embeddings.projection.weight.dtype
 
-        breakpoint()
+        # breakpoint()
 
         embeddings = self.patch_embeddings(pixel_values.to(dtype=target_dtype))
 
@@ -348,7 +348,7 @@ class Dinov2Layer(nn.Cell):
         output_attentions: bool = False,
     ) -> Union[Tuple[Tensor, Tensor], Tuple[Tensor]]:
 
-        breakpoint()
+        # breakpoint()
 
         self_attention_outputs = self.attention(
             self.norm1(hidden_states),  # in Dinov2, layernorm is applied before self-attention
@@ -399,7 +399,7 @@ class Dinov2Encoder(nn.Cell):
 
             layer_head_mask = head_mask[i] if head_mask is not None else None
 
-            breakpoint()
+            # breakpoint()
 
             layer_outputs = layer_module(hidden_states, layer_head_mask, output_attentions)
 
@@ -494,7 +494,7 @@ class Dinov2Model(PreTrainedModel):
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
-        breakpoint()
+        # breakpoint()
 
         embedding_output = self.embeddings(pixel_values, bool_masked_pos=bool_masked_pos)
 
