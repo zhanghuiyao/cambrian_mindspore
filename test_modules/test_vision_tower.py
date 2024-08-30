@@ -130,7 +130,7 @@ def test_vision_tower(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="test")
-    parser.add_argument("--ms_mode", type=int, default=1, help="0 is Graph, 1 is Pynative")
+    parser.add_argument("--ms_mode", type=int, default=0, help="0 is Graph, 1 is Pynative")
     parser.add_argument("--jit_level", type=str, default="O0")
     parser.add_argument("--image_path", type=str, default="./demo/math.png")
     parser.add_argument("--fp16", type=ast.literal_eval, default=True)
