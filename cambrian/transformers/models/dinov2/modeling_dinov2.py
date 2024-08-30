@@ -68,7 +68,7 @@ class Dinov2Embeddings(nn.Cell):
         patch_pos_embed = ops.interpolate(
             patch_pos_embed.to(dtype=ms.float32),
             size=size,
-            mode="bilinear",  # "bicubic", "bilinear"
+            mode="bicubic",  # "bicubic", "bilinear"
             align_corners=False,
         ).to(dtype=target_dtype)
 
