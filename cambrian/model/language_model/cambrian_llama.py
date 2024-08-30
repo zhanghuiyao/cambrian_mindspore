@@ -106,7 +106,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
 
             # zhy_test infer, breakpoint()
             # np.save(f"hidden_states_in_{i}.npy", hidden_states.asnumpy())
-            ops.TensorDump()(f"hidden_states_in_{i}.npy", hidden_states)
+            # ops.TensorDump()(f"hidden_states_in_{i}.npy", hidden_states)
 
             layer_outputs = decoder_layer(
                 hidden_states,
@@ -121,7 +121,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
 
             # zhy_test infer, breakpoint()
             # np.save(f"hidden_states_out_{i}.npy", hidden_states.asnumpy())
-            ops.TensorDump()(f"hidden_states_out_{i}.npy", hidden_states)
+            # ops.TensorDump()(f"hidden_states_out_{i}.npy", hidden_states)
 
             if not self.connector_only:
 
@@ -208,9 +208,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
 
         # zhy_test infer, breakpoint()
         # np.save(f"hidden_states_out.npy", hidden_states.asnumpy())
-        ops.TensorDump()(f"hidden_states_out.npy", hidden_states)
-
-        # breakpoint()
+        # ops.TensorDump()(f"hidden_states_out.npy", hidden_states)
 
         outputs = (hidden_states,)
         if use_cache and past_key_values is not None:
@@ -516,7 +514,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             inputs_embeds = self.get_model().embed_tokens(inputs)
 
         # zhy_test infer
-        breakpoint()
+        # breakpoint()
 
         return super().generate(
             position_ids=position_ids,

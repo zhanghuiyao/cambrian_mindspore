@@ -1468,7 +1468,7 @@ class GenerationMixin:
                 **model_inputs,
             )
 
-            breakpoint()
+            # breakpoint()
 
             print(f"======> zhy_test, step: {step}, sample outputs shape: {[o.shape for o in outputs if o is not None]}, time cost: {time.time() - s_time:.3f}s")
             s_time = time.time()
