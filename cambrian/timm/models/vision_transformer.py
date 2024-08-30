@@ -403,16 +403,11 @@ class VisionTransformer(nn.Cell):
         x = self._pos_embed(x)
         x = self.patch_drop(x)
         x = self.norm_pre(x)
-
-        breakpoint()
-
         x = self.blocks(x)
         x = self.norm(x)
         return x
 
     def forward_head(self, x: Tensor, pre_logits: bool = False) -> Tensor:
-        breakpoint()
-
         if self.attn_pool is not None:
             x = self.attn_pool(x)
         elif self.global_pool == 'avg':
@@ -424,8 +419,6 @@ class VisionTransformer(nn.Cell):
         return x if pre_logits else self.head(x)
 
     def construct(self, x: Tensor) -> Tensor:
-        breakpoint()
-
         x = self.forward_features(x)
         x = self.forward_head(x)
         return x
