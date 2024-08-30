@@ -128,6 +128,7 @@ class Block(nn.Cell):
         self.drop_path2 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
     def construct(self, x: Tensor) -> Tensor:
+        breakpoint()
         x = x + self.drop_path1(self.ls1(self.attn(self.norm1(x))))
         x = x + self.drop_path2(self.ls2(self.mlp(self.norm2(x))))
         return x
@@ -398,12 +399,13 @@ class VisionTransformer(nn.Cell):
         return tuple(outputs)
 
     def forward_features(self, x: Tensor) -> Tensor:
-        breakpoint()
-
         x = self.patch_embed(x)
         x = self._pos_embed(x)
         x = self.patch_drop(x)
         x = self.norm_pre(x)
+
+        breakpoint()
+
         x = self.blocks(x)
         x = self.norm(x)
         return x
