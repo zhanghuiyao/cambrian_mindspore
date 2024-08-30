@@ -128,7 +128,6 @@ class Block(nn.Cell):
         self.drop_path2 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
     def construct(self, x: Tensor) -> Tensor:
-        breakpoint()
         x = x + self.drop_path1(self.ls1(self.attn(self.norm1(x))))
         x = x + self.drop_path2(self.ls2(self.mlp(self.norm2(x))))
         return x
