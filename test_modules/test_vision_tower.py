@@ -106,6 +106,8 @@ def test_vision_tower(args):
 
             out = model(image_tensor)
 
+            breakpoint()
+
             print(f"======> {i + 1}/{module_len}, Image Process: image_tensor.shape: {image_tensor.shape}")
             print(f"======> {i + 1}/{module_len}, Result: out.shape: {out.shape}, time cost: {time.time() - s_time:.2f}s")
 
