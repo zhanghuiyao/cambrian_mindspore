@@ -332,11 +332,8 @@ def train():
                               tokenizer=tokenizer,
                               args=training_args,
                               **data_module)
-    if training_args.train_continue:
-        resume_from_checkpoint = training_args.resume_from_checkpoint
-        trainer.train(resume_from_checkpoint=resume_from_checkpoint)
-    else:
-        trainer.train()
+
+    trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
 
     log_rank0(f"Training finished: {training_args.output_dir}")
 
