@@ -117,7 +117,7 @@ def init_environment(training_args: MindSporeArguments):
     ms.set_context(
         mode=training_args.mode,
         device_target=training_args.device_target,
-        jit_config={"jit_level": training_args.jit_level, "jit_syntax_level": ms.STRICT},
+        jit_config={"jit_level": training_args.jit_level},
         deterministic="ON",
         pynative_synchronize=True,
         memory_optimize_level="O1",
