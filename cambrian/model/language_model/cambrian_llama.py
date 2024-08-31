@@ -549,7 +549,7 @@ class TrainWrapperForCambrianLlamaForCausalLM(nn.Cell):
         assert isinstance(network, CambrianLlamaForCausalLM)
 
         self.cambrian_llama_causal = network
-        self.input_image_len = len(network.model.vision_tower_aux_list())
+        self.input_image_len = len(network.model.vision_tower_aux_list)
 
         self.input_keys = [
             "input_ids", "attention_mask", "position_ids", "labels",
