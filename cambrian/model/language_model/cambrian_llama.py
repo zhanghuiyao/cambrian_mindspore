@@ -511,7 +511,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             self.final_vision_feature_size = final_vision_feature_size
             self.global_context_feature = global_context_feature
         else:
-            inputs_embeds = self.get_model().embed_tokens(inputs)
+            inputs_embeds = self.model.embed_tokens(inputs)
 
         # zhy_test infer
         # breakpoint()
@@ -549,7 +549,7 @@ class TrainWrapperForCambrianLlamaForCausalLM(nn.Cell):
         assert isinstance(network, CambrianLlamaForCausalLM)
 
         self.cambrian_llama_causal = network
-        self.input_image_len = len(network.model.get_vision_tower_aux_list())
+        self.input_image_len = len(network.model.vision_tower_aux_list())
 
         self.input_keys = [
             "input_ids", "attention_mask", "position_ids", "labels",

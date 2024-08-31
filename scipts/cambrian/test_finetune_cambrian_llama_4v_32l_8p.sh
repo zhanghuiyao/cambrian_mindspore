@@ -21,6 +21,7 @@ task_name="run_cambrian-8b-finetune"
 model_name_or_path="./cambrian/hf-configs/nyu-visionx-cambrian-8b"
 image_folder="./demo/toy-dataset/images_from_coco"
 pretrain_mm_mlp_adapter="./checkpoints/cambrian-8b-pretrain/mm_projector.bin"
+resume_from_checkpoint="./cambrian-8b.ckpt"
 ckpt_dir="checkpoints"
 data_path="./demo/toy-dataset/alignment_2.5m.jsonl"  #  e.g. Cambrian7M_withsystemprompt.jsonl
 per_device_train_batch_size=1
@@ -28,7 +29,8 @@ enable_flash_attention="True"
 optim="adamw_zero2_mindspore"
 adamw_enable_fuse="True"
 adamw_zero_shard_size=8
-output_dir=$task_name"_bs"$per_device_train_batch_size"_zero2_fuseop_shard"$adamw_zero_shard_size"_8cards"
+jit_level=O0
+output_dir=$task_name"_bs"$per_device_train_batch_size"_zero2_fuseop_shard"$adamw_zero_shard_size"_8cards_jit"$jit_level
 
 num_epochs=1000
 
@@ -80,7 +82,7 @@ python -u cambrian/train/train.py \
     --run_name $task_name \
     \
     --device_target Ascend \
-    --jit_level O2 \
+    --jit_level $jit_level \
     --is_distribute True \
     --max_device_memory 59GB \
     --enable_flash_attention $enable_flash_attention \
@@ -90,6 +92,8 @@ python -u cambrian/train/train.py \
     --adamw_zero_shard_size $adamw_zero_shard_size \
     --save_safetensors False \
     --dataloader_num_workers 1 \
+    \
+    --resume_from_checkpoint $resume_from_checkpoint \
     \
     > .log_msrun.txt 2>&1 &
 

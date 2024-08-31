@@ -87,10 +87,6 @@ def _is_peft_model(model):
     return False
 
 
-# Name of the files used for checkpointing
-TRAINER_STATE_NAME = "trainer_state.json"
-
-
 class TrainOutput(NamedTuple):
     global_step: int
     training_loss: float
@@ -99,6 +95,13 @@ class TrainOutput(NamedTuple):
 
 PREFIX_CHECKPOINT_DIR = "checkpoint"
 _re_checkpoint = re.compile(r"^" + PREFIX_CHECKPOINT_DIR + r"\-(\d+)$")
+
+
+# Name of the files used for checkpointing
+TRAINER_STATE_NAME = "trainer_state.json"
+OPTIMIZER_NAME = "optimizer.ckpt"
+SCHEDULER_NAME = "scheduler.ckpt"
+SCALER_NAME = "scaler.ckpt"
 
 
 class Trainer:
@@ -677,11 +680,13 @@ class Trainer:
                 raise ValueError(f"No valid checkpoint found in output directory ({args.output_dir})")
 
         if resume_from_checkpoint is not None:
-            self._load_from_checkpoint(resume_from_checkpoint)
-            # In case of repeating the find_executable_batch_size, set `self._train_batch_size` properly
-            state = TrainerState.load_from_json(os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME))
-            if state.train_batch_size is not None:
-                self._train_batch_size = state.train_batch_size
+            # self._load_from_checkpoint(resume_from_checkpoint)  # load weight later
+
+            if os.path.isfile(os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME)):
+                # In case of repeating the find_executable_batch_size, set `self._train_batch_size` properly
+                state = TrainerState.load_from_json(os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME))
+                if state.train_batch_size is not None:
+                    self._train_batch_size = state.train_batch_size
 
         inner_training_loop = functools.partial(self._inner_training_loop, batch_size=self._train_batch_size)  # TODO: level 3, Add find_executable_batch_size function
         if args.push_to_hub:
@@ -816,10 +821,15 @@ class Trainer:
 
         # ckpt loading
         if resume_from_checkpoint is not None:
+            logger.info("Checkpoint loading...")
+
             self._load_from_checkpoint(resume_from_checkpoint)
 
             # Check if saved optimizer or scheduler states exist
             self._load_optimizer_and_scheduler(resume_from_checkpoint)
+        else:
+            logger.info("No available resume checkpoint.")
+
 
         # Train!
         logger.info("***** Running training *****")
@@ -1045,8 +1055,6 @@ class Trainer:
 
     def _load_from_checkpoint(self, resume_from_checkpoint, model=None):
 
-        # FIXME: level 2, joint model name resume_from_checkpoint
-
         if model is None:
             model = self.model
 
@@ -1057,16 +1065,38 @@ class Trainer:
 
             m = [n for n in m if ("_buffer" not in n) and (".inv_freq" not in n)]
             if len(m) > 0:
-                logger.info(f"WARNING: missing keys num: {len(m)}, top 10 name is: {m[:10]}")
+                logger.info(f"WARNING: missing keys num: {len(m)}, names (top 100): {m[:10]}")
             if len(u) > 0:
-                logger.info(f"WARNING: unexpected keys num: {len(u)}, top 10 name is: {u[:10]}")
+                logger.info(f"WARNING: unexpected keys num: {len(u)}, names (top 100): {u[:10]}")
 
             logger.info(f"load checkpoint from `{resume_from_checkpoint}` success, time cost: {time.time() - s_time:.2f}s")
         else:
             logger.warning(f"resume_from_checkpoint is not file: `{resume_from_checkpoint}`")
 
-    def _load_optimizer_and_scheduler(self, checkpoint):
-        raise NotImplementedError
+    def _load_optimizer_and_scheduler(self, resume_from_checkpoint):
+        if resume_from_checkpoint is None:
+            return
+
+        # get path to file
+        OPTIMIZER_PATH = os.path.join(resume_from_checkpoint, OPTIMIZER_NAME)
+        LR_PATH = os.path.join(resume_from_checkpoint, SCHEDULER_NAME)
+
+        if os.path.isfile(OPTIMIZER_PATH):
+            optimizer_state = ms.load_checkpoint(OPTIMIZER_PATH)
+            optimizer_state = optimizer_state['optimizer_state']
+            ms.load_param_into_net(self.optimizer, optimizer_state)
+            logger.info(f"Optimizer state successfully loaded from {OPTIMIZER_PATH}")
+        else:
+            logger.warning(f"Not exist optimizer state checkpoint path: `{OPTIMIZER_PATH}`")
+
+        if os.path.isfile(LR_PATH):
+            lr_scheduler_state = ms.load_checkpoint(LR_PATH)
+            ms.load_param_into_net(self.lr_scheduler, lr_scheduler_state)
+            logger.info(f"LR scheduler state successfully loaded from {LR_PATH}")
+        else:
+            logger.warning(f"Not exist lr scheduler state checkpoint path: `{LR_PATH}`")
+
+        print("Loaded optimizer and lr scheduler state done.")
 
     def _sorted_checkpoints(
         self, output_dir=None, checkpoint_prefix=PREFIX_CHECKPOINT_DIR, use_mtime=False

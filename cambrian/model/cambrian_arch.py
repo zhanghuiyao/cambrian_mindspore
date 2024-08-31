@@ -122,7 +122,7 @@ class CambrianMetaModel:
                 )
 
     def get_vision_tower_aux_list(self):
-        return self.vision_tower_aux_list
+        raise NotImplementedError
 
     def initialize_vision_modules(self, model_args):
         # vision_tower = model_args.vision_tower
@@ -148,7 +148,7 @@ class CambrianMetaModel:
         self.config.mm_vision_tower_aux_token_len_list = vision_tower_aux_token_len_list
         self.config.connector_only = connector_only
 
-        if self.get_vision_tower_aux_list() is None:
+        if self.vision_tower_aux_list is None:
             raise AttributeError("please build module on init function..")
         else:
             vision_tower_aux_list = self.vision_tower_aux_list
@@ -268,11 +268,11 @@ class CambrianMetaForCausalLM:
     def get_model(self):
         raise NotImplementedError
 
-    # def get_vision_tower(self):
-    #     return self.get_model().get_vision_tower()
+    def get_vision_tower(self):
+        raise NotImplementedError
 
     def get_vision_tower_aux_list(self):
-        return self.model.get_vision_tower_aux_list()
+        raise NotImplementedError
 
     def rearrange_vision_tower_features_train(self, vision_tower_aux_feature_list, vision_tower_aux_attention_masks_list, query_side_len):
         vision_tower_aux_feature_rearranged_list = ()
@@ -347,10 +347,11 @@ class CambrianMetaForCausalLM:
         return vision_tower_aux_feature_rearranged_list, vision_tower_aux_attention_masks_rearranged_list
 
     def encode_images(self, image_aux_list):
-        vision_tower_aux_list = self.model.vision_tower_aux_list  # .get_vision_tower_aux_list()
         image_aux_features_list = ()
-        for image_aux, vision_tower_aux in zip(image_aux_list, vision_tower_aux_list):
-            image_aux = ops.depend(image_aux, image_aux_features_list)  # FIXME: zhy_test depend
+        for idx in range(len(self.model.vision_tower_aux_list)):
+            image_aux = image_aux_list[idx]
+            vision_tower_aux = self.model.vision_tower_aux_list[idx]
+
             image_aux_features = vision_tower_aux(image_aux)
             image_aux_features_list += (image_aux_features,)
         return image_aux_features_list
@@ -371,7 +372,7 @@ class CambrianMetaForCausalLM:
         self, input_ids, position_ids, attention_mask, labels,
         images, image_aux_attention_masks_list=None, image_sizes=None
     ):
-        vision_tower_aux_list = self.model.vision_tower_aux_list  #.get_vision_tower_aux_list()
+        vision_tower_aux_list = self.model.vision_tower_aux_list
 
         # assert vision_tower_aux_list is not None
         # assert images is not None
