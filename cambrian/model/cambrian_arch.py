@@ -356,7 +356,7 @@ class CambrianMetaForCausalLM:
             image_aux_features_list += (image_aux_features,)
         return image_aux_features_list
 
-    @ms.jit  # zhy_test infer
+    @ms.jit(jit_config=ms.JitConfig(jit_level="O0", jit_syntax_level="STRICT"))  # zhy_test infer
     def prepare_inputs_labels_for_multimodal_(
             self, input_ids, position_ids, attention_mask, labels, *images_and_sizes
     ):
