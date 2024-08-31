@@ -122,7 +122,7 @@ class CambrianMetaModel:
                 )
 
     def get_vision_tower_aux_list(self):
-        raise NotImplementedError
+        return self.vision_tower_aux_list
 
     def initialize_vision_modules(self, model_args):
         # vision_tower = model_args.vision_tower
@@ -272,7 +272,7 @@ class CambrianMetaForCausalLM:
         raise NotImplementedError
 
     def get_vision_tower_aux_list(self):
-        raise self.model.vision_tower_aux_list
+        return self.model.vision_tower_aux_list
 
     def rearrange_vision_tower_features_train(self, vision_tower_aux_feature_list, vision_tower_aux_attention_masks_list, query_side_len):
         vision_tower_aux_feature_rearranged_list = ()
