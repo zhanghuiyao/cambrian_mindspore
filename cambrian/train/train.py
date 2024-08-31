@@ -136,7 +136,6 @@ class TrainingArguments(MindSporeArguments, _TrainingArguments):
     )
 
     train_continue: bool = False
-    resume_from_checkpoint: Optional[str] = None
 
 
 def train():
