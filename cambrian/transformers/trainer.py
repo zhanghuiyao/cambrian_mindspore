@@ -828,8 +828,7 @@ class Trainer:
             # Check if saved optimizer or scheduler states exist
             self._load_optimizer_and_scheduler(resume_from_checkpoint)
         else:
-            logger.info("No available resume checkpoint.")
-
+            logger.warning("No available resume checkpoint.")
 
         # Train!
         logger.info("***** Running training *****")
