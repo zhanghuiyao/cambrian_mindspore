@@ -39,9 +39,8 @@ def process(image, question, tokenizer, image_processor, model_config):
     image_tensor = process_images([image], image_processor, model_config)
     image_tensor = tuple([Tensor(i) for i in image_tensor])
 
-    # FIXME: unpad image input
-    # image_size = [image.size]
-    image_size = [image_tensor[0].shape[-2:]]
+    image_size = [image.size]
+    # image_size = [image_tensor[0].shape[-2:]]  # unpad image input
 
     input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='np')[None, ...]
 
@@ -83,7 +82,9 @@ def inference(args):
 
         outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
 
-        print(f"outputs: {outputs}")
+        print("=" * 46 + " Result " + "=" * 46)
+        print(outputs)
+        print("=" * 100)
 
 
 if __name__ == '__main__':

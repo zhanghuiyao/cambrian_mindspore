@@ -41,9 +41,8 @@ def process(image, question, tokenizer, image_processor, model_config):
     image_tensor = process_images([image], image_processor, model_config)
     image_tensor = tuple([Tensor(i) for i in image_tensor])
 
-    # FIXME: unpad image input
-    image_size = [image.size]  # zhy_test infer, breakpoint()
-    # image_size = [image_tensor[0].shape[-2:]]
+    image_size = [image.size]
+    # image_size = [image_tensor[0].shape[-2:]]  # unpad image input  # breakpoint()
 
     input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='np')[None, ...]
 
