@@ -1,5 +1,6 @@
 import mindspore as ms
-from mindspore import nn, context, ParallelMode
+import numpy as np
+from mindspore import Tensor, Parameter, context, ParallelMode
 
 
 _DTYPE_2_STRING = {
@@ -20,3 +21,9 @@ def _is_parallel():
     is_parallel = context.get_auto_parallel_context("parallel_mode") not in \
                   (ParallelMode.STAND_ALONE,)
     return is_parallel
+
+
+@ms.constexpr(reuse_result=False)
+def _tensor_2_tuple(tensor):
+    assert isinstance(tensor, (Tensor, Parameter))
+    return tuple(tensor.asnumpy().tolist())
