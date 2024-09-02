@@ -520,10 +520,16 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 self.global_context_feature = global_context_feature
 
             else:
-                self.vision_tower_aux_feature_list = ParameterTuple([Parameter(_item) for _item in vision_tower_aux_feature_list])
-                self.vision_tower_aux_attention_masks_list = ParameterTuple([Parameter(_item) for _item in vision_tower_aux_attention_masks_list])
+                vision_feature_num = len(vision_tower_aux_feature_list)
+
+                self.vision_tower_aux_feature_list = ParameterTuple([Parameter(vision_tower_aux_feature_list[_i],
+                                                                               name=f"infer_vision_tower_aux_feature_list_{_i}")
+                                                                     for _i in range(vision_feature_num)])
+                self.vision_tower_aux_attention_masks_list = ParameterTuple([Parameter(vision_tower_aux_attention_masks_list[_i],
+                                                                               name=f"infer_vision_tower_aux_attention_masks_list_{_i}")
+                                                                             for _i in range(vision_feature_num)])
                 self.final_vision_feature_size = final_vision_feature_size
-                self.global_context_feature = Parameter(global_context_feature)
+                self.global_context_feature = Parameter(global_context_feature, name=f"infer_global_context_feature")
         else:
             inputs_embeds = self.model.embed_tokens(inputs)
 
