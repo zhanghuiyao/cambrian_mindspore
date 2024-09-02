@@ -23,9 +23,7 @@ def _is_parallel():
     return is_parallel
 
 
-@ms.constexpr(reuse_result=False)
-def _tensor_2_tuple(input):
-    if isinstance(input, (Tensor, Parameter)):
-        return tuple(input.asnumpy().tolist())
-    else:
-        return input
+# FIXME: Can't work on MindSpore 2.3.0
+# @ms.constexpr(reuse_result=False)
+# def _tensor_2_tuple(input):
+#     return tuple(input.asnumpy().tolist())

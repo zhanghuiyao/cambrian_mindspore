@@ -164,15 +164,16 @@ class MultiKVCrossAttention(nn.Cell):
     ):
 
         vision_latents_list = vision_latents_attention_mask_list[:self.num_of_kvs]
-        attention_mask_list = vision_latents_attention_mask_list[self.num_of_kvs:]
+        attention_mask_list = vision_latents_attention_mask_list[self.num_of_kvs:self.num_of_kvs*2]
+
+        if len(vision_latents_attention_mask_list) > 2 * self.num_of_kvs:
+            queries_mask = vision_latents_attention_mask_list[-1]
+        else:
+            queries_mask = None
 
         bsz, q_len, _ = queries.shape
 
         query_states = self.q_proj(queries)
-        # key_states = ops.cat(
-        #     [getattr(self, 'k_proj_{}'.format(i))(vision_latents_list[i]) for i in range(self.num_of_kvs)], axis=1)
-        # value_states = ops.cat(
-        #     [getattr(self, 'v_proj_{}'.format(i))(vision_latents_list[i]) for i in range(self.num_of_kvs)], axis=1)
         key_states = ops.cat(
             [self.k_projs[i](vision_latents_list[i]) for i in range(self.num_of_kvs)], axis=1)
         value_states = ops.cat(
@@ -184,9 +185,6 @@ class MultiKVCrossAttention(nn.Cell):
         key_states = key_states.view(bsz, v_len, self.num_heads, self.head_dim).swapdims(1, 2)
         value_states = value_states.view(bsz, v_len, self.num_heads, self.head_dim).swapdims(1, 2)
 
-        # if kv_weight is not None:
-        #     kv_weight = kv_weight.unsqueeze(1).broadcast_to((-1, self.num_heads, -1, -1))
-
         attention_mask = ops.cat(attention_mask_list, axis=-1)
 
         # if attention_mask is not None:
@@ -195,11 +193,6 @@ class MultiKVCrossAttention(nn.Cell):
         #     #         f"Attention mask should be of size {(bsz, 1, q_len, v_len)}, but is {attention_mask.shape}"
         #     #     )
         #     assert attention_mask.shape == (bsz, 1, q_len, v_len)
-
-        if attention_mask is not None:
-            query_states = query_states
-            key_states = key_states
-            value_states = value_states
 
         attn_output = scaled_dot_product_attention(
             query_states,
