@@ -456,6 +456,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
         # if "inputs_embeds" in kwargs:
         #     raise NotImplementedError("`inputs_embeds` is not supported")
         assert inputs_embeds is None
+        final_vision_feature_size = None
 
         # zhy_test infer
         # breakpoint()
@@ -530,7 +531,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                                                                              for _i in range(vision_feature_num)])
                 self.global_context_feature = Parameter(global_context_feature, name="infer_global_context_feature")
 
-            kwargs = kwargs.update({"final_vision_feature_size": final_vision_feature_size})
         else:
             inputs_embeds = self.model.embed_tokens(inputs)
 
@@ -541,6 +541,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             position_ids=position_ids,
             attention_mask=attention_mask,
             inputs_embeds=inputs_embeds,
+            final_vision_feature_size=final_vision_feature_size,
             **kwargs
         )
 
