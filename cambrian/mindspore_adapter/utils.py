@@ -25,5 +25,4 @@ def _is_parallel():
 
 @ms.constexpr(reuse_result=False)
 def _tensor_2_tuple(tensor):
-    assert isinstance(tensor, (Tensor, Parameter))
     return tuple(tensor.asnumpy().tolist())
