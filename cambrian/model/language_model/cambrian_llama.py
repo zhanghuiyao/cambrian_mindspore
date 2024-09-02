@@ -14,7 +14,6 @@ from cambrian.transformers.modeling_attn_mask_utils import _prepare_4d_causal_at
 from cambrian.model.cambrian_arch import CambrianMetaModel, CambrianMetaForCausalLM
 from cambrian.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
 from cambrian.mindspore_adapter import auto_mixed_precision, recompute_except_output
-from cambrian.mindspore_adapter.utils import _tensor_2_tuple
 
 
 logger = logging.get_logger(__name__)
