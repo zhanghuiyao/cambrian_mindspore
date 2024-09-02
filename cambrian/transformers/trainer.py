@@ -906,8 +906,8 @@ class Trainer:
             self.control = self.callback_handler.on_epoch_begin(args, self.state, self.control)
 
             if epoch == epochs_trained and resume_from_checkpoint is not None and steps_trained_in_current_epoch == 0:
-                # self._load_rng_state(resume_from_checkpoint)
-                raise NotImplementedError
+                # self._load_rng_state(resume_from_checkpoint)  # FIXME: level 3
+                pass
 
             rng_to_sync = False
             steps_skipped = 0

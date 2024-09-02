@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple, Union
 
 import mindspore as ms
 import numpy as np
-from mindspore import nn, ops, Tensor, Parameter
+from mindspore import nn, ops, Tensor, Parameter, ParameterTuple
 
 from transformers import GenerationConfig
 from transformers.utils import logging
@@ -506,10 +506,24 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             # attention_mask = Tensor(np.load("./pt_tensors/mask.npy"), ms.bool_)
             # breakpoint()
 
-            self.vision_tower_aux_feature_list = vision_tower_aux_feature_list
-            self.vision_tower_aux_attention_masks_list = vision_tower_aux_attention_masks_list
-            self.final_vision_feature_size = final_vision_feature_size
-            self.global_context_feature = global_context_feature
+            if hasattr(self, "vision_tower_aux_feature_list") and isinstance(self.vision_tower_aux_feature_list, (Parameter, ParameterTuple)):
+                vision_feature_num = len(vision_tower_aux_feature_list)
+
+                assert len(self.vision_tower_aux_feature_list) == len(vision_tower_aux_feature_list)
+                assert len(self.vision_tower_aux_attention_masks_list) == len(vision_tower_aux_attention_masks_list)
+                assert self.final_vision_feature_size == final_vision_feature_size
+                assert self.global_context_feature.shape == global_context_feature.shape
+
+                for i in range(vision_feature_num):
+                    self.vision_tower_aux_feature_list[i] = vision_tower_aux_feature_list[i]
+                    self.vision_tower_aux_attention_masks_list[i] = vision_tower_aux_attention_masks_list[i]
+                self.global_context_feature = global_context_feature
+
+            else:
+                self.vision_tower_aux_feature_list = ParameterTuple([Parameter(_item) for _item in vision_tower_aux_feature_list])
+                self.vision_tower_aux_attention_masks_list = ParameterTuple([Parameter(_item) for _item in vision_tower_aux_attention_masks_list])
+                self.final_vision_feature_size = final_vision_feature_size
+                self.global_context_feature = Parameter(global_context_feature)
         else:
             inputs_embeds = self.model.embed_tokens(inputs)
 
