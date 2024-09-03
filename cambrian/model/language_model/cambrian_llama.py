@@ -561,6 +561,10 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             inputs['images'] = images
         if image_sizes is not None:
             inputs['image_sizes'] = image_sizes
+
+        if kwargs.get("final_vision_feature_size", None) is not None:
+            inputs['final_vision_feature_size'] = kwargs['final_vision_feature_size']
+
         return inputs
 
 
