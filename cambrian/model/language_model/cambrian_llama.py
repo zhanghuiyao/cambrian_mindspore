@@ -230,7 +230,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
 
                             padded_latent_query_with_newline = \
                                 hidden_states[
-                                    batch_i:batch_i + 1,
+                                    batch_i,
                                     latent_query_start_idx:latent_query_start_idx + max_latent_query_newline_num,
                                     :
                                 ]
