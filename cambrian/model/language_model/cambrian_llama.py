@@ -254,6 +254,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                             latent_query_list.append(padded_latent_query.view(max_latent_query_num, 1, -1))
                             newline_embd_list.append(padded_newline_embd.view(1, final_h, 1, -1))
 
+                        breakpoint()
                         latent_query = ops.cat(latent_query_list, 0)
                         latent_query = self.vision_sampler_layers[(i - cross_layers_start_idx) // cross_index_step](
                             latent_query,
