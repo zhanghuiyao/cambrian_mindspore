@@ -293,7 +293,7 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                                 _index_table,
                                 _gather_index_query
                             )
-                            hidden_states_with_latent_query = ops.concat(hidden_states[batch_i], padded_latent_query_with_newline)
+                            hidden_states_with_latent_query = ops.concat((hidden_states[batch_i], padded_latent_query_with_newline), axis=0)
                             cur_hidden_states = ops.gather(hidden_states_with_latent_query, _gather_index, axis=0)
                             hidden_states[batch_i] = cur_hidden_states
 
