@@ -516,9 +516,9 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 assert self.global_context_feature.shape == global_context_feature.shape
 
                 for i in range(vision_feature_num):
-                    self.vision_tower_aux_feature_list[i] = vision_tower_aux_feature_list[i]
-                    self.vision_tower_aux_attention_masks_list[i] = vision_tower_aux_attention_masks_list[i]
-                self.global_context_feature = global_context_feature
+                    ops.assign(self.vision_tower_aux_feature_list[i], vision_tower_aux_feature_list[i])
+                    ops.assign(self.vision_tower_aux_attention_masks_list[i], vision_tower_aux_attention_masks_list[i])
+                ops.assign(self.global_context_feature, global_context_feature)
 
             else:
                 vision_feature_num = len(vision_tower_aux_feature_list)
