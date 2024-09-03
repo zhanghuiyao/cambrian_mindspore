@@ -1463,8 +1463,6 @@ class GenerationMixin:
             # FIXME: zhy_test, model inputs dynamic shape
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
-            print(f"model_inputs['final_vision_feature_size']: {model_inputs['final_vision_feature_size']}")
-
             # forward pass to get next token
             outputs = self(
                 **model_inputs,
