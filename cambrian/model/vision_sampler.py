@@ -140,12 +140,6 @@ class MultiKVCrossAttention(nn.Cell):
 
         self.k_projs, self.v_projs = nn.CellList([]), nn.CellList([])
         for i, kv_dim in enumerate(kv_dim_list):
-            # setattr(self, 'k_proj_{}'.format(i), nn.SequentialCell([
-            #     nn.LayerNorm([kv_dim]), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
-            # ]))
-            # setattr(self, 'v_proj_{}'.format(i), nn.SequentialCell([
-            #     nn.LayerNorm([kv_dim]), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
-            # ]))
             self.k_projs.append(
                 nn.SequentialCell([
                     nn.LayerNorm([kv_dim]), nn.Dense(kv_dim, self.num_heads * self.head_dim, has_bias=attention_bias)
@@ -164,12 +158,7 @@ class MultiKVCrossAttention(nn.Cell):
     ):
 
         vision_latents_list = vision_latents_attention_mask_list[:self.num_of_kvs]
-        attention_mask_list = vision_latents_attention_mask_list[self.num_of_kvs:self.num_of_kvs*2]
-
-        if len(vision_latents_attention_mask_list) > 2 * self.num_of_kvs:
-            queries_mask = vision_latents_attention_mask_list[-1]
-        else:
-            queries_mask = None
+        attention_mask_list = vision_latents_attention_mask_list[self.num_of_kvs:]
 
         bsz, q_len, _ = queries.shape
 

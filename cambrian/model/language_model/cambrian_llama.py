@@ -159,45 +159,142 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                         # latent_query = latent_query.view(bs, self.latent_query_num, -1)
                         latent_query = latent_query.view(bs, image_token_len_per_side, image_token_len_per_side, -1)
                         latent_query_with_newline = ops.cat([latent_query, newline_embd], 2).flatten(start_dim=1, end_dim=2)
-                        hidden_states[:, latent_query_start_idx:latent_query_start_idx+latent_query_newline_num] = latent_query_with_newline[:, :, :]
+                        hidden_states[
+                            :,
+                            latent_query_start_idx:latent_query_start_idx+latent_query_newline_num
+                        ] = \
+                            latent_query_with_newline[:, :, :]
                     else:
+
+                        # 1. original implement
+                        # bs = len(final_vision_feature_size)
+                        # latent_query_num_list = []
+                        # newline_embd_list = []
+                        # latent_query_list = []
+                        # for batch_i in range(bs):
+                        #     cur_h, cur_w = final_vision_feature_size[batch_i]
+                        #
+                        #     cur_latent_query_num = cur_h*cur_w
+                        #     cur_latent_query_newline_num = cur_h * (cur_w+1)
+                        #     cur_latent_query_with_newline = \
+                        #         hidden_states[
+                        #             batch_i:batch_i+1,
+                        #             latent_query_start_idx:latent_query_start_idx+cur_latent_query_newline_num,
+                        #             :
+                        #         ]
+                        #
+                        #     cur_latent_query_with_newline = cur_latent_query_with_newline.view(1, cur_h, cur_w+1, -1)
+                        #     cur_latent_query = cur_latent_query_with_newline[:, :, :-1, :]
+                        #     cur_newline_embd = cur_latent_query_with_newline[:, :, -1:, :]
+                        #
+                        #     latent_query_num_list.append(cur_latent_query_num)
+                        #     latent_query_list.append(cur_latent_query.view(cur_latent_query_num, 1, -1))
+                        #     newline_embd_list.append(cur_newline_embd)
+                        # latent_query = ops.cat(latent_query_list, 0)
+                        # latent_query = self.vision_sampler_layers[(i-cross_layers_start_idx)//cross_index_step](
+                        #     latent_query,
+                        #     global_context_feature,
+                        #     *vision_tower_aux_feature_list,
+                        #     *vision_tower_aux_attention_masks_list
+                        # )
+                        #
+                        # latent_query = ops.split(latent_query, latent_query_num_list, 0)
+                        # for batch_i in range(bs):
+                        #     cur_h, cur_w = final_vision_feature_size[batch_i]
+                        #     cur_latent_query = latent_query[batch_i]
+                        #     cur_newline_embd = newline_embd_list[batch_i]
+                        #     cur_latent_query_newline_num = cur_h * (cur_w+1)
+                        #     cur_latent_query = cur_latent_query.view(1, cur_h, cur_w, -1)
+                        #     cur_latent_query_with_newline = ops.cat([cur_latent_query, cur_newline_embd], 2).flatten(start_dim=1, end_dim=2)
+                        #     hidden_states[
+                        #         batch_i:batch_i+1,
+                        #         latent_query_start_idx:latent_query_start_idx+cur_latent_query_newline_num
+                        #     ] = \
+                        #         cur_latent_query_with_newline[:, :, :]
+
+                        # 2. new implement, for avoid dynamic shape
                         bs = len(final_vision_feature_size)
                         latent_query_num_list = []
                         newline_embd_list = []
                         latent_query_list = []
+
+                        final_h = final_w = int(self.image_token_len ** 0.5)
+                        max_latent_query_num = final_h * final_w
+                        max_latent_query_newline_num = final_h * (final_w + 1)
+
                         for batch_i in range(bs):
+
                             cur_h, cur_w = final_vision_feature_size[batch_i]
+                            cur_latent_query_num = cur_h * cur_w
+                            cur_latent_query_newline_num = cur_h * (cur_w + 1)
 
-                            cur_latent_query_num = cur_h*cur_w
-                            cur_latent_query_newline_num = cur_h * (cur_w+1)
-                            cur_latent_query_with_newline = hidden_states[batch_i:batch_i+1, latent_query_start_idx:latent_query_start_idx+cur_latent_query_newline_num, :]
+                            padded_latent_query_with_newline = \
+                                hidden_states[
+                                    batch_i:batch_i + 1,
+                                    latent_query_start_idx:latent_query_start_idx + max_latent_query_newline_num,
+                                    :
+                                ]
 
-                            cur_latent_query_with_newline = cur_latent_query_with_newline.view(1, cur_h, cur_w+1, -1)
-                            cur_latent_query = cur_latent_query_with_newline[:, :, :-1, :]
-                            cur_newline_embd = cur_latent_query_with_newline[:, :, -1:, :]
+                            # cur_latent_query_with_newline = cur_latent_query_with_newline.view(1, cur_h, cur_w + 1, -1)
+                            # cur_latent_query = cur_latent_query_with_newline[:, :, :-1, :]
+                            # cur_newline_embd = cur_latent_query_with_newline[:, :, -1:, :]
+
+                            # gather latent_query
+                            _index_table = ops.arange(0, max_latent_query_num)
+                            _gather_index_1 = _index_table + (_index_table // cur_w)
+                            _gather_index_1 = ops.clip(_gather_index_1, 0, cur_latent_query_newline_num - 1)
+                            padded_latent_query = ops.gather(padded_latent_query_with_newline, _gather_index_1, axis=0)
+
+                            # gather newline_embd
+                            _gather_index_2 = ops.arange(1, final_h + 1) * (cur_w + 1) - 1
+                            _gather_index_2 = ops.clip(_gather_index_2, 0, cur_latent_query_newline_num - 1)
+                            padded_newline_embd = ops.gather(padded_latent_query_with_newline, _gather_index_2, axis=0)
 
                             latent_query_num_list.append(cur_latent_query_num)
-                            latent_query_list.append(cur_latent_query.view(cur_latent_query_num, 1, -1))
-                            newline_embd_list.append(cur_newline_embd)
+                            latent_query_list.append(padded_latent_query.view(max_latent_query_num, 1, -1))
+                            newline_embd_list.append(padded_newline_embd.view(1, final_h, 1, -1))
 
                         latent_query = ops.cat(latent_query_list, 0)
-
-                        latent_query = self.vision_sampler_layers[(i-cross_layers_start_idx)//cross_index_step](
+                        latent_query = self.vision_sampler_layers[(i - cross_layers_start_idx) // cross_index_step](
                             latent_query,
                             global_context_feature,
                             *vision_tower_aux_feature_list,
                             *vision_tower_aux_attention_masks_list
                         )
 
-                        latent_query = ops.split(latent_query, latent_query_num_list, 0)
+                        latent_query = latent_query.view(bs, max_latent_query_num, 1, -1)
                         for batch_i in range(bs):
                             cur_h, cur_w = final_vision_feature_size[batch_i]
-                            cur_latent_query = latent_query[batch_i]
-                            cur_newline_embd = newline_embd_list[batch_i]
-                            cur_latent_query_newline_num = cur_h * (cur_w+1)
-                            cur_latent_query = cur_latent_query.view(1, cur_h, cur_w, -1)
-                            cur_latent_query_with_newline = ops.cat([cur_latent_query, cur_newline_embd], 2).flatten(start_dim=1, end_dim=2)
-                            hidden_states[batch_i:batch_i+1, latent_query_start_idx:latent_query_start_idx+cur_latent_query_newline_num] = cur_latent_query_with_newline[:, :, :]
+                            cur_latent_query_newline_num = cur_h * (cur_w + 1)
+                            padded_latent_query = latent_query[batch_i].view(max_latent_query_num, -1)   # (max_latent_query_num, -1)
+                            padded_newline_embd = newline_embd_list[batch_i].view(final_h * 1, -1)       # (final_h, -1)
+                            padded_latent_query_with_newline = ops.concat((padded_latent_query, padded_newline_embd), axis=0)
+
+                            _index_table = ops.arange(0, max_latent_query_newline_num)
+                            _gather_index_1 = _index_table - _index_table // (cur_w + 1)
+                            _gather_index_2 = (_index_table + 1) // (cur_w + 1) - 1 + max_latent_query_num
+                            _gather_index = ops.select(
+                                (_index_table + 1) % (cur_w + 1) == 0,
+                                _gather_index_2,
+                                _gather_index_1
+                            )
+                            padded_latent_query_with_newline = ops.gather(padded_latent_query_with_newline, _gather_index, axis=0)
+                            padded_latent_query_with_newline = padded_latent_query_with_newline.view(max_latent_query_newline_num, -1)
+
+
+                            _index_table = ops.arange(0, hidden_states.shape[1])
+                            _gather_index_query = _index_table - latent_query_start_idx + hidden_states.shape[1]
+                            _gather_index = ops.select(
+                                ops.logical_or(
+                                    _index_table < latent_query_start_idx,
+                                    _index_table >= latent_query_start_idx + cur_latent_query_newline_num
+                                ),
+                                _index_table,
+                                _gather_index_query
+                            )
+                            hidden_states_with_latent_query = ops.concat(hidden_states[batch_i], padded_latent_query_with_newline)
+                            cur_hidden_states = ops.gather(hidden_states_with_latent_query, _gather_index, axis=0)
+                            hidden_states[batch_i] = cur_hidden_states
 
             if use_cache:
                 # next_cache = next_decoder_cache.to_legacy_cache() if use_legacy_cache else next_decoder_cache
@@ -321,7 +418,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             image_sizes: Optional[List[List[int]]] = None,
             return_dict: Optional[bool] = None,
             cache_position=None,
-            final_vision_feature_size=None,
+            final_vision_feature_size=None,  # for infer
     ):
 
         vision_tower_aux_feature_list = None
@@ -488,6 +585,22 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 *image_sizes,
             )
 
+            max_per_context_token_len = self.model.image_token_len
+            # final_vision_feature_size: ((cur_h, cur_w), ...)
+            cur_context_token_len = sum([(_h * _w) for _h, _w in final_vision_feature_size])
+            assert global_context_feature.shape[0] == cur_context_token_len
+            bs = inputs_embeds.shape[0]
+            context_shape, context_dtype = global_context_feature.shape, global_context_feature.dtype
+            # (cur_h*cur_w+..., 1, -1) -> (final_h*final_w*bs, 1, -1)
+            new_global_context_feature = ops.ones((bs, max_per_context_token_len, *context_shape[1:]), dtype=context_dtype)
+            _cur_pos = 0
+            for idx in range(bs):
+                cur_h, cur_w = final_vision_feature_size[idx]
+                _size = cur_w * cur_h
+                new_global_context_feature[idx, :_size] = global_context_feature[_cur_pos:_cur_pos+_size]
+                _cur_pos = _cur_pos + _size
+            global_context_feature = new_global_context_feature.view(-1, *context_shape[1:])
+
             # _dtype = vision_tower_aux_feature_list[0].dtype
             # vision_tower_aux_feature_list = [
             #     Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_0_pt.npy"), _dtype),
@@ -513,7 +626,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
                 assert len(self.vision_tower_aux_feature_list) == len(vision_tower_aux_feature_list)
                 assert len(self.vision_tower_aux_attention_masks_list) == len(vision_tower_aux_attention_masks_list)
-                assert self.global_context_feature.shape == global_context_feature.shape
 
                 for i in range(vision_feature_num):
                     ops.assign(self.vision_tower_aux_feature_list[i], vision_tower_aux_feature_list[i])
