@@ -670,7 +670,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             position_ids=position_ids,
             attention_mask=attention_mask,
             inputs_embeds=inputs_embeds,
-            final_vision_feature_size=Tensor(final_vision_feature_size, ms.int32),
+            final_vision_feature_size=ms.mutable(final_vision_feature_size), #Tensor(final_vision_feature_size, ms.int32),
             **kwargs
         )
 
