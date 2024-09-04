@@ -76,7 +76,7 @@ def inference(args):
             do_sample=True if temperature > 0 else False,
             temperature=temperature,
             num_beams=1,
-            max_new_tokens=10, #512,
+            max_new_tokens=512,
             use_cache=False  #True
         )
 
