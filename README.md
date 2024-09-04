@@ -1,11 +1,11 @@
 <div align="center">
 
-#  🪼 *Cambrian-1*:<br> A Fully Open, Vision-Centric Exploration of Multimodal LLMs
+#  🪼 *Cambrian-1 on MindSpore*
 
 </div>
 
 
-> *Here is [Cambrian-1](https://arxiv.org/abs/2406.16860) implemented with [MindSpore](https://www.mindspore.cn/), reference to [Official Implementation](https://github.com/cambrian-mllm/cambrian) by New York University.*
+> *Here is [Cambrian-1](https://arxiv.org/abs/2406.16860)(A Fully Open, Vision-Centric Exploration of Multimodal LLMs) implemented with [MindSpore](https://www.mindspore.cn/), reference to [Official Implementation](https://github.com/cambrian-mllm/cambrian) by New York University.*
 
 <div align="center">
 <p>
@@ -18,12 +18,19 @@
 <br>
 
 
-## Release
+## Installation
 
-coming soon !!!
+### Training
+
+1. Clone this repository and navigate to into the codebase
+```bash
+git clone https://github.com/zhanghuiyao/cambrian_mindspore.git
+cd cambrian_mindspore
+export PYTHONPATH=$PYTHONPATH
+```
 
 
-## Features
+## Features and TodoList
 
 - [x] Cambrian Framework
   - [x] Infer
