@@ -273,6 +273,7 @@ class VisionCrossAttentionLayer(nn.Cell):
 
         vision_latents_pos_list = []
         for i, vision_latents in enumerate(vision_latents_list):
+            import pdb;pdb.set_trace()
             if vision_latents.shape[1] > 1:
                 vision_latents_pos_list.append(
                     vision_latents + self.pos_embeds[i].parameter_attr[None, :, :].to(vision_latents.dtype)
