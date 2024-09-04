@@ -25,10 +25,14 @@ coming soon !!!
 
 ## Features
 
-- [ ] Cambrian Model
+- [x] Cambrian Framework
   - [x] Infer
-  - [ ] Pretrain - Training Spatial Vision Aggregator
-  - [ ] Finetune - Instruction Tuning
+  - [x] Pretrain - Training Spatial Vision Aggregator
+  - [x] Finetune - Instruction Tuning
+- [x] Third party dependencies
+  - [x] `transformers` -> `cambrian/transformers`
+  - [x] `open_clip` -> `cambrian/open_clip`
+  - [x] `timm` -> `cambrian/timm`
 - [x] Base Modules
   - [x] Connector
     - [x] SVA, Spatial Vision Aggregator
@@ -43,8 +47,8 @@ coming soon !!!
     - [x] LLaMA-3-Instruct-8B
     - [ ] Vicuna-1.5-13B
     - [ ] Hermes-2-Yi-34B
+- [ ] Benchmarking: CV-Bench
 - [ ] Targeted Data Engine
-- [ ] Benchmarking
 - [ ] Evaluation (Not yet release)
 
 
