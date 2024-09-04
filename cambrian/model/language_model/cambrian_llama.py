@@ -242,12 +242,12 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                             # gather latent_query
                             _index_table = ops.arange(0, max_latent_query_num)
                             _gather_index_1 = _index_table + (_index_table // cur_w)
-                            _gather_index_1 = ops.clip(_gather_index_1, 0, cur_latent_query_newline_num - 1)
+                            _gather_index_1 = ops.clip(_gather_index_1, Tensor(0, ms.int32), Tensor(cur_latent_query_newline_num - 1, ms.int32))
                             padded_latent_query = ops.gather(padded_latent_query_with_newline, _gather_index_1, axis=0)
 
                             # gather newline_embd
                             _gather_index_2 = ops.arange(1, final_h + 1) * (cur_w + 1) - 1
-                            _gather_index_2 = ops.clip(_gather_index_2, 0, cur_latent_query_newline_num - 1)
+                            _gather_index_2 = ops.clip(_gather_index_2, Tensor(0, ms.int32), Tensor(cur_latent_query_newline_num - 1, ms.int32))
                             padded_newline_embd = ops.gather(padded_latent_query_with_newline, _gather_index_2, axis=0)
 
                             latent_query_num_list.append(cur_latent_query_num)
