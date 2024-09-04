@@ -5,7 +5,7 @@
 </div>
 
 
-> *Here is [Cambrian-1](https://arxiv.org/abs/2406.16860)(A Fully Open, Vision-Centric Exploration of Multimodal LLMs) implemented with [MindSpore](https://www.mindspore.cn/), reference to [Official Implementation](https://github.com/cambrian-mllm/cambrian) by New York University.*
+> *Here is [Cambrian-1: A Fully Open, Vision-Centric Exploration of Multimodal LLMs](https://arxiv.org/abs/2406.16860) implemented with [MindSpore](https://www.mindspore.cn/), reference to [Official Implementation](https://github.com/cambrian-mllm/cambrian) by New York University.*
 
 <div align="center">
 <p>
