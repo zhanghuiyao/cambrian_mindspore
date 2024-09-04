@@ -18,15 +18,74 @@
 <br>
 
 
+## Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+    - [Preprocess pretrain weight](#preprocess-pretrain-weight)
+    - [Inference](#inference)
+    - [Training](#training)
+- [Features and TodoList](#features-and-todolist)
+
+
 ## Installation
 
-### Training
-
 1. Clone this repository and navigate to into the codebase
+
 ```bash
 git clone https://github.com/zhanghuiyao/cambrian_mindspore.git
 cd cambrian_mindspore
-export PYTHONPATH=$PYTHONPATH
+export PYTHONPATH=$PWD:$PYTHONPATH
+```
+
+2. Install [MindSpore](https://www.mindspore.cn/install/) and CANN
+
+3. Install Others Packages
+
+```bash
+pip install -r requirements.txt
+```
+
+## Quick Start
+
+### Preprocess pretrain weight
+
+1. Download
+
+- `cambrian` pretrain weight from https://huggingface.co/nyu-visionx/cambrian-8b
+- `siglip/CLIP-ViT-SO400M-14-384` pretrain weight from https://huggingface.co/timm/ViT-SO400M-14-SigLIP-384
+- `openai/clip-vit-large-patch14-336` pretrain weight from https://huggingface.co/openai/clip-vit-large-patch14-336
+- `facebook/dinov2-giant-res378` pretrain weight from https://huggingface.co/facebook/dinov2-giant
+- `clip-convnext-XXL-multi-stage` pretrain weight from https://huggingface.co/laion/CLIP-convnext_xxlarge-laion2B-s34B-b82K-augreg-soup
+
+2. Convert weight to MindSpore format
+
+```shell
+python tools/weight_conversion/convert_weight.py \
+  --cambrian_folder "path to cambrian folder" \
+  --siglip_folder "path to siglip/CLIP-ViT-SO400M-14-384 folder" \
+  --openai_folder "path to openai/clip-vit-large-patch14-336 folder" \
+  --dinov2_folder "path to facebook/dinov2-giant-res378 folder" \
+  --convnext_folder "path to clip-convnext-XXL-multi-stage folder" \
+  --mindspore_checkpoint_path "cambrian-8b.ckpt"
+```
+
+### Inference
+
+```bash
+python inference.py --checkpoint_path ./cambrian-8b.ckpt
+```
+
+### Training
+
+```bash
+# Replace your dataset path in `*.sh`, default is two-images toy-dataset
+
+# pretrain
+bash scripts/cambrian/pretrain_cambrian_8b.sh
+
+# finetune
+bash scripts/cambrian/finetune_cambrian_8b.sh
 ```
 
 
@@ -54,17 +113,7 @@ export PYTHONPATH=$PYTHONPATH
     - [x] LLaMA-3-Instruct-8B
     - [ ] Vicuna-1.5-13B
     - [ ] Hermes-2-Yi-34B
-- [ ] Benchmarking: CV-Bench
-- [ ] Targeted Data Engine
-- [ ] Evaluation (Not yet release)
-
-
-## Contents
-- [Quick Start]()
-- [Cambrian Weights](#cambrian-weights)
-    - [Weight Convert]()
-- [Cambrian Instruction Tuning Data](#cambrian-instruction-tuning-data)
-- [Train](#train)
-- [Evaluation](#evaluation)
-- [Demo](#demo)
+- [ ] (TODO) Benchmarking: CV-Bench
+- [ ] (TODO) Targeted Data Engine
+- [ ] (Not yet release) Evaluation 
 
