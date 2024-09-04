@@ -192,7 +192,6 @@ class TrainOneStepWrapper(nn.Cell):
             grads = self.reducer(grads)
         unscaled_grads = self.scaler.unscale(grads)
 
-        # FIXME: level 0, zhy_test
         finite = self.all_finite(unscaled_grads)
         finite = ops.equal(self.all_finite_reducer(finite.to(ms.int32)),
                            self.all_finite_reducer(ops.ones((), ms.int32))).to(ms.bool_)

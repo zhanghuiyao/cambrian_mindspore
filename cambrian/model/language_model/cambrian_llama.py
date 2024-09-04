@@ -4,16 +4,13 @@ import mindspore as ms
 import numpy as np
 from mindspore import nn, ops, Tensor, Parameter, ParameterTuple
 
-from transformers import GenerationConfig
 from transformers.utils import logging
 
 from cambrian.transformers.models.llama import LlamaConfig, LlamaModel, LlamaForCausalLM
-from cambrian.transformers.cache_utils import Cache, DynamicCache, StaticCache
 from cambrian.transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 
 from cambrian.model.cambrian_arch import CambrianMetaModel, CambrianMetaForCausalLM
-from cambrian.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
-from cambrian.mindspore_adapter import auto_mixed_precision, recompute_except_output
+from cambrian.mindspore_adapter import recompute_except_output
 
 
 logger = logging.get_logger(__name__)
@@ -103,11 +100,6 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
         hidden_states = inputs_embeds
 
         for i, decoder_layer in enumerate(self.layers):
-
-            # zhy_test infer, breakpoint()
-            # np.save(f"hidden_states_in_{i}.npy", hidden_states.asnumpy())
-            # ops.TensorDump()(f"hidden_states_in_{i}.npy", hidden_states)
-
             layer_outputs = decoder_layer(
                 hidden_states,
                 attention_mask=attention_mask,
@@ -118,10 +110,6 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
             )
 
             hidden_states = layer_outputs[0]
-
-            # zhy_test infer, breakpoint()
-            # np.save(f"hidden_states_out_{i}.npy", hidden_states.asnumpy())
-            # ops.TensorDump()(f"hidden_states_out_{i}.npy", hidden_states)
 
             if not self.connector_only:
 
@@ -211,6 +199,8 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                         #         latent_query_start_idx:latent_query_start_idx+cur_latent_query_newline_num
                         #     ] = \
                         #         cur_latent_query_with_newline[:, :, :]
+                        ### ----------------------------------------------> origin implement finish
+
 
                         # 2. new implement, for avoid dynamic shape
                         bs = len(final_vision_feature_size)
@@ -295,6 +285,8 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                             hidden_states_with_latent_query = ops.concat((hidden_states[batch_i], padded_latent_query_with_newline), axis=0)
                             cur_hidden_states = ops.gather(hidden_states_with_latent_query, _gather_index, axis=0)
                             hidden_states[batch_i] = cur_hidden_states
+                        ### ----------------------------------------------> new implement 2 finish
+
 
             if use_cache:
                 # next_cache = next_decoder_cache.to_legacy_cache() if use_legacy_cache else next_decoder_cache
@@ -302,10 +294,6 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                 past_key_values[i] = next_cache
 
         hidden_states = self.norm(hidden_states)
-
-        # zhy_test infer, breakpoint()
-        # np.save(f"hidden_states_out.npy", hidden_states.asnumpy())
-        # ops.TensorDump()(f"hidden_states_out.npy", hidden_states)
 
         outputs = (hidden_states,)
         if use_cache and past_key_values is not None:
@@ -550,22 +538,13 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             **kwargs,
     ) -> Union[Tuple, Tensor]:
 
-        # if "inputs_embeds" in kwargs:
-        #     raise NotImplementedError("`inputs_embeds` is not supported")
         assert inputs_embeds is None
         final_vision_feature_size = None
-
-        # zhy_test infer
-        # breakpoint()
 
         inputs, _, position_ids, attention_mask = \
             self.preprocess_input_before_generate_numpy(inputs, None, position_ids, attention_mask)
 
-        # zhy_test infer
-        # breakpoint()
-
         if images is not None:
-
             (
                 inputs,
                 position_ids,
@@ -586,7 +565,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             )
 
 
-            # Do pad
+            # Doing pad, avoid dynamic shape
             max_per_context_token_len = self.model.image_token_len
             # final_vision_feature_size: ((cur_h, cur_w), ...)
             cur_context_token_len = sum([(_h * _w) for _h, _w in final_vision_feature_size])
@@ -618,25 +597,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 vision_tower_aux_feature_list.append(padded_vision_tower_aux_feature_list[i].view(-1, *_shape1[2:]))
                 vision_tower_aux_attention_masks_list.append(padded_vision_tower_aux_attention_masks_list[i].view(-1, *_shape2[2:]))
 
-            # _dtype = vision_tower_aux_feature_list[0].dtype
-            # vision_tower_aux_feature_list = [
-            #     Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_0_pt.npy"), _dtype),
-            #     Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_1_pt.npy"), _dtype),
-            #     Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_2_pt.npy"), _dtype),
-            #     Tensor(np.load("./pt_tensors/_vision_tower_aux_feature_list_3_pt.npy"), _dtype),
-            # ]
-            # vision_tower_aux_attention_masks_list = [
-            #     Tensor(np.load("./pt_tensors/_vision_tower_aux_attention_masks_list_0_pt.npy"), ms.bool_),
-            #     Tensor(np.load("./pt_tensors/_vision_tower_aux_attention_masks_list_1_pt.npy"), ms.bool_),
-            #     Tensor(np.load("./pt_tensors/_vision_tower_aux_attention_masks_list_2_pt.npy"), ms.bool_),
-            #     Tensor(np.load("./pt_tensors/_vision_tower_aux_attention_masks_list_3_pt.npy"), ms.bool_),
-            # ]
-            # final_vision_feature_size = np.load("./pt_tensors/_final_vision_feature_size_pt.npy").tolist()
-            # global_context_feature = Tensor(np.load("./pt_tensors/_global_context_feature_pt.npy"), _dtype)
-            # inputs_embeds = Tensor(np.load("./pt_tensors/_inputs_embeds_pt_fixed.npy"), _dtype)
-            # position_ids = None
-            # attention_mask = Tensor(np.load("./pt_tensors/mask.npy"), ms.bool_)
-            # breakpoint()
 
             if hasattr(self, "vision_tower_aux_feature_list") and isinstance(self.vision_tower_aux_feature_list, (Parameter, ParameterTuple)):
                 vision_feature_num = len(vision_tower_aux_feature_list)
@@ -662,9 +622,6 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
 
         else:
             inputs_embeds = self.model.embed_tokens(inputs)
-
-        # zhy_test infer
-        # breakpoint()
 
         return super().generate(
             position_ids=position_ids,
