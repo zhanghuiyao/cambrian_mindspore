@@ -501,7 +501,7 @@ class CambrianMetaForCausalLM:
             final_size = ()
             if self.model.mm_projector_type == 'sva':
                 vision_tower_aux_feature_list_final, vision_tower_aux_attention_masks_list_final = \
-                    self.rearrange_vision_tower_features_inference(vision_tower_aux_feature_list, final_height, image_sizes, unpad=False)  #unpad=True #zhy_test #breakpoint
+                    self.rearrange_vision_tower_features_inference(vision_tower_aux_feature_list, final_height, image_sizes, unpad=True)
                 global_context_feature_final = []
             for batch_i in range(bs):
                 cur_image_feature = image_features[batch_i]

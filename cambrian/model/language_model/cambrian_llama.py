@@ -585,21 +585,39 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
                 *image_sizes,
             )
 
+
+            # Do pad
             max_per_context_token_len = self.model.image_token_len
             # final_vision_feature_size: ((cur_h, cur_w), ...)
             cur_context_token_len = sum([(_h * _w) for _h, _w in final_vision_feature_size])
             assert global_context_feature.shape[0] == cur_context_token_len
-            bs = inputs_embeds.shape[0]
+            bs, num_vision_tower = inputs_embeds.shape[0], len(vision_tower_aux_feature_list)
             context_shape, context_dtype = global_context_feature.shape, global_context_feature.dtype
-            # (cur_h*cur_w+..., 1, -1) -> (final_h*final_w*bs, 1, -1)
-            new_global_context_feature = ops.ones((bs, max_per_context_token_len, *context_shape[1:]), dtype=context_dtype)
+            # (cur_h*cur_w+..., 1, -1) -> (bs, final_h*final_w, 1, -1)
+            padded_global_context_feature = ops.ones((bs, max_per_context_token_len, *context_shape[1:]), dtype=context_dtype)
+            # 4*(cur_h*cur_w+..., factor, -1) -> 4*(bs, final_h*final_w, factor, -1)
+            padded_vision_tower_aux_feature_list, padded_vision_tower_aux_attention_masks_list = [], []
+            for i in range(num_vision_tower):
+                _shape1, _dtype1 = vision_tower_aux_feature_list[i].shape, vision_tower_aux_feature_list[i].dtype
+                _shape2, _dtype2 = vision_tower_aux_attention_masks_list[i].shape, vision_tower_aux_attention_masks_list[i].dtype
+                padded_vision_tower_aux_feature_list.append(ops.ones((bs, max_per_context_token_len, *_shape1[1:]), dtype=_dtype1))
+                padded_vision_tower_aux_attention_masks_list.append(ops.ones((bs, max_per_context_token_len, *_shape2[1:]), dtype=_dtype2))
             _cur_pos = 0
-            for idx in range(bs):
-                cur_h, cur_w = final_vision_feature_size[idx]
+            for idx_bs in range(bs):
+                cur_h, cur_w = final_vision_feature_size[idx_bs]
                 _size = cur_w * cur_h
-                new_global_context_feature[idx, :_size] = global_context_feature[_cur_pos:_cur_pos+_size]
+                padded_global_context_feature[idx_bs, :_size] = global_context_feature[_cur_pos:_cur_pos+_size]
+                for idx_vision in range(num_vision_tower):
+                    padded_vision_tower_aux_feature_list[idx_vision][idx_bs, :_size] = vision_tower_aux_feature_list[idx_vision][_cur_pos:_cur_pos+_size]
+                    padded_vision_tower_aux_attention_masks_list[idx_vision][idx_bs, :_size] = vision_tower_aux_attention_masks_list[idx_vision][_cur_pos:_cur_pos+_size]
                 _cur_pos = _cur_pos + _size
-            global_context_feature = new_global_context_feature.view(-1, *context_shape[1:])
+            global_context_feature = padded_global_context_feature.view(-1, *context_shape[1:])
+            vision_tower_aux_feature_list, vision_tower_aux_attention_masks_list = [], []
+            for i in range(num_vision_tower):
+                _shape1, _dtype1 = padded_vision_tower_aux_feature_list[i].shape, padded_vision_tower_aux_feature_list[i].dtype
+                _shape2, _dtype2 = padded_vision_tower_aux_attention_masks_list[i].shape, padded_vision_tower_aux_attention_masks_list[i].dtype
+                vision_tower_aux_feature_list.append(padded_vision_tower_aux_feature_list[i].view(-1, *_shape1[1:]))
+                vision_tower_aux_attention_masks_list.append(padded_vision_tower_aux_attention_masks_list[i].view(-1, *_shape1[1:]))
 
             # _dtype = vision_tower_aux_feature_list[0].dtype
             # vision_tower_aux_feature_list = [
@@ -653,7 +671,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             position_ids=position_ids,
             attention_mask=attention_mask,
             inputs_embeds=inputs_embeds,
-            final_vision_feature_size=final_vision_feature_size,
+            final_vision_feature_size=ms.mutable(final_vision_feature_size),
             **kwargs
         )
 
