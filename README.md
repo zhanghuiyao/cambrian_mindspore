@@ -95,7 +95,7 @@ bash scripts/cambrian/finetune_cambrian_8b.sh
   - [x] Infer
   - [x] Pretrain - Training Spatial Vision Aggregator
   - [x] Finetune - Instruction Tuning
-- [x] Third party dependencies
+- [x] Third party library adaptation
   - [x] `transformers` -> `cambrian/transformers`
   - [x] `open_clip` -> `cambrian/open_clip`
   - [x] `timm` -> `cambrian/timm`
