@@ -339,8 +339,11 @@ class CambrianTrainer(Trainer):
         TRAIN_ARGS_PATH = os.path.join(output_dir, TRAINING_ARGS_NAME)
         TRAINER_STATE_NAME_PATH = os.path.join(output_dir, TRAINER_STATE_NAME)
 
+        # FIXME: filter projector (pretrain task)
+        # FIXME: filter optimizer weight
+        # FIXME: save 1 weights w/o tp+pp
         ms.save_checkpoint(model if model is not None else self.model, WEIGHTS_NAME_PATH)
-        ms.save_checkpoint(self.optimizer, WEIGHTS_NAME_OPT_PATH)
+        # ms.save_checkpoint(self.optimizer, WEIGHTS_NAME_OPT_PATH)
         if isinstance(self.lr_scheduler, nn.Cell):
             ms.save_checkpoint(self.lr_scheduler, LR_PATH)
 

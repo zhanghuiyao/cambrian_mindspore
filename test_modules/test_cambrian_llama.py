@@ -140,7 +140,6 @@ def test_cambrian_llama_causal(model_path: str, args):
             clip_value=1.0
         )
 
-        # FIXME: zhy_test
         if args.amp_level == "O2":
             from cambrian.mindspore_adapter.amp import auto_mixed_precision
             train_model = auto_mixed_precision(train_model, amp_level=args.amp_level, dtype=ms.float16)

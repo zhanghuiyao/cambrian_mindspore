@@ -25,14 +25,15 @@ pretrain_mm_mlp_adapter="./checkpoints/cambrian-8b-pretrain/mm_projector.bin"   
 resume_from_checkpoint="./cambrian-8b.ckpt"                                     #
 ckpt_dir="checkpoints"                                                          #
 data_path="./demo/toy-dataset/alignment_2.5m.jsonl"                             # your_path_to_pretrain_jsonl e.g. Cambrian7M_withsystemprompt.jsonl
-per_device_train_batch_size=8
+per_device_train_batch_size=1
 enable_flash_attention="True"
 optim="adamw_zero2_mindspore"
 adamw_enable_fuse="True"
 adamw_zero_shard_size=8
 jit_level=O0
-output_dir=$task_name"_bs"$per_device_train_batch_size"_zero2_shard"$adamw_zero_shard_size"_fuseop_8cards_jit"$jit_level
+output_dir=$task_name"_bs"$per_device_train_batch_size"_zero2_fuseop_shard"$adamw_zero_shard_size"_8cards_jit"$jit_level
 
+num_epochs=1000
 
 
 msrun --bind_core=True --worker_num=$device_num --local_worker_num=$device_num --master_port=$master_port --log_dir=$output_dir \
@@ -62,12 +63,12 @@ python -u cambrian/train/train.py \
     --group_by_modality_length True \
     --bf16 False \
     --output_dir $output_dir/$ckpt_dir \
-    --num_train_epochs 1 \
+    --num_train_epochs $num_epochs \
     --per_device_train_batch_size $per_device_train_batch_size \
     --gradient_accumulation_steps 1 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 2000 \
+    --save_steps 10000 \
     --save_total_limit 1 \
     --learning_rate 4e-5 \
     --weight_decay 0. \

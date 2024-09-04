@@ -5,8 +5,6 @@ from abc import abstractmethod
 import mindspore as ms
 from mindspore import nn, ops, Tensor, Parameter
 
-from ezcolorlog import root_logger as logger
-
 from cambrian.model.multimodal_encoder.builder import build_vision_tower_aux_list
 from cambrian.model.multimodal_projector.builder import build_vision_projector
 from cambrian.model.vision_sampler import VisionTokenSampler
@@ -280,7 +278,7 @@ class CambrianMetaForCausalLM:
         bs = vision_tower_aux_feature_list[0].shape[0]
         for vision_tower_aux_feature, vision_tower_aux_attention_masks in zip(vision_tower_aux_feature_list, vision_tower_aux_attention_masks_list):
 
-            vision_tower_aux_feature = ops.depend(vision_tower_aux_feature, vision_tower_aux_feature_rearranged_list) # FIXME: zhy_test depend
+            vision_tower_aux_feature = ops.depend(vision_tower_aux_feature, vision_tower_aux_feature_rearranged_list) # FIXME: depend
 
             aux_height = aux_width = int(vision_tower_aux_feature.shape[1]**0.5)
             # assert aux_height * aux_width == vision_tower_aux_feature.shape[1]
@@ -301,7 +299,7 @@ class CambrianMetaForCausalLM:
         vision_tower_aux_attention_masks_rearranged_list = ()
         bs = vision_tower_aux_feature_list[0].shape[0]
         for vision_tower_aux_feature in vision_tower_aux_feature_list:
-            vision_tower_aux_feature = ops.depend(vision_tower_aux_feature, vision_tower_aux_feature_rearranged_list)  # FIXME: zhy_test depend
+            vision_tower_aux_feature = ops.depend(vision_tower_aux_feature, vision_tower_aux_feature_rearranged_list)  # FIXME: depend
 
             aux_height = aux_width = int(vision_tower_aux_feature.shape[1]**0.5)
             # assert (aux_height//query_side_len) * query_side_len == aux_height
@@ -356,7 +354,7 @@ class CambrianMetaForCausalLM:
             image_aux_features_list += (image_aux_features,)
         return image_aux_features_list
 
-    # @ms.jit  # zhy_test
+    # @ms.jit  # FIXME: calculation accuracy bug when @mindspore.jit on MindSpore 2.3
     def prepare_inputs_labels_for_multimodal_(
             self, input_ids, position_ids, attention_mask, labels, *images_and_sizes
     ):
@@ -410,7 +408,7 @@ class CambrianMetaForCausalLM:
             # 2. do mm_projector_aux: get vision tokens from each vision tower
             for aux_i in range(len(vision_tower_aux_list)):
                 image_aux_features = image_aux_features_list[aux_i]
-                image_aux_features = ops.depend(image_aux_features, vision_tower_aux_feature_list) # FIXME: zhy_test depend
+                image_aux_features = ops.depend(image_aux_features, vision_tower_aux_feature_list) # FIXME: depend
 
                 # image_aux_features = getattr(self.model, 'mm_projector_aux_{}'.format(aux_i))(image_aux_features).to(dtype)
                 image_aux_features = self.model.mm_projector_auxes[aux_i](image_aux_features).to(dtype)
@@ -422,7 +420,7 @@ class CambrianMetaForCausalLM:
             # perform vision sampling for each query group
             for query_group_i, query_num in enumerate(query_num_list):
                 query_features_i = self.model.vision_query[query_group_i, :].view(1, 1, 1, -1).broadcast_to((bs, query_num, -1, -1))
-                query_features_i = ops.depend(query_features_i, final_image_features_list)  # FIXME: zhy_test depend
+                query_features_i = ops.depend(query_features_i, final_image_features_list)  # FIXME: depend
                 global_context_feature_i = global_context_feature.broadcast_to((-1, query_num, 1, -1)).flatten(start_dim=0, end_dim=1)
                 query_side_len = int(query_num**0.5)
 

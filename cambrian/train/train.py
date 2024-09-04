@@ -285,13 +285,15 @@ def train():
 
         model.config.tune_mm_mlp_adapter = training_args.tune_mm_mlp_adapter = model_args.tune_mm_mlp_adapter
         if model_args.tune_mm_mlp_adapter:
-            model.requires_grad = False
+            # model.requires_grad = False
             tune_modules = ['mm_projector', 'pos_emb', 'vision_sampler', 'vision_sampler_layers', 'vision_query',
                             'image_newline']
             for name, param in model.parameters_and_names():
                 if any(listed_name in name for listed_name in tune_modules):
                     print_rank0('tuning {}'.format(name))
                     param.requires_grad = True
+                else:
+                    param.requires_grad = False
 
         model.config.freeze_mm_mlp_adapter = training_args.freeze_mm_mlp_adapter
         if training_args.freeze_mm_mlp_adapter:

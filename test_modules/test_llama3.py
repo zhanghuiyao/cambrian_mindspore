@@ -68,7 +68,6 @@ def test_llama3_causal(model_path: str, args):
         if args.gradient_checkpointing:
             model.gradient_checkpointing_enable()
 
-        # FIXME: zhy_test
         # 1. force param fp16
         if args.force_param_fp16:
             from cambrian.mindspore_adapter.amp import convert_module_dtype

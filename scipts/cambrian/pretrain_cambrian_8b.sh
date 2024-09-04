@@ -1,33 +1,42 @@
 #!/bin/bash
 
-export ASCEND_RT_VISIBLE_DEVICES=0
+# envirment
+export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+device_num=8
+
 export HCCL_DETERMINISTIC=true
 export ASCEND_LAUNCH_BLOCKING=1
 export MS_ENABLE_NUMA=0
 export GLOG_v=2
+
 export MS_MEMORY_STATISTIC=1
 export MS_DEV_RUNTIME_CONF="synchronize:True"
 
 
+# common setting
+master_port=9001
+
 
 # hyper-parameters
-task_name="run_cambrian-8b-finetune"
-model_name_or_path="./cambrian/hf-configs/nyu-visionx-cambrian-8b"
-image_folder="./demo/toy-dataset/images_from_coco"
-pretrain_mm_mlp_adapter="./checkpoints/cambrian-8b-pretrain/mm_projector.bin"
-ckpt_dir="checkpoints"
-data_path="./demo/toy-dataset/alignment_2.5m.jsonl"  #  e.g. Cambrian7M_withsystemprompt.jsonl
+task_name="run_cambrian-8b-pretrain"
+model_name_or_path="./cambrian/hf-configs/nyu-visionx-cambrian-8b"              # your_path_to_llama3
+image_folder="./demo/toy-dataset/images_from_coco"                              # your_path_to_image_folder
+pretrain_mm_mlp_adapter="./checkpoints/cambrian-8b-pretrain/mm_projector.bin"   #
+resume_from_checkpoint="./cambrian-8b.ckpt"                                     #
+ckpt_dir="checkpoints"                                                          #
+data_path="./demo/toy-dataset/alignment_2.5m.jsonl"                             # your_path_to_pretrain_jsonl e.g. alignment_2.5m.jsonl
 per_device_train_batch_size=1
 enable_flash_attention="True"
-#optim="adamw_zero2_mindspore"
-optim="adamw_mindspore"
+optim="adamw_zero2_mindspore"
+adamw_enable_fuse="True"
 adamw_zero_shard_size=8
-adamw_enable_fuse="False"
+jit_level=O0
+output_dir=$task_name"_bs"$per_device_train_batch_size"_zero2_fuseop_shard"$adamw_zero_shard_size"_8cards_jit"$jit_level
+
+num_epochs=1000
 
 
-
-output_dir=$task_name"_bs"$per_device_train_batch_size"_adamw_1cards"
-
+msrun --bind_core=True --worker_num=$device_num --local_worker_num=$device_num --master_port=$master_port --log_dir=$output_dir \
 python -u cambrian/train/train.py \
     --model_name_or_path $model_name_or_path \
     --version llama_v3 \
@@ -46,24 +55,24 @@ python -u cambrian/train/train.py \
     --start_of_vision_sampler_layers 0 \
     --stride_of_vision_sampler_layers 3 \
     --mm_projector_type sva \
-    --unfreeze_mm_vision_tower False \
+    --mm_vision_sampler_lr 1e-4 \
+    --tune_mm_mlp_adapter True \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
     --image_aspect_ratio pad \
-    --group_by_modality_length True \
     --bf16 False \
     --output_dir $output_dir/$ckpt_dir \
-    --num_train_epochs 1 \
+    --num_train_epochs $num_epochs \
     --per_device_train_batch_size $per_device_train_batch_size \
     --gradient_accumulation_steps 1 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
     --save_steps 10000 \
     --save_total_limit 1 \
-    --learning_rate 4e-5 \
+    --learning_rate 1e-3 \
     --weight_decay 0. \
-    --warmup_ratio 0.03 \
+    --warmup_ratio 0.06 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
     --tf32 False \
@@ -74,15 +83,20 @@ python -u cambrian/train/train.py \
     --run_name $task_name \
     \
     --device_target Ascend \
-    --jit_level O2 \
-    --is_distribute False \
+    --jit_level $jit_level \
+    --is_distribute True \
     --max_device_memory 59GB \
     --enable_flash_attention $enable_flash_attention \
     --fp16 True \
     --optim $optim \
     --adamw_enable_fuse $adamw_enable_fuse \
+    --adamw_zero_shard_size $adamw_zero_shard_size \
     --save_safetensors False \
     --dataloader_num_workers 1 \
+    \
+    --resume_from_checkpoint $resume_from_checkpoint \
+    \
+    > .log_msrun.txt 2>&1 &
 
-    # --pretrain_mm_mlp_adapter $pretrain_mm_mlp_adapter \
-    #--per_device_eval_batch_size 4 \
+
+    # --per_device_eval_batch_size 4 \
