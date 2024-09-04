@@ -615,8 +615,8 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             vision_tower_aux_feature_list, vision_tower_aux_attention_masks_list = [], []
             for i in range(num_vision_tower):
                 _shape1, _shape2 = padded_vision_tower_aux_feature_list[i].shape, padded_vision_tower_aux_attention_masks_list[i].shape
-                vision_tower_aux_feature_list.append(padded_vision_tower_aux_feature_list[i].view(-1, *_shape1[1:]))
-                vision_tower_aux_attention_masks_list.append(padded_vision_tower_aux_attention_masks_list[i].view(-1, *_shape2[1:]))
+                vision_tower_aux_feature_list.append(padded_vision_tower_aux_feature_list[i].view(-1, *_shape1[2:]))
+                vision_tower_aux_attention_masks_list.append(padded_vision_tower_aux_attention_masks_list[i].view(-1, *_shape2[2:]))
 
             # _dtype = vision_tower_aux_feature_list[0].dtype
             # vision_tower_aux_feature_list = [
