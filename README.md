@@ -52,6 +52,8 @@ pip install -r requirements.txt
 
 1. Download
 
+> download pretrain weight from huggingface.co
+
 - `cambrian` pretrain weight from https://huggingface.co/nyu-visionx/cambrian-8b
 - `siglip/CLIP-ViT-SO400M-14-384` pretrain weight from https://huggingface.co/timm/ViT-SO400M-14-SigLIP-384
 - `openai/clip-vit-large-patch14-336` pretrain weight from https://huggingface.co/openai/clip-vit-large-patch14-336
@@ -113,8 +115,15 @@ bash scripts/cambrian/finetune_cambrian_8b.sh
     - [x] LLaMA-3-Instruct-8B
     - [ ] Vicuna-1.5-13B
     - [ ] Hermes-2-Yi-34B
-- [ ] (TODO) support KV-Cache
-- [ ] (TODO) Benchmarking: CV-Bench
-- [ ] (TODO) Targeted Data Engine
-- [ ] (Not yet release) Evaluation 
+- [ ] Functions
+  - [ ] Parallelism
+    - [x] Data Parallelism
+    - [x] Optimizer Parallelism (ZeRO stage 1/2)
+    - [ ] (TODO) Tensor Parallelism
+    - [ ] (TODO) Pipeline Parallelism
+  - [ ] (TODO) KV-Cache
+  - [ ] (TODO) support loading from `.safetensors` or `.bin`
+  - [ ] (TODO) Benchmarking: CV-Bench
+  - [ ] (TODO) Targeted Data Engine
+  - [ ] (Not yet release) Evaluation 
 
