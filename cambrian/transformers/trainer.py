@@ -514,8 +514,8 @@ class Trainer:
             "num_parallel_workers": self.args.dataloader_num_workers,
             "sampler": self._get_train_sampler(),
             "python_multiprocessing": False,
-            "num_shards": None,  # FIXME: level 0, confirm shard with sampler, dp & mp
-            "shard_id": None,
+            "num_shards": getattr(self.args, "rank_size", 1),
+            "shard_id": getattr(self.args, "rank", 0),
             "column_names": "item"
         }
         ds_batch_params = {
@@ -531,6 +531,12 @@ class Trainer:
         loader = ms.dataset.GeneratorDataset(train_dataset, **ds_init_params)
         loader = loader.batch(**ds_batch_params)
         loader = loader.repeat(**ds_repeat_params)
+
+        logger.info(f"create dataloader success, \n"
+                    f"\tshard_id/num_shards: {ds_init_params['shard_id']}/{ds_init_params['num_shards']}\n"
+                    f"\tnum_parallel_workers: {ds_init_params['num_parallel_workers']}\n"
+                    f"\tpython_multiprocessing: {ds_init_params['python_multiprocessing']}\n"
+                    f"\tper_batch_size: {ds_batch_params['batch_size']}")
 
         return loader
 

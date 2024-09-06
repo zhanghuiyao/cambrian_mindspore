@@ -39,6 +39,14 @@ class MindSporeArguments:
             ),
         },
     )
+    rank: int = field(
+        default=0,
+        metadata={"help": "rank id"}
+    )
+    rank_size: int = field(
+        default=1,
+        metadata={"help": "device num"}
+    )
 
     enable_flash_attention: Optional[bool] = field(
         default=False,
@@ -121,6 +129,7 @@ def init_environment(training_args: MindSporeArguments):
         deterministic="ON",
         pynative_synchronize=True,
         memory_optimize_level="O1",
+        # jit_syntax_level=ms.STRICT
     )
 
     if training_args.mode == ms.PYNATIVE_MODE:
@@ -145,3 +154,9 @@ def init_environment(training_args: MindSporeArguments):
             gradients_mean=True,
             device_num=world_size,
         )
+
+        training_args.rank = rank_id
+        training_args.rank_size = world_size
+    else:
+        training_args.rank = 0
+        training_args.rank_size = 1
