@@ -113,6 +113,7 @@ bash scripts/cambrian/finetune_cambrian_8b.sh
     - [x] LLaMA-3-Instruct-8B
     - [ ] Vicuna-1.5-13B
     - [ ] Hermes-2-Yi-34B
+- [ ] (TODO) support KV-Cache
 - [ ] (TODO) Benchmarking: CV-Bench
 - [ ] (TODO) Targeted Data Engine
 - [ ] (Not yet release) Evaluation 
