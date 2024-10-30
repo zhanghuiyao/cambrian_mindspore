@@ -78,6 +78,7 @@ def run_llama3_generate(args):
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_path)
     model = LlamaForCausalLM.from_pretrained(args.model_path, use_flash_attention_2=args.use_fa)
+    model.embed_tokens = model.model.embed_tokens  # zhy_test
 
     model = auto_mixed_precision(model, amp_level="O2", dtype=ms.float16)
     print(f"=====> Building model done.")
