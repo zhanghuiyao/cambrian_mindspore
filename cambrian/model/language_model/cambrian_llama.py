@@ -287,7 +287,6 @@ class CambrianLlamaModel(CambrianMetaModel, LlamaModel):
                             hidden_states[batch_i] = cur_hidden_states
                         ### ----------------------------------------------> new implement 2 finish
 
-
             if use_cache:
                 # next_cache = next_decoder_cache.to_legacy_cache() if use_legacy_cache else next_decoder_cache
                 next_cache = layer_outputs[1]
@@ -627,7 +626,7 @@ class CambrianLlamaForCausalLM(LlamaForCausalLM, CambrianMetaForCausalLM):
             position_ids=position_ids,
             attention_mask=attention_mask,
             inputs_embeds=inputs_embeds,
-            final_vision_feature_size=ms.mutable(final_vision_feature_size), #Tensor(final_vision_feature_size, ms.int32),
+            final_vision_feature_size=ms.mutable(final_vision_feature_size) if final_vision_feature_size else None, #Tensor(final_vision_feature_size, ms.int32),
             **kwargs
         )
 
