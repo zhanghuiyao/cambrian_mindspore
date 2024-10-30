@@ -108,7 +108,7 @@ def run_llama3_generate(args):
             break
 
         prompt = [prompt,]
-        input_ids = tokenizer(prompt).input_ids
+        input_ids = np.array(tokenizer(prompt).input_ids)
 
         # input_ids = ms.Tensor(input_ids, ms.int32)
         # input_kwargs = {}
