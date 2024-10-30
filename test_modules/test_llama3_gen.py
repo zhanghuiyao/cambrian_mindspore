@@ -49,19 +49,26 @@ def run_llama3_generate(args):
             break
 
         prompt = [prompt,]
-        input_ids = ms.Tensor(tokenizer(prompt).input_ids, ms.int32)
+        input_ids = tokenizer(prompt).input_ids
 
-        input_kwargs = {}
-        if args.use_embed_input:
-            input_kwargs["inputs_embeds"] = model.get_input_embeddings()(input_ids)
-        else:
-            input_kwargs["input_ids"] = input_ids
+        # input_ids = ms.Tensor(input_ids, ms.int32)
+        # input_kwargs = {}
+        # if args.use_embed_input:
+        #     input_kwargs["inputs_embeds"] = model.get_input_embeddings()(input_ids)
+        # else:
+        #     input_kwargs["input_ids"] = input_ids
+
+        input_ids, _, position_ids, attention_mask = \
+            model.preprocess_input_before_generate_numpy(input_ids, None, position_ids=None, attention_mask=None)
+        input_embeds = model.embed_tokens(input_ids)
 
         output_ids = model.generate(
-            **input_kwargs,
+            position_ids=position_ids,
+            attention_mask=attention_mask,
+            inputs_embeds=input_embeds,
             use_cache=False,
             max_new_tokens=30,
-            do_sample=False
+            do_sample=False,
         )
         output_ids = output_ids.asnumpy()
 
