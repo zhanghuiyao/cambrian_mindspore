@@ -3,11 +3,70 @@ import ast
 import argparse
 import time
 import mindspore as ms
+import numpy as np
 
 from transformers import AutoTokenizer
 
 from cambrian.transformers.models.llama import LlamaForCausalLM
 from cambrian.mindspore_adapter import auto_mixed_precision
+
+
+def preprocess_input_before_generate_numpy_2(
+        max_len: int,
+        input_ids: np.ndarray,
+        labels: np.ndarray = None,
+        position_ids: np.ndarray = None,
+        attention_mask: np.ndarray = None,
+):
+    # init empty array
+    bs = len(input_ids)
+    padded_input_ids = np.zeros((bs, max_len), np.int32)
+    padded_labels = np.full((bs, max_len), -1, np.int32)
+    padded_position_ids = np.zeros((bs, max_len), np.int32)
+    padded_attention_mask = np.zeros((bs, max_len), np.bool_)
+
+    _labels = labels
+    _position_ids = position_ids
+    _attention_mask = attention_mask
+    if attention_mask is None:
+        attention_mask = np.ones_like(input_ids, dtype=np.bool_)
+    else:
+        attention_mask = attention_mask.astype(np.bool_)
+    if position_ids is None:
+        position_ids = np.arange(0, input_ids.shape[1], dtype=np.int32)
+    if labels is None:
+        labels = np.full_like(input_ids, -1)
+
+    masked_input_ids = []
+    masked_labels = []
+    masked_attention_mask = []
+    for i in range(len(input_ids)):
+        cur_input_ids, cur_labels, cur_attention_mask = input_ids[i], labels[i], attention_mask[i]
+        active_len = int(cur_attention_mask.sum())
+        # assert cur_attention_mask[:active_len].sum() == cur_attention_mask.sum()
+        masked_input_ids.append(cur_input_ids[:active_len])
+        masked_labels.append(cur_labels[:active_len])
+        masked_attention_mask.append(cur_attention_mask[:active_len])
+    input_ids = masked_input_ids
+    labels = masked_labels
+    attention_mask = masked_attention_mask
+
+    for batch_idx, cur_input_ids in enumerate(input_ids):
+
+        cur_len = cur_input_ids.shape[0]
+
+        padded_input_ids[batch_idx, :cur_len] = cur_input_ids[:]
+
+        padded_labels[batch_idx, :cur_len] = labels[batch_idx][:]
+        padded_attention_mask[batch_idx, :cur_len] = attention_mask[batch_idx][:]
+        padded_position_ids[batch_idx, :cur_len] = np.arange(0, cur_len, dtype=position_ids.dtype)
+
+    new_input_ids = ms.Tensor(padded_input_ids)
+    new_attention_mask = ms.Tensor(padded_attention_mask)
+    new_labels = None if _labels is None else ms.Tensor(padded_labels)
+    new_position_ids = None if _position_ids is None else ms.Tensor(padded_position_ids)
+
+    return new_input_ids, new_labels, new_position_ids, new_attention_mask
 
 
 def run_llama3_generate(args):
@@ -59,7 +118,9 @@ def run_llama3_generate(args):
         #     input_kwargs["input_ids"] = input_ids
 
         input_ids, _, position_ids, attention_mask = \
-            model.preprocess_input_before_generate_numpy(input_ids, None, position_ids=None, attention_mask=None)
+            preprocess_input_before_generate_numpy_2(
+                30, input_ids, None, position_ids=None, attention_mask=None
+            )
         input_embeds = model.embed_tokens(input_ids)
 
         output_ids = model.generate(
