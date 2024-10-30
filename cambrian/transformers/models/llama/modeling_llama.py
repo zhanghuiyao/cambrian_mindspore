@@ -10,7 +10,7 @@ from transformers import LlamaConfig, GenerationConfig, logging
 from cambrian.transformers.activations import ACT2FN
 from cambrian.transformers.cache_utils import Cache, StaticCache, DynamicCache
 from cambrian.transformers.modeling_utils import PreTrainedModel
-from cambrian.transformers.modeling_attn_mask_utils import DTYPE_FP16_MIN
+from cambrian.transformers.modeling_attn_mask_utils import DTYPE_FP16_MIN, _prepare_4d_causal_attention_mask
 
 from cambrian.mindspore_adapter.attention import FlashAttention2
 from cambrian.constants import IGNORE_INDEX
@@ -643,8 +643,13 @@ class LlamaModel(LlamaPreTrainedModel):
         if position_ids is None:
             position_ids = cache_position.unsqueeze(0)
 
-        causal_mask = self._update_causal_mask(
-            attention_mask, inputs_embeds, cache_position, past_key_values, output_attentions
+        # zhy_test
+        # causal_mask = self._update_causal_mask(
+        #     attention_mask, inputs_embeds, cache_position, past_key_values, output_attentions
+        # )
+        batch_size, seq_length = inputs_embeds.shape[:2]
+        causal_mask = _prepare_4d_causal_attention_mask(
+            attention_mask, (batch_size, seq_length), inputs_embeds, 0
         )
 
         # embed positions
