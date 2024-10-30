@@ -266,5 +266,5 @@ if __name__ == '__main__':
         raise ValueError
 
     # zhy_test
-    # run_llama3_generate(args)
-    run_llama3_generate_2(args)
+    run_llama3_generate(args)
+    # run_llama3_generate_2(args)
