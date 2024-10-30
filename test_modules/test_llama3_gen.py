@@ -121,7 +121,7 @@ def run_llama3_generate(args):
             preprocess_input_before_generate_numpy_2(
                 30, input_ids, None, position_ids=None, attention_mask=None
             )
-        input_embeds = model.embed_tokens(input_ids)
+        input_embeds = model.model.embed_tokens(input_ids)
 
         output_ids = model.generate(
             position_ids=position_ids,
