@@ -102,7 +102,8 @@ def run_llama3_generate(args):
         print(f"WARNING: No available pre-trained weights")
 
     while True:
-        prompt = input("Enter your prompt [e.g. `What's your name?`] or enter [`q`] to exit: ")
+        # prompt = input("Enter your prompt [e.g. `What's your name?`] or enter [`q`] to exit: ")
+        prompt = "What's your name?"
 
         if prompt == "q":
             print("Generate task done, see you next time!")
@@ -141,6 +142,8 @@ def run_llama3_generate(args):
         print(outputs)
         print("=" * 100)
 
+        break
+
 
 def run_llama3_generate_2(args):
 
@@ -154,6 +157,7 @@ def run_llama3_generate_2(args):
     tokenizer = AutoTokenizer.from_pretrained(args.model_path)
     model = CambrianLlamaForCausalLM.from_pretrained(args.model_path, use_flash_attention_2=args.use_fa)
     model.model.connector_only = True
+    model.embed_tokens = model.model.embed_tokens  # zhy_test
 
     model = auto_mixed_precision(model, amp_level="O2", dtype=ms.float16)
     print(f"=====> Building model done.")
@@ -177,7 +181,8 @@ def run_llama3_generate_2(args):
         print(f"WARNING: No available pre-trained weights")
 
     while True:
-        prompt = input("Enter your prompt [e.g. `What's your name?`] or enter [`q`] to exit: ")
+        # prompt = input("Enter your prompt [e.g. `What's your name?`] or enter [`q`] to exit: ")
+        prompt = "What's your name?"
 
         if prompt == "q":
             print("Generate task done, see you next time!")
@@ -208,6 +213,8 @@ def run_llama3_generate_2(args):
         print("=" * 46 + " Result " + "=" * 46)
         print(outputs)
         print("=" * 100)
+
+        break
 
 
 if __name__ == '__main__':
