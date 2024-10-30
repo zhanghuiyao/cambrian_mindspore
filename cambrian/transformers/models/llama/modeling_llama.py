@@ -773,6 +773,9 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         # TODO: Initialize weights and apply final processing
         # self.post_init()
 
+    def get_model(self):
+        return self.model
+
     def get_input_embeddings(self):
         return self.model.embed_tokens
 
