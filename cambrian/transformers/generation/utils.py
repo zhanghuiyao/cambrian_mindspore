@@ -268,7 +268,9 @@ class GenerationMixin:
                 break
 
         if "inputs_embeds" in model_kwargs:
-            return ops.ones((batch_size, 0), dtype=ms.int32)
+            # zhy_test
+            # return ops.ones((batch_size, 0), dtype=ms.int32)
+            return ops.zeros((batch_size, model_kwargs["inputs_embeds"].shape[1]), dtype=ms.int32)
 
         if bos_token_id is None:
             raise ValueError("`bos_token_id` has to be defined when no `input_ids` are provided.")
